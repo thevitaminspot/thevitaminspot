@@ -1,0 +1,16 @@
+export type {
+  Appointment,
+  AppointmentStatus,
+  DeliveryZone,
+  InfusionService,
+  Order,
+  OrderItem,
+  OrderStatus,
+  Payment,
+  PaymentStatus,
+  Product,
+  ProductCategory,
+  ProductImage,
+  User,
+  UserRole,
+} from "@/lib/generated/prisma/client";
