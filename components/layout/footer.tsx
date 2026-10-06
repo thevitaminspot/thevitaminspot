@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { brand } from "@/lib/brand";
+import { BrandMark } from "@/components/layout/brand-mark";
 import { site, whatsappHref } from "@/lib/site";
 
 const links = [
@@ -22,16 +21,7 @@ export function Footer({ packs }: { packs: { href: string; label: string }[] }) 
       <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-3">
-              <Image
-                src={brand.logo.src}
-                alt={brand.logo.alt}
-                width={36}
-                height={47}
-                className="h-12 w-auto object-contain"
-              />
-              <p className="font-display text-3xl leading-none">{site.name}</p>
-            </div>
+            <BrandMark size={48} />
             <p className="mt-5 max-w-sm text-sm leading-7 text-cream/70">{site.tagline}</p>
             <p className="mt-4 text-sm leading-relaxed text-cream/50">{site.address.label}</p>
           </div>
