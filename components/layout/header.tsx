@@ -63,14 +63,17 @@ function MobileNav({
         aria-label="Mobile"
       >
         <div className="flex items-center justify-between border-b border-deep/10 px-5 py-4">
-          <Image
-            src={brand.mark.src}
-            alt=""
-            width={36}
-            height={36}
-            className="size-9 object-contain"
-            aria-hidden
-          />
+          <div className="flex items-center gap-2.5">
+            <Image
+              src={brand.mark.src}
+              alt=""
+              width={36}
+              height={36}
+              className="size-9 object-contain"
+              aria-hidden
+            />
+            <span className="font-display text-lg text-deep">{site.name}</span>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -150,15 +153,19 @@ export function Header() {
     <>
       <header className="sticky top-0 z-40 border-b border-deep/10 bg-cream/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-2.5 sm:px-5 md:px-8 md:py-3">
-          <Link href="/" className="flex min-w-0 items-center" onClick={closeNav} aria-label={site.name}>
+          <Link href="/" className="flex min-w-0 items-center gap-2.5" onClick={closeNav}>
             <Image
               src={brand.mark.src}
-              alt={brand.mark.alt}
+              alt=""
               width={44}
               height={44}
-              className="size-10 object-contain md:size-11"
+              className="size-10 shrink-0 object-contain md:size-11"
               priority
+              aria-hidden
             />
+            <span className="font-display truncate text-lg tracking-[0.03em] sm:text-xl">
+              {site.name}
+            </span>
           </Link>
 
           <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
