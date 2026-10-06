@@ -1,7 +1,7 @@
 export const brand = {
   name: "The Vitamin Spot",
   logo: {
-    src: "/brand/logo.png",
+    src: "/brand/logo.jpg",
     alt: "The Vitamin Spot",
     width: 495,
     height: 648,

@@ -44,7 +44,6 @@ export const metadata: Metadata = {
     type: "website",
     siteName: site.name,
   },
-  icons: { icon: brand.logo.src },
   alternates: { canonical: "/" },
 };
 
