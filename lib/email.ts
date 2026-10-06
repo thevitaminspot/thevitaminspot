@@ -100,12 +100,16 @@ async function deliver(
   return { data: payload as { id?: string }, error: null };
 }
 
+export type SendMailResult =
+  | { ok: true; id?: string; provider: "resend"; from: string }
+  | { ok: false; error: string };
+
 export async function sendMail(input: {
   to: string;
   subject: string;
   html: string;
   replyTo?: string;
-}) {
+}): Promise<SendMailResult> {
   if (!process.env.RESEND_API_KEY) {
     console.info("[email:skipped] Set RESEND_API_KEY in .env.", input.subject, input.to);
     return { ok: false as const, error: "Resend is not configured." };
@@ -183,7 +187,7 @@ export async function sendBookingReceived(input: {
       : `<p>We’ll confirm your appointment shortly.</p>`;
   return sendMail({
     to: input.to,
-    subject: `We received your booking — ${input.serviceName}`,
+    subject: `We received your booking - ${input.serviceName}`,
     html: `<p>Dear ${escapeHtml(input.name)},</p><p>Thanks for booking <strong>${escapeHtml(input.serviceName)}</strong> for ${escapeHtml(when)}.</p>${depositDue}<p>You can view or change your booking here:</p><p><a href="${escapeHtml(input.manageUrl)}">Manage your booking</a></p>`,
   });
 }
@@ -206,7 +210,7 @@ export async function sendBookingDepositPaid(input: {
       : "";
   return sendMail({
     to: input.to,
-    subject: `Deposit received — ${input.serviceName}`,
+    subject: `Deposit received - ${input.serviceName}`,
     html: `<p>Dear ${escapeHtml(input.name)},</p><p>We’ve received your deposit of <strong>${escapeHtml(formatNaira(input.depositAmount))}</strong> for <strong>${escapeHtml(input.serviceName)}</strong>.</p><p><strong>When:</strong> ${escapeHtml(when)}<br><strong>Where:</strong> ${escapeHtml(location)}</p><p>Your booking is confirmed.</p>${balance}<p>Please arrive a few minutes early. Tell us if you’re pregnant, on medication, or have allergies.</p><p><a href="${escapeHtml(input.manageUrl)}">View your booking</a></p><p>Questions? Reply to this email or WhatsApp us at ${escapeHtml(site.phone)}.</p>`,
   });
 }
@@ -235,7 +239,22 @@ export async function sendBookingConfirmed(input: {
       : "";
   return sendMail({
     to: input.to,
-    subject: `Booking confirmed — ${input.serviceName}`,
+    subject: `Booking confirmed - ${input.serviceName}`,
     html: `<p>Dear ${escapeHtml(input.name)},</p><p>Your <strong>${escapeHtml(input.serviceName)}</strong> session is confirmed.</p><p><strong>When:</strong> ${escapeHtml(when)}<br><strong>Where:</strong> ${escapeHtml(location)}</p>${depositLine}<p>Please arrive a few minutes early. Tell us if you’re pregnant, on medication, or have allergies.</p><p><a href="${escapeHtml(input.manageUrl)}">View your booking</a></p><p>Questions? Reply to this email or WhatsApp us at ${escapeHtml(site.phone)}.</p>`,
+  });
+}
+
+export async function sendBookingCancelled(input: {
+  to: string;
+  name: string;
+  serviceName: string;
+  startsAt: Date;
+  manageUrl: string;
+}) {
+  const when = formatBookingWhen(input.startsAt);
+  return sendMail({
+    to: input.to,
+    subject: `Booking cancelled - ${input.serviceName}`,
+    html: `<p>Dear ${escapeHtml(input.name)},</p><p>Your <strong>${escapeHtml(input.serviceName)}</strong> session on ${escapeHtml(when)} has been cancelled.</p><p>If this was a mistake, reply to this email or book again on the site.</p><p><a href="${escapeHtml(input.manageUrl)}">View the booking</a></p>`,
   });
 }

@@ -7,9 +7,13 @@ import { findInfusion } from "@/lib/data";
 import { tryPrisma } from "@/lib/db";
 import { attachCustomer, getSessionProfile } from "@/lib/auth";
 import { findLocalAppointment, updateLocalAppointment } from "@/lib/local-store";
-import { escapeHtml, sendBookingConfirmed, sendBookingReceived, sendMail } from "@/lib/email";
+import {
+  notifyAdminNewBooking,
+  notifyBookingCancelled,
+  notifyBookingConfirmed,
+  notifyBookingReceived,
+} from "@/lib/booking-notify";
 import { hasPaystack } from "@/lib/env";
-import { formatNaira } from "@/lib/money";
 import { initializePaystack } from "@/lib/paystack";
 import { rateLimit } from "@/lib/rate-limit";
 import { site, whatsappHref } from "@/lib/site";
@@ -96,7 +100,7 @@ export async function createBooking(input: {
   });
 
   const manageUrl = `${site.url}/appointments/${token}`;
-  await sendBookingReceived({
+  notifyBookingReceived({
     to: details.data.email,
     name: details.data.name,
     serviceName: drip.name,
@@ -104,13 +108,13 @@ export async function createBooking(input: {
     manageUrl,
     deposit: drip.deposit,
     sessionPrice: drip.price,
-  }).catch(() => undefined);
-
-  await sendMail({
-    to: process.env.ADMIN_EMAIL ?? site.email,
-    subject: `New booking: ${drip.name}`,
-    html: `<p>${escapeHtml(details.data.name)} booked <strong>${escapeHtml(drip.name)}</strong> for ${escapeHtml(startsAt.toLocaleString("en-NG"))}.</p><p>${drip.deposit > 0 ? `Deposit: ${escapeHtml(formatNaira(drip.deposit))}.` : "No deposit required."}</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
-  }).catch(() => undefined);
+  });
+  notifyAdminNewBooking({
+    name: details.data.name,
+    serviceName: drip.name,
+    startsAt,
+    deposit: drip.deposit,
+  });
 
   if (input.payDeposit) {
     if (!hasPaystack()) {
@@ -247,6 +251,13 @@ export async function updateAppointment(
       where: { id: appointment.id },
       data: { status: "CANCELLED" },
     });
+    notifyBookingCancelled({
+      to: appointment.email,
+      name: appointment.name,
+      serviceName: appointment.service.name,
+      startsAt: appointment.startsAt,
+      manageUrl: `${site.url}/appointments/${token}`,
+    });
     return { ok: true };
   }
 
@@ -277,7 +288,7 @@ export async function updateAppointment(
       ? appointment.service.deposit
       : undefined;
 
-  await sendBookingConfirmed({
+  notifyBookingConfirmed({
     to: appointment.email,
     name: appointment.name,
     serviceName: appointment.service.name,
@@ -286,7 +297,7 @@ export async function updateAppointment(
     depositPaid,
     depositDue,
     sessionPrice: appointment.service.price,
-  }).catch(() => undefined);
+  });
 
   return { ok: true };
 }
