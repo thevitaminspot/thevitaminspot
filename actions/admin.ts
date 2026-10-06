@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { getAdminProfile } from "@/lib/auth";
 import { categories, type CatalogInfusion } from "@/lib/catalog";
 import { tryPrisma } from "@/lib/db";
-import { escapeHtml, sendBookingConfirmed, sendMail, sendOrderUpdate } from "@/lib/email";
+import {
+  notifyBookingCancelled,
+  notifyBookingConfirmed,
+} from "@/lib/booking-notify";
+import { escapeHtml, sendMail, sendOrderUpdate } from "@/lib/email";
 import { uploadImage } from "@/lib/images";
 import { nairaToKobo } from "@/lib/money";
 import { seedCatalog } from "@/lib/seed-catalog";
@@ -374,7 +378,7 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
   await prisma.appointment.update({ where: { id }, data: { status } });
 
   if (status === "CONFIRMED" && existing.status !== "CONFIRMED") {
-    await sendBookingConfirmed({
+    notifyBookingConfirmed({
       to: existing.email,
       name: existing.name,
       serviceName: existing.service.name,
@@ -383,13 +387,15 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
       depositPaid,
       depositDue,
       sessionPrice: existing.service.price,
-    }).catch(() => undefined);
+    });
   } else if (status === "CANCELLED" && existing.status !== "CANCELLED") {
-    await sendMail({
+    notifyBookingCancelled({
       to: existing.email,
-      subject: `Booking cancelled — ${existing.service.name}`,
-      html: `<p>Dear ${escapeHtml(existing.name)},</p><p>Your ${escapeHtml(existing.service.name)} on ${escapeHtml(existing.startsAt.toLocaleString("en-NG"))} has been cancelled.</p><p><a href="${escapeHtml(manageUrl)}">View the booking</a></p>`,
-    }).catch(() => undefined);
+      name: existing.name,
+      serviceName: existing.service.name,
+      startsAt: existing.startsAt,
+      manageUrl,
+    });
   }
   revalidatePath("/admin/appointments");
   revalidatePath("/admin");

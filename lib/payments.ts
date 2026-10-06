@@ -1,6 +1,7 @@
 import "server-only";
 import { tryPrisma } from "@/lib/db";
-import { escapeHtml, sendBookingDepositPaid, sendMail, sendOrderUpdate } from "@/lib/email";
+import { notifyBookingDepositPaidNow } from "@/lib/booking-notify";
+import { escapeHtml, sendMail, sendOrderUpdate } from "@/lib/email";
 import { hasPaystack } from "@/lib/env";
 import { formatNaira } from "@/lib/money";
 import { verifyPaystackTransaction } from "@/lib/paystack";
@@ -140,7 +141,7 @@ export async function settlePaystackReference(reference: string, outcome: "succe
 
   if (paid && payment.appointment) {
     const appointment = payment.appointment;
-    await sendBookingDepositPaid({
+    await notifyBookingDepositPaidNow({
       to: appointment.email,
       name: appointment.name,
       serviceName: appointment.service.name,
@@ -148,7 +149,7 @@ export async function settlePaystackReference(reference: string, outcome: "succe
       manageUrl: `${site.url}/appointments/${appointment.accessToken}`,
       depositAmount: payment.amount,
       sessionPrice: appointment.service.price,
-    }).catch(() => undefined);
+    });
 
     await sendMail({
       to: process.env.ADMIN_EMAIL ?? site.email,
