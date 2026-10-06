@@ -22,13 +22,17 @@ export function Footer({ packs }: { packs: { href: string; label: string }[] }) 
       <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
           <div>
-            <Image
-              src={brand.mark.src}
-              alt={brand.mark.alt}
-              width={48}
-              height={48}
-              className="size-12 object-contain"
-            />
+            <div className="flex items-center gap-3">
+              <Image
+                src={brand.mark.src}
+                alt=""
+                width={48}
+                height={48}
+                className="size-12 shrink-0 object-contain"
+                aria-hidden
+              />
+              <p className="font-display text-3xl leading-none">{site.name}</p>
+            </div>
             <p className="mt-5 max-w-sm text-sm leading-7 text-cream/70">{site.tagline}</p>
             <p className="mt-4 text-sm leading-relaxed text-cream/50">{site.address.label}</p>
           </div>
