@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { fetchSlots, updateAppointment } from "@/actions/booking";
+import { formControl, formSubmitInline } from "@/components/ui/form-styles";
 
 export function AppointmentManager({
   token,
@@ -31,7 +32,7 @@ export function AppointmentManager({
           type="date"
           value={date}
           onChange={(event) => setDate(event.target.value)}
-          className="rounded-lg border border-deep/15 bg-transparent px-4 py-3"
+          className={formControl}
         />
         <button
           type="button"
@@ -45,7 +46,7 @@ export function AppointmentManager({
             const result = await updateAppointment(token, "reschedule", first.start);
             setMessage(result.error ?? `Moved to ${first.label}.`);
           }}
-          className="rounded-lg bg-tint px-5 py-3 text-[11px] tracking-[0.18em] uppercase"
+          className={formSubmitInline}
         >
           Move to first open hour
         </button>

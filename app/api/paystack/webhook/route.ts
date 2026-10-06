@@ -1,5 +1,17 @@
+import { handlePaystackWebhookCharge } from "@/lib/payments";
 import { verifyPaystackSignature } from "@/lib/paystack";
-import { tryPrisma } from "@/lib/db";
+
+export const runtime = "nodejs";
+
+type PaystackEvent = {
+  event: string;
+  data?: {
+    reference?: string;
+    status?: string;
+    amount?: number;
+    currency?: string;
+  };
+};
 
 export async function POST(request: Request) {
   const raw = await request.text();
@@ -7,43 +19,47 @@ export async function POST(request: Request) {
 
   try {
     if (!verifyPaystackSignature(raw, signature)) {
-      return Response.json({ error: "Invalid signature" }, { status: 400 });
+      return Response.json({ error: "Invalid signature" }, { status: 401 });
     }
   } catch {
-    return Response.json({ error: "Paystack is not configured" }, { status: 400 });
+    return Response.json({ error: "Paystack is not configured" }, { status: 503 });
   }
 
-  const event = JSON.parse(raw) as {
-    event: string;
-    data: { reference: string; status: string };
-  };
+  let event: PaystackEvent;
+  try {
+    event = JSON.parse(raw) as PaystackEvent;
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-  const prisma = await tryPrisma();
-  if (!prisma) return Response.json({ received: true });
+  const data = event.data;
+  if (!data?.reference || !data.status || typeof data.amount !== "number") {
+    return Response.json({ received: true, ignored: true });
+  }
 
-  const payment = await prisma.payment.findUnique({
-    where: { paystackReference: event.data.reference },
-  });
-  if (!payment) return Response.json({ received: true });
-
-  if (event.event === "charge.success" && event.data.status === "success") {
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: { status: "PAID" },
+  if (event.event === "charge.success" || event.event === "charge.failed") {
+    const result = await handlePaystackWebhookCharge({
+      reference: data.reference,
+      status: data.status,
+      amount: data.amount,
+      currency: data.currency ?? "NGN",
     });
-    if (payment.orderId) {
-      await prisma.order.update({
-        where: { id: payment.orderId },
-        data: { status: "PAID" },
-      });
-    }
-    if (payment.appointmentId) {
-      await prisma.appointment.update({
-        where: { id: payment.appointmentId },
-        data: { status: "CONFIRMED" },
-      });
+
+    if (!result.ok && result.error === "amount_mismatch") {
+      return Response.json({ error: "Amount mismatch" }, { status: 422 });
     }
   }
 
   return Response.json({ received: true });
+}
+
+export async function GET() {
+  return Response.json(
+    {
+      ok: true,
+      message: "Paystack webhook endpoint. POST signed events from Paystack only.",
+      url: "/api/paystack/webhook",
+    },
+    { status: 200 },
+  );
 }

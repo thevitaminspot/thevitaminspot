@@ -1,15 +1,17 @@
-import { getSessionUser } from "@/lib/supabase/server";
+import "server-only";
+import { notFound, redirect } from "next/navigation";
+import { getAdminProfile, getSessionProfile, hasClerk } from "@/lib/auth";
+import type { SessionProfile } from "@/lib/auth";
 
 export async function getAdminUser() {
-  const user = await getSessionUser();
-  if (user) return user;
+  return getAdminProfile();
+}
 
-  return {
-    id: "local-preview",
-    email: "preview@localhost",
-    app_metadata: {},
-    user_metadata: {},
-    aud: "authenticated",
-    created_at: "",
-  };
+export async function requireAdmin(): Promise<SessionProfile> {
+  if (!hasClerk()) notFound();
+  const profile = await getSessionProfile();
+  if (!profile) redirect("/login");
+  const admin = await getAdminProfile();
+  if (!admin) redirect("/account");
+  return admin;
 }

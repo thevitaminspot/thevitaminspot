@@ -3,8 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { subscribeNotes } from "@/actions/contact";
 import { brand } from "@/lib/brand";
 import { site, whatsappHref } from "@/lib/site";
 
@@ -14,14 +12,8 @@ const links = [
   { href: "/contact", label: "Contact" },
 ];
 
-const outline =
-  "[filter:drop-shadow(1px_0_0_#fff)_drop-shadow(-1px_0_0_#fff)_drop-shadow(0_1px_0_#fff)_drop-shadow(0_-1px_0_#fff)]";
-
 export function Footer({ packs }: { packs: { href: string; label: string }[] }) {
   const pathname = usePathname();
-  const [email, setEmail] = useState("");
-  const [note, setNote] = useState("");
-  const [pending, setPending] = useState(false);
 
   if (pathname.startsWith("/admin")) return null;
 
@@ -36,12 +28,12 @@ export function Footer({ packs }: { packs: { href: string; label: string }[] }) 
                 alt={brand.logo.alt}
                 width={36}
                 height={47}
-                className={`h-12 w-auto object-contain ${outline}`}
+                className="h-12 w-auto object-contain"
               />
               <p className="font-display text-3xl leading-none">{site.name}</p>
             </div>
             <p className="mt-5 max-w-sm text-sm leading-7 text-cream/70">{site.tagline}</p>
-            <p className="mt-4 text-sm text-cream/50">{site.address.city}</p>
+            <p className="mt-4 text-sm leading-relaxed text-cream/50">{site.address.label}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-8">
@@ -103,43 +95,8 @@ export function Footer({ packs }: { packs: { href: string; label: string }[] }) 
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col gap-5 border-t border-cream/15 pt-6 md:flex-row md:items-end md:justify-between">
+        <div className="mt-14 border-t border-cream/15 pt-6">
           <p className="text-xs text-cream/45">© 2026 The Vitamin Spot. All rights reserved.</p>
-          <form
-            className="w-full max-w-sm"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setPending(true);
-              setNote("");
-              const result = await subscribeNotes(email);
-              setPending(false);
-              setNote(result.error ?? "Noted.");
-              if (!result.error) setEmail("");
-            }}
-          >
-            <div className="flex overflow-hidden rounded-lg border border-cream/20">
-              <label className="sr-only" htmlFor="footer-email">
-                Email address
-              </label>
-              <input
-                id="footer-email"
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="Email address"
-                className="min-w-0 flex-1 bg-transparent px-4 py-2 text-sm text-cream outline-none placeholder:text-cream/40"
-              />
-              <button
-                type="submit"
-                disabled={pending}
-                className="shrink-0 bg-cream px-4 py-2 text-sm text-deep disabled:opacity-60"
-              >
-                {pending ? "Sending" : "Subscribe"}
-              </button>
-            </div>
-            {note ? <p className="mt-2 text-xs text-cream/60">{note}</p> : null}
-          </form>
         </div>
       </div>
     </footer>

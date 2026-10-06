@@ -1,6 +1,13 @@
 import { Faq, ProductStories, WalkIn } from "@/components/home/home-sections";
 import { Hero } from "@/components/home/hero";
 import { listProducts } from "@/lib/data";
+import { site } from "@/lib/site";
+
+export const metadata = {
+  title: "Vitamin packs and IV drips in Abuja",
+  description: site.description,
+  alternates: { canonical: "/" },
+};
 
 function nairaLabel(kobo: number) {
   const amount = Math.round(kobo / 100).toString();

@@ -1,16 +1,17 @@
 import { BlockDateForm } from "@/components/admin/block-date-form";
-import { getAdminUser } from "@/lib/admin";
+import { DatabaseSetup } from "@/components/admin/setup";
+import { requireAdmin } from "@/lib/admin";
 import { getRules } from "@/lib/availability";
 import { tryPrisma } from "@/lib/db";
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default async function AdminAvailabilityPage() {
-  const admin = await getAdminUser();
-  if (!admin) return <p>Sign in to manage hours.</p>;
-  const rules = await getRules();
+  await requireAdmin();
   const prisma = await tryPrisma();
-  const blocked = prisma ? await prisma.blockedDate.findMany() : [];
+  if (!prisma) return <DatabaseSetup />;
+  const rules = await getRules();
+  const blocked = await prisma.blockedDate.findMany();
 
   return (
     <div>

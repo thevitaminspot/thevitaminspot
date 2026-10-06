@@ -1,18 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { getAdminUser } from "@/lib/admin";
-import { categories, type CatalogInfusion, type CatalogProduct } from "@/lib/catalog";
+import { getAdminProfile } from "@/lib/auth";
+import { categories, type CatalogInfusion } from "@/lib/catalog";
 import { tryPrisma } from "@/lib/db";
-import {
-  readLocalAppointments,
-  updateLocalAppointment,
-  withInfusions,
-  withProducts,
-} from "@/lib/local-store";
+import { escapeHtml, sendBookingConfirmed, sendMail, sendOrderUpdate } from "@/lib/email";
+import { uploadImage } from "@/lib/images";
 import { nairaToKobo } from "@/lib/money";
+import { seedCatalog } from "@/lib/seed-catalog";
+import { site } from "@/lib/site";
 import type { AppointmentStatus, OrderStatus } from "@/lib/generated/prisma/client";
 
 function slugify(value: string) {
@@ -30,6 +26,8 @@ function refreshShop(slug?: string) {
   revalidatePath("/admin");
   revalidatePath("/admin/products");
   revalidatePath("/admin/infusions");
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/zones");
   revalidatePath("/infusions");
   if (slug) revalidatePath(`/shop/${slug}`);
 }
@@ -42,19 +40,39 @@ function lines(value: string) {
 }
 
 async function guard() {
-  const admin = await getAdminUser();
-  if (!admin) return { error: "Forbidden" as const };
+  const admin = await getAdminProfile();
+  if (!admin) return { error: "Sign in with an admin account." as const };
   return null;
+}
+
+async function database() {
+  const denied = await guard();
+  if (denied) return denied;
+  const prisma = await tryPrisma();
+  if (!prisma) {
+    return { error: "Connect Neon with DATABASE_URL before saving." as const };
+  }
+  return prisma;
 }
 
 function knownCategory(slug: string) {
   return categories.find((item) => item.slug === slug) ?? null;
 }
 
+export async function seedCatalogue() {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const result = await seedCatalog(prisma);
+  refreshShop();
+  revalidatePath("/admin/appointments");
+  return { ok: true as const, created: result.created };
+}
+
 export async function updateProduct(input: {
   id: string;
   name: string;
   priceNaira: number;
+  compareAtPriceNaira?: number;
   stock: number;
   tagline: string;
   description: string;
@@ -62,11 +80,12 @@ export async function updateProduct(input: {
   ingredients: string;
   usage: string;
   featured: boolean;
+  isActive?: boolean;
   categorySlug: string;
   images: { url: string; alt: string }[];
 }) {
-  const denied = await guard();
-  if (denied) return denied;
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
   const name = input.name.trim();
   if (name.length < 2) return { error: "Name is too short." };
   if (!Number.isFinite(input.priceNaira) || input.priceNaira < 0) {
@@ -79,79 +98,47 @@ export async function updateProduct(input: {
   if (images.length === 0) return { error: "Add at least one picture." };
   const category = knownCategory(input.categorySlug);
   if (!category) return { error: "Pick a category." };
-  const benefits = lines(input.benefits);
-  const ingredients = lines(input.ingredients);
-  const usage = input.usage.trim();
-  const tagline = input.tagline.trim();
-  const description = input.description.trim();
 
-  const prisma = await tryPrisma();
-  if (prisma) {
-    const existing = await prisma.product.findUnique({ where: { id: input.id } });
-    if (existing) {
-      const categoryRow =
-        (await prisma.productCategory.findUnique({ where: { slug: category.slug } })) ??
-        (await prisma.productCategory.create({
-          data: {
-            name: category.name,
-            slug: category.slug,
-            description: category.description,
-          },
-        }));
-      await prisma.product.update({
-        where: { id: input.id },
-        data: {
-          name,
-          tagline,
-          description,
-          usage,
-          benefits,
-          ingredients,
-          featured: input.featured,
-          categoryId: categoryRow.id,
-          price: nairaToKobo(input.priceNaira),
-          stock: input.stock,
-          images: {
-            deleteMany: {},
-            create: images.map((image, position) => ({
-              url: image.url.trim(),
-              alt: image.alt.trim() || name,
-              position,
-            })),
-          },
-        },
-      });
-      refreshShop(existing.slug);
-      return { ok: true as const };
-    }
-  }
+  const existing = await prisma.product.findUnique({ where: { id: input.id } });
+  if (!existing) return { error: "Product not found." };
 
-  let slug = "";
-  const result = await withProducts((rows) => {
-    const index = rows.findIndex((row) => row.id === input.id);
-    if (index < 0) return { error: "Product not found." };
-    slug = rows[index].slug;
-    rows[index] = {
-      ...rows[index],
+  const categoryRow =
+    (await prisma.productCategory.findUnique({ where: { slug: category.slug } })) ??
+    (await prisma.productCategory.create({
+      data: {
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
+      },
+    }));
+
+  await prisma.product.update({
+    where: { id: input.id },
+    data: {
       name,
-      tagline,
-      description,
-      usage,
-      benefits,
-      ingredients,
+      tagline: input.tagline.trim(),
+      description: input.description.trim(),
+      usage: input.usage.trim(),
+      benefits: lines(input.benefits),
+      ingredients: lines(input.ingredients),
       featured: input.featured,
-      categorySlug: category.slug,
+      isActive: input.isActive ?? existing.isActive,
+      categoryId: categoryRow.id,
       price: nairaToKobo(input.priceNaira),
+      compareAtPrice: input.compareAtPriceNaira ? nairaToKobo(input.compareAtPriceNaira) : null,
       stock: input.stock,
-      images: images.map((image) => ({
-        url: image.url.trim(),
-        alt: image.alt.trim() || name,
-      })),
-    };
-    return rows;
+      images: {
+        deleteMany: {},
+        create: images.map((image, position) => ({
+          url: image.url.trim(),
+          alt: image.alt.trim() || name,
+          position,
+        })),
+      },
+    },
   });
-  if ("ok" in result) refreshShop(slug);
-  return result;
+  refreshShop(existing.slug);
+  return { ok: true as const };
 }
 
 export async function uploadProductImage(formData: FormData) {
@@ -159,20 +146,13 @@ export async function uploadProductImage(formData: FormData) {
   if (denied) return denied;
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Choose an image." };
-  if (!file.type.startsWith("image/")) return { error: "That file is not an image." };
-  if (file.size > 8_000_000) return { error: "Image must be under 8MB." };
-  const ext =
-    file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-  const filename = `${Date.now().toString(36)}.${ext}`;
-  const dir = path.join(process.cwd(), "public/images/uploads");
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), Buffer.from(await file.arrayBuffer()));
-  return { url: `/images/uploads/${filename}` };
+  return uploadImage(file);
 }
 
 export async function createProduct(input: {
   name: string;
   priceNaira: number;
+  compareAtPriceNaira?: number;
   stock: number;
   tagline: string;
   description: string;
@@ -180,11 +160,12 @@ export async function createProduct(input: {
   ingredients: string;
   usage: string;
   featured: boolean;
+  isActive?: boolean;
   categorySlug: string;
   images: { url: string; alt: string }[];
 }) {
-  const denied = await guard();
-  if (denied) return denied;
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
   const name = input.name.trim();
   if (name.length < 2) return { error: "Name is too short." };
   if (!Number.isFinite(input.priceNaira) || input.priceNaira <= 0) {
@@ -197,101 +178,86 @@ export async function createProduct(input: {
   if (!category) return { error: "Pick a category." };
   const images = input.images.filter((image) => image.url.trim());
   if (images.length === 0) return { error: "Add at least one picture." };
-  const tagline = input.tagline.trim();
-  const description = input.description.trim() || tagline || name;
-  const benefits = lines(input.benefits);
-  const ingredients = lines(input.ingredients);
-  const usage = input.usage.trim();
 
-  const slugBase = slugify(name);
-  const prisma = await tryPrisma();
-  if (prisma) {
-    const categoryRow =
-      (await prisma.productCategory.findUnique({ where: { slug: category.slug } })) ??
-      (await prisma.productCategory.create({
-        data: {
-          name: category.name,
-          slug: category.slug,
-          description: category.description,
-        },
-      }));
-    const slug = `${slugBase}-${Date.now().toString(36)}`;
-    await prisma.product.create({
+  const categoryRow =
+    (await prisma.productCategory.findUnique({ where: { slug: category.slug } })) ??
+    (await prisma.productCategory.create({
       data: {
-        name,
-        slug,
-        tagline,
-        description,
-        benefits,
-        ingredients,
-        usage,
-        featured: input.featured,
-        price: nairaToKobo(input.priceNaira),
-        stock: input.stock,
-        sku: slug.toUpperCase(),
-        categoryId: categoryRow.id,
-        images: {
-          create: images.map((image, position) => ({
-            url: image.url.trim(),
-            alt: image.alt.trim() || name,
-            position,
-          })),
-        },
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
       },
-    });
-    refreshShop();
-    return { ok: true as const };
-  }
-
-  const result = await withProducts((rows) => {
-    let slug = slugBase;
-    if (rows.some((row) => row.slug === slug)) slug = `${slugBase}-${rows.length + 1}`;
-    const product: CatalogProduct = {
-      id: `prod-${Date.now().toString(36)}`,
+    }));
+  const slug = `${slugify(name)}-${Date.now().toString(36)}`;
+  await prisma.product.create({
+    data: {
       name,
       slug,
-      tagline,
-      description,
-      benefits,
-      ingredients,
-      usage,
-      price: nairaToKobo(input.priceNaira),
-      sku: slug.toUpperCase(),
-      stock: input.stock,
+      tagline: input.tagline.trim(),
+      description: input.description.trim() || input.tagline.trim() || name,
+      benefits: lines(input.benefits),
+      ingredients: lines(input.ingredients),
+      usage: input.usage.trim(),
       featured: input.featured,
-      categorySlug: category.slug,
-      images: images.map((image) => ({
-        url: image.url.trim(),
-        alt: image.alt.trim() || name,
-      })),
-    };
-    return [product, ...rows];
+      isActive: input.isActive ?? true,
+      price: nairaToKobo(input.priceNaira),
+      compareAtPrice: input.compareAtPriceNaira ? nairaToKobo(input.compareAtPriceNaira) : null,
+      stock: input.stock,
+      sku: slug.toUpperCase(),
+      categoryId: categoryRow.id,
+      images: {
+        create: images.map((image, position) => ({
+          url: image.url.trim(),
+          alt: image.alt.trim() || name,
+          position,
+        })),
+      },
+    },
   });
-  if ("ok" in result) refreshShop();
-  return result;
+  refreshShop();
+  return { ok: true as const };
+}
+
+export async function updateProductStock(id: string, newStock: number) {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  if (!Number.isInteger(newStock) || newStock < 0) {
+    return { error: "Stock must be a positive integer." };
+  }
+  await prisma.product.update({
+    where: { id },
+    data: { stock: newStock },
+  });
+  refreshShop();
+  return { ok: true as const };
+}
+
+export async function toggleProductActive(id: string) {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const existing = await prisma.product.findUnique({ where: { id } });
+  if (!existing) return { error: "Product not found." };
+  await prisma.product.update({
+    where: { id },
+    data: { isActive: !existing.isActive },
+  });
+  refreshShop(existing.slug);
+  return { ok: true as const, isActive: !existing.isActive };
 }
 
 export async function deleteProduct(id: string) {
-  const denied = await guard();
-  if (denied) return denied;
-
-  const prisma = await tryPrisma();
-  if (prisma) {
-    const existing = await prisma.product.findUnique({ where: { id } });
-    if (existing) {
-      await prisma.product.delete({ where: { id } });
-      refreshShop();
-      return { ok: true as const };
-    }
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const existing = await prisma.product.findUnique({ where: { id } });
+  if (!existing) return { error: "Product not found." };
+  const sold = await prisma.orderItem.count({ where: { productId: id } });
+  if (sold > 0) {
+    await prisma.product.update({ where: { id }, data: { isActive: false, stock: 0 } });
+  } else {
+    await prisma.product.delete({ where: { id } });
   }
-
-  const result = await withProducts((rows) => {
-    const next = rows.filter((row) => row.id !== id);
-    if (next.length === rows.length) return { error: "Product not found." };
-    return next;
-  });
-  if ("ok" in result) refreshShop();
-  return result;
+  refreshShop(existing.slug);
+  return { ok: true as const };
 }
 
 type InfusionInput = {
@@ -334,120 +300,99 @@ function readInfusion(input: InfusionInput) {
 }
 
 export async function updateInfusion(input: InfusionInput & { id: string }) {
-  const denied = await guard();
-  if (denied) return denied;
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
   const fields = readInfusion(input);
   if ("error" in fields) return fields;
-
-  const prisma = await tryPrisma();
-  if (prisma) {
-    const existing = await prisma.infusionService.findUnique({ where: { id: input.id } });
-    if (existing) {
-      await prisma.infusionService.update({
-        where: { id: input.id },
-        data: fields,
-      });
-      refreshShop();
-      return { ok: true as const };
-    }
-  }
-
-  const result = await withInfusions((rows) => {
-    const index = rows.findIndex((row) => row.id === input.id);
-    if (index < 0) return { error: "Infusion not found." };
-    rows[index] = { ...rows[index], ...fields };
-    return rows;
-  });
-  if ("ok" in result) refreshShop();
-  return result;
+  const existing = await prisma.infusionService.findUnique({ where: { id: input.id } });
+  if (!existing) return { error: "Infusion not found." };
+  await prisma.infusionService.update({ where: { id: input.id }, data: fields });
+  refreshShop();
+  return { ok: true as const };
 }
 
 export async function createInfusion(input: InfusionInput) {
-  const denied = await guard();
-  if (denied) return denied;
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
   const fields = readInfusion(input);
   if ("error" in fields) return fields;
-
-  const slugBase = slugify(fields.name);
-  const prisma = await tryPrisma();
-  if (prisma) {
-    const slug = `${slugBase}-${Date.now().toString(36)}`;
-    await prisma.infusionService.create({
-      data: { ...fields, slug, isActive: true },
-    });
-    refreshShop();
-    return { ok: true as const };
-  }
-
-  const result = await withInfusions((rows) => {
-    let slug = slugBase;
-    if (rows.some((row) => row.slug === slug)) slug = `${slugBase}-${rows.length + 1}`;
-    const infusion: CatalogInfusion = {
-      id: `drip-${Date.now().toString(36)}`,
-      slug,
-      featured: false,
-      isActive: true,
-      ...fields,
-    };
-    return [infusion, ...rows];
+  const slug = `${slugify(fields.name)}-${Date.now().toString(36)}`;
+  await prisma.infusionService.create({
+    data: { ...fields, slug, isActive: true },
   });
-  if ("ok" in result) refreshShop();
-  return result;
+  refreshShop();
+  return { ok: true as const };
 }
 
 export async function deleteInfusion(id: string) {
-  const denied = await guard();
-  if (denied) return denied;
-
-  const prisma = await tryPrisma();
-  if (prisma) {
-    const existing = await prisma.infusionService.findUnique({ where: { id } });
-    if (existing) {
-      try {
-        await prisma.infusionService.delete({ where: { id } });
-      } catch {
-        await prisma.infusionService.update({ where: { id }, data: { isActive: false } });
-      }
-      refreshShop();
-      return { ok: true as const };
-    }
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const existing = await prisma.infusionService.findUnique({ where: { id } });
+  if (!existing) return { error: "Infusion not found." };
+  const booked = await prisma.appointment.count({ where: { serviceId: id } });
+  if (booked > 0) {
+    await prisma.infusionService.update({ where: { id }, data: { isActive: false } });
+  } else {
+    await prisma.infusionService.delete({ where: { id } });
   }
-
-  const result = await withInfusions((rows) => {
-    const next = rows.filter((row) => row.id !== id);
-    if (next.length === rows.length) return { error: "Infusion not found." };
-    return next;
-  });
-  if ("ok" in result) refreshShop();
-  return result;
+  refreshShop();
+  return { ok: true as const };
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus) {
-  const denied = await guard();
-  if (denied) return denied;
-  const prisma = await tryPrisma();
-  if (!prisma) return { error: "Database is not configured." };
-  await prisma.order.update({ where: { id }, data: { status } });
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const order = await prisma.order.update({ where: { id }, data: { status } });
+  await sendOrderUpdate({
+    to: order.email,
+    name: order.name,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    total: order.total,
+    trackUrl: `${site.url}/orders/${order.accessToken}`,
+  }).catch(() => undefined);
   revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${id}`);
   return { ok: true as const };
 }
 
 export async function updateAppointmentStatus(id: string, status: AppointmentStatus) {
-  const denied = await guard();
-  if (denied) return denied;
-  const prisma = await tryPrisma();
-  if (prisma) {
-    const existing = await prisma.appointment.findUnique({ where: { id } });
-    if (existing) {
-      await prisma.appointment.update({ where: { id }, data: { status } });
-      revalidatePath("/admin/appointments");
-      return { ok: true as const };
-    }
-  }
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const existing = await prisma.appointment.findUnique({
+    where: { id },
+    include: { service: true, payment: true },
+  });
+  if (!existing) return { error: "Appointment not found." };
+  const manageUrl = `${site.url}/appointments/${existing.accessToken}`;
+  const depositPaid =
+    existing.payment?.status === "PAID" ? existing.payment.amount : undefined;
+  const depositDue =
+    existing.service.deposit > 0 && existing.payment?.status !== "PAID"
+      ? existing.service.deposit
+      : undefined;
+  await prisma.appointment.update({ where: { id }, data: { status } });
 
-  const updated = await updateLocalAppointment(id, { status });
-  if (!updated) return { error: "Appointment not found." };
+  if (status === "CONFIRMED" && existing.status !== "CONFIRMED") {
+    await sendBookingConfirmed({
+      to: existing.email,
+      name: existing.name,
+      serviceName: existing.service.name,
+      startsAt: existing.startsAt,
+      manageUrl,
+      depositPaid,
+      depositDue,
+      sessionPrice: existing.service.price,
+    }).catch(() => undefined);
+  } else if (status === "CANCELLED" && existing.status !== "CANCELLED") {
+    await sendMail({
+      to: existing.email,
+      subject: `Booking cancelled — ${existing.service.name}`,
+      html: `<p>Dear ${escapeHtml(existing.name)},</p><p>Your ${escapeHtml(existing.service.name)} on ${escapeHtml(existing.startsAt.toLocaleString("en-NG"))} has been cancelled.</p><p><a href="${escapeHtml(manageUrl)}">View the booking</a></p>`,
+    }).catch(() => undefined);
+  }
   revalidatePath("/admin/appointments");
+  revalidatePath("/admin");
   return { ok: true as const };
 }
 
@@ -456,50 +401,96 @@ export async function acceptAppointment(id: string) {
 }
 
 export async function listAdminAppointments() {
-  const denied = await guard();
-  if (denied) return [];
+  const admin = await getAdminProfile();
+  if (!admin) return [];
   const prisma = await tryPrisma();
-  if (prisma) {
-    const rows = await prisma.appointment.findMany({
-      include: { service: true },
-      orderBy: { startsAt: "asc" },
-      take: 50,
-    });
-    if (rows.length > 0) {
-      return rows.map((row) => ({
-        id: row.id,
-        startsAt: row.startsAt.toISOString(),
-        name: row.name,
-        email: row.email,
-        status: row.status,
-        serviceName: row.service.name,
-      }));
-    }
-  }
-
-  const local = await readLocalAppointments();
-  return local
-    .slice()
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-    .map((row) => ({
-      id: row.id,
-      startsAt: row.startsAt,
-      name: row.name,
-      email: row.email,
-      status: row.status,
-      serviceName: row.serviceName,
-    }));
+  if (!prisma) return [];
+  const rows = await prisma.appointment.findMany({
+    include: { service: true, payment: true },
+    orderBy: { startsAt: "asc" },
+    take: 80,
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    startsAt: row.startsAt.toISOString(),
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    status: row.status,
+    serviceName: row.service.name,
+    deposit: row.service.deposit,
+    sessionPrice: row.service.price,
+    depositPaid: row.payment?.status === "PAID" ? row.payment.amount : null,
+  }));
 }
 
 export async function blockDate(date: string, reason?: string) {
-  const denied = await guard();
-  if (denied) return denied;
-  const prisma = await tryPrisma();
-  if (!prisma) return { error: "Database is not configured." };
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
   await prisma.blockedDate.upsert({
     where: { date: new Date(date) },
     update: { reason },
     create: { date: new Date(date), reason },
   });
+  revalidatePath("/admin/availability");
+  return { ok: true as const };
+}
+
+export async function updateZone(input: { id: string; feeNaira: number; eta: string; isActive: boolean }) {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  if (!Number.isFinite(input.feeNaira) || input.feeNaira < 0) {
+    return { error: "Enter a delivery fee in naira." };
+  }
+  await prisma.deliveryZone.update({
+    where: { id: input.id },
+    data: {
+      fee: nairaToKobo(input.feeNaira),
+      eta: input.eta.trim() || "Same day",
+      isActive: input.isActive,
+    },
+  });
+  revalidatePath("/admin/zones");
+  revalidatePath("/checkout");
+  return { ok: true as const };
+}
+
+export async function createZone(input: { name: string; feeNaira: number; eta: string; isActive: boolean }) {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const name = input.name.trim();
+  if (name.length < 2) return { error: "Zone name is required." };
+  if (!Number.isFinite(input.feeNaira) || input.feeNaira < 0) {
+    return { error: "Enter a delivery fee in naira." };
+  }
+  const slug = slugify(name);
+  const existing = await prisma.deliveryZone.findUnique({ where: { slug } });
+  if (existing) return { error: "A delivery zone with this name already exists." };
+
+  await prisma.deliveryZone.create({
+    data: {
+      name,
+      slug,
+      fee: nairaToKobo(input.feeNaira),
+      eta: input.eta.trim() || "Same day delivery",
+      isActive: input.isActive,
+    },
+  });
+  revalidatePath("/admin/zones");
+  revalidatePath("/checkout");
+  return { ok: true as const };
+}
+
+export async function deleteZone(id: string) {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const used = await prisma.order.count({ where: { deliveryZoneId: id } });
+  if (used > 0) {
+    await prisma.deliveryZone.update({ where: { id }, data: { isActive: false } });
+  } else {
+    await prisma.deliveryZone.delete({ where: { id } });
+  }
+  revalidatePath("/admin/zones");
+  revalidatePath("/checkout");
   return { ok: true as const };
 }

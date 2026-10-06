@@ -1,64 +1,52 @@
-"use client";
+import { SignIn } from "@clerk/nextjs";
+import Link from "next/link";
+import { hasClerk } from "@/lib/env";
 
-import { useState } from "react";
-import { createSupabaseBrowser } from "@/lib/supabase/client";
+export const metadata = { title: "Sign in" };
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  if (!hasClerk()) {
+    return (
+      <main className="mx-auto max-w-lg px-5 py-20 text-center">
+        <h1 className="font-display text-4xl text-deep">Sign in</h1>
+        <p className="mt-4 leading-relaxed text-deep/70">
+          Add <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> and <code>CLERK_SECRET_KEY</code> to
+          open accounts. You can still shop and book as a guest.
+        </p>
+      </main>
+    );
+  }
 
   return (
-    <main className="mx-auto max-w-md px-5 py-20">
-      <h1 className="font-display text-5xl">Your account</h1>
-      <p className="mt-4 text-deep/70">
-        You can still shop and book without one.
-      </p>
-      <form
-        className="mt-8 space-y-4"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          const supabase = createSupabaseBrowser();
-          if (!supabase) {
-            setMessage("Add Supabase keys to enable login.");
-            return;
-          }
-          const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-          });
-          setMessage(error?.message ?? "Check your email for a quiet door.");
-        }}
-      >
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Email"
-          className="w-full rounded-lg border border-deep/15 px-5 py-3"
-        />
-        <button className="w-full rounded-lg bg-deep py-3 text-[11px] tracking-[0.18em] text-cream uppercase">
-          Email a magic link
-        </button>
-      </form>
-      <button
-        type="button"
-        className="mt-4 w-full rounded-lg border border-deep/15 py-3 text-[11px] tracking-[0.18em] uppercase"
-        onClick={async () => {
-          const supabase = createSupabaseBrowser();
-          if (!supabase) {
-            setMessage("Add Supabase keys to enable Google.");
-            return;
-          }
-          await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: { redirectTo: `${window.location.origin}/auth/callback` },
-          });
-        }}
-      >
-        Continue with Google
-      </button>
-      {message ? <p className="mt-4 text-sm">{message}</p> : null}
+    <main className="grid min-h-[70vh] place-items-center px-5 py-16">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center">
+          <h1 className="font-display text-3xl text-deep md:text-4xl">Welcome back</h1>
+          <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-deep/65">
+            Sign in to see your orders and drip bookings.
+          </p>
+        </div>
+
+        <div className="flex justify-center">
+          <SignIn routing="hash" forceRedirectUrl="/account" />
+        </div>
+
+        <div className="rounded-2xl border border-deep/10 bg-white p-4 text-center text-xs text-deep/70">
+          <p className="font-medium text-deep">Shopping or booking as a guest?</p>
+          <p className="mt-1 text-deep/60">
+            You don’t need an account to buy a pack or book a drip.
+          </p>
+          <div className="mt-3 flex items-center justify-center gap-4 font-medium">
+            <Link href="/shop" className="text-deep underline hover:text-sage">
+              See the packs
+            </Link>
+            <span className="text-deep/30">·</span>
+            <Link href="/infusions" className="text-deep underline hover:text-sage">
+              Book a drip
+            </Link>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

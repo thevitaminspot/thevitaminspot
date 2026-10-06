@@ -14,14 +14,16 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "email:test": "node scripts/email-test.mjs",
+    "env:prepare-vercel": "node scripts/prepare-vercel-env.mjs",
+    "env:import-vercel": "vercel env import .env.production production --force --yes"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.11",
     "@hookform/resolvers": "^5.9.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.117.2",
     "@tanstack/react-query": "^5.104.0",
     "framer-motion": "^13.5.0",
     "lucide-react": "^1.49.0",
@@ -30,7 +32,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.89.0",
-    "resend": "^6.32.0",
+    "resend": "^6.32.1",
     "server-only": "^0.0.1",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"

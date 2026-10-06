@@ -1,10 +1,10 @@
 # The Vitamin Spot!
 
-Upscale wellness lounge and shop for Maitama, Abuja. Infusion bookings and a vitamin atelier.
+Upscale wellness lounge and shop for Abuja. Infusion bookings and a vitamin atelier.
 
 ## Stack
 
-Next.js App Router, TypeScript, Tailwind CSS, Framer Motion, Prisma, Supabase (Postgres, Auth, Storage), Paystack, Resend.
+Next.js App Router, TypeScript, Tailwind CSS, Prisma, Neon Postgres, Clerk, Cloudinary, Paystack, Resend.
 
 ## Setup
 
@@ -15,21 +15,22 @@ cp .env.example .env
 
 Fill in:
 
-- `DATABASE_URL` — Supabase Postgres connection string
-- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `DATABASE_URL` — Neon pooled Postgres connection string
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` — use **Development** (`pk_test_` / `sk_test_`) keys locally; put **Production** (`pk_live_` / `sk_live_`) keys only on Vercel
+- `NEXT_PUBLIC_APP_URL` — `http://localhost:3000` locally; `https://www.thevitaminspotltd.com` on Vercel
+- `ADMIN_EMAIL` — Clerk user allowed into `/admin` (or set public metadata `role` to `admin`)
+- `CLOUDINARY_URL` — product and session image uploads
 - `PAYSTACK_SECRET_KEY` and `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
-- `RESEND_API_KEY`
-- `ADMIN_EMAIL` — the Supabase user allowed into `/admin`
+- `RESEND_API_KEY` and `RESEND_FROM_EMAIL` — transactional email via Resend; verify `thevitaminspotltd.com` first ([RESEND_DOMAIN.md](./RESEND_DOMAIN.md))
 
 Then:
 
 ```bash
-npx prisma migrate dev --name init
-npm run db:seed
+npx prisma db push
 npm run dev
 ```
 
-The public catalogue, drip menu, and home page also read from `lib/catalog.ts`, so the site can be designed and browsed before the database is connected. Bookings, checkout, and admin writes need Prisma + Paystack.
+Open `/admin` and load the starter catalogue. That writes products, infusions, delivery zones, and hours into Neon. The public shop can still show the starter catalogue before the database is connected. Checkout, bookings, and admin saves require Neon.
 
 ## Scripts
 
@@ -38,13 +39,16 @@ npm run dev
 npm run build
 npm run typecheck
 npm run lint
-npm run db:migrate
 npm run db:seed
 ```
 
 ## Paystack webhook
 
-Point Paystack to `/api/paystack/webhook`. The handler verifies `x-paystack-signature` with HMAC SHA512.
+See [PAYSTACK_WEBHOOK.md](./PAYSTACK_WEBHOOK.md). Register:
+
+`https://www.thevitaminspotltd.com/api/paystack/webhook`
+
+The handler verifies `x-paystack-signature`, validates amount/currency, marks the order paid, and reduces stock atomically.
 
 ## WhatsApp
 

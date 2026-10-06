@@ -1,5 +1,4 @@
 import { tryPrisma } from "@/lib/db";
-import { readLocalAppointments } from "@/lib/local-store";
 
 export const DEFAULT_SLOT_MIN = 45;
 export const DEFAULT_BUFFER_MIN = 15;
@@ -61,7 +60,6 @@ export async function listSlots(dateIso: string, durationMin: number) {
     : null;
   if (blocked) return [];
 
-  const localTaken = prisma ? [] : await readLocalAppointments();
   const taken = prisma
     ? await prisma.appointment.findMany({
         where: {
@@ -72,12 +70,7 @@ export async function listSlots(dateIso: string, durationMin: number) {
           },
         },
       })
-    : localTaken
-        .filter((row) => row.status === "PENDING" || row.status === "CONFIRMED")
-        .map((row) => ({
-          startsAt: new Date(row.startsAt),
-          endsAt: new Date(row.endsAt),
-        }));
+    : [];
 
   const slots: { start: string; end: string; label: string }[] = [];
 

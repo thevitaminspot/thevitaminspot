@@ -65,7 +65,6 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "tvs-cart",
-      skipHydration: true,
       partialize: (state) => ({ items: state.items }),
     },
   ),

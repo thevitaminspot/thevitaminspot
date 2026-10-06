@@ -1,5 +1,5 @@
 import "server-only";
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { getPaystackSecret } from "@/lib/env";
 
 const PAYSTACK_API = "https://api.paystack.co";
@@ -44,8 +44,31 @@ export async function initializePaystack(input: InitializeInput) {
 
 export function verifyPaystackSignature(rawBody: string, signature: string | null) {
   if (!signature) return false;
-  const hash = createHmac("sha512", getPaystackSecret())
-    .update(rawBody)
-    .digest("hex");
-  return hash === signature;
+  const hash = createHmac("sha512", getPaystackSecret()).update(rawBody).digest("hex");
+  const expected = Buffer.from(hash);
+  const received = Buffer.from(signature);
+  if (expected.length !== received.length) return false;
+  return timingSafeEqual(expected, received);
+}
+
+export async function verifyPaystackTransaction(reference: string) {
+  const response = await fetch(
+    `${PAYSTACK_API}/transaction/verify/${encodeURIComponent(reference)}`,
+    {
+      headers: { Authorization: `Bearer ${getPaystackSecret()}` },
+      cache: "no-store",
+    },
+  );
+
+  const payload = (await response.json()) as {
+    status: boolean;
+    message: string;
+    data?: { status: string; amount: number; currency: string; reference: string };
+  };
+
+  if (!response.ok || !payload.status || !payload.data) {
+    throw new Error(payload.message || "Paystack could not verify that payment.");
+  }
+
+  return payload.data;
 }

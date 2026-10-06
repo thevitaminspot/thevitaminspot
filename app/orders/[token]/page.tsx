@@ -1,10 +1,17 @@
 import { tryPrisma } from "@/lib/db";
 import { formatNaira } from "@/lib/money";
+import { confirmPaystackReturn } from "@/lib/payments";
 
-export const metadata = { title: "Order" };
+export const metadata = { title: "Order", robots: { index: false, follow: false } };
 
-export default async function OrderPage({ params }: PageProps<"/orders/[token]">) {
+export default async function OrderPage({
+  params,
+  searchParams,
+}: PageProps<"/orders/[token]">) {
   const { token } = await params;
+  const query = await searchParams;
+  const reference = typeof query.reference === "string" ? query.reference : query.trxref;
+  await confirmPaystackReturn(typeof reference === "string" ? reference : undefined);
   const prisma = await tryPrisma();
   const order = prisma
     ? await prisma.order.findUnique({

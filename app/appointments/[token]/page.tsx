@@ -1,32 +1,42 @@
 import { AppointmentManager } from "@/components/booking/appointment-manager";
+import { PayDepositButton } from "@/components/booking/pay-deposit-button";
 import { findInfusion } from "@/lib/data";
 import { tryPrisma } from "@/lib/db";
 import { findLocalAppointment } from "@/lib/local-store";
+import { confirmPaystackReturn } from "@/lib/payments";
 import { whatsappHref } from "@/lib/site";
 
-export const metadata = { title: "Your appointment" };
+export const metadata = { title: "Your appointment", robots: { index: false, follow: false } };
 
 export default async function AppointmentPage({
   params,
+  searchParams,
 }: PageProps<"/appointments/[token]">) {
   const { token } = await params;
+  const query = await searchParams;
+  const reference = typeof query.reference === "string" ? query.reference : query.trxref;
+  await confirmPaystackReturn(typeof reference === "string" ? reference : undefined);
   const prisma = await tryPrisma();
   const row = prisma
     ? await prisma.appointment.findUnique({
         where: { accessToken: token },
-        include: { service: true },
+        include: { service: true, payment: true },
       })
     : null;
   const local = row ? null : await findLocalAppointment(token);
+  const paidDeposit = row?.payment?.status === "PAID";
   const appointment = row
     ? {
         status: row.status,
         serviceName: row.service.name,
         serviceSlug: row.service.slug,
         durationMin: row.service.durationMin,
+        deposit: row.service.deposit,
         startsAt: row.startsAt,
         name: row.name,
         email: row.email,
+        showPayDeposit:
+          row.status === "PENDING" && !paidDeposit && row.service.deposit > 0,
       }
     : local
       ? {
@@ -57,11 +67,14 @@ export default async function AppointmentPage({
         <br />
         {appointment.name} · {appointment.email}
       </p>
+      {"showPayDeposit" in appointment && appointment.showPayDeposit ? (
+        <PayDepositButton token={token} deposit={appointment.deposit} />
+      ) : null}
       <a
         href={whatsappHref(
           `My Vitamin Spot booking is ${appointment.serviceName} on ${appointment.startsAt.toLocaleString("en-NG")}.`,
         )}
-        className="mt-6 inline-flex rounded-lg bg-deep px-5 py-3 text-[11px] tracking-[0.18em] text-cream uppercase"
+        className="mt-6 inline-flex rounded-lg border border-deep/15 px-5 py-3 text-[11px] tracking-[0.18em] text-deep uppercase"
       >
         Share on WhatsApp
       </a>

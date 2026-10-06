@@ -2,17 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AccountButton } from "@/components/layout/account-button";
 
 const links = [
   { href: "/admin", label: "Today" },
+  { href: "/admin/orders", label: "Orders" },
   { href: "/admin/products", label: "Products" },
+  { href: "/admin/customers", label: "Customers" },
+  { href: "/admin/zones", label: "Delivery" },
   { href: "/admin/infusions", label: "Infusions" },
   { href: "/admin/appointments", label: "Bookings" },
-  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/messages", label: "Messages" },
   { href: "/admin/availability", label: "Hours" },
 ];
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  children,
+  email,
+}: {
+  children: React.ReactNode;
+  email?: string;
+}) {
   const pathname = usePathname();
 
   return (
@@ -43,6 +53,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             View shop
           </Link>
         </nav>
+        <div className="hidden items-center gap-3 px-5 pb-6 md:flex">
+          <AccountButton />
+          {email ? <span className="truncate text-xs text-deep/45">{email}</span> : null}
+        </div>
       </aside>
       <div className="mx-auto w-full max-w-5xl px-5 py-8 md:px-8">{children}</div>
     </div>

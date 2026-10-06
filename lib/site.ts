@@ -2,7 +2,8 @@ export const site = {
   name: "The Vitamin Spot",
   legalName: "The Vitamin Spot",
   tagline: "Supplements and vitamins in Abuja. IV if you want one.",
-  description: "The Vitamin Spot in Abuja. Supplements, vitamins, and IV bookings.",
+  description:
+    "The Vitamin Spot in Abuja sells vitamin packs and supplements, and books IV drip sessions. Walk in at Theodak Plaza, CBD, or shop and book online.",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   locale: "en-NG",
   currency: "NGN",
@@ -11,16 +12,22 @@ export const site = {
   whatsapp: "2348142246407",
   whatsappUs: "13129980147",
   email: "thevitaminspotltd@gmail.com",
-  instagram: "https://instagram.com/yasbeautyallure",
-  instagramHandle: "@yasbeautyallure",
+  instagram: "https://instagram.com/the_vitaminspot",
+  instagramHandle: "@the_vitaminspot",
   address: {
-    line1: "Abuja",
-    area: "FCT",
+    line1: "Theodak Plaza, Plot 1008 National Hospital Road",
+    line2: "Ali Muhammad Zarah St",
+    area: "Central Business District",
     city: "Abuja",
+    postalCode: "900103",
+    region: "Federal Capital Territory",
     country: "Nigeria",
-    mapUrl: "https://maps.google.com/?q=Abuja+Nigeria",
+    label: "Central Business District, Abuja",
+    full: "Theodak Plaza, Plot 1008 National Hospital Road, Ali Muhammad Zarah St, Central Business District, Abuja 900103, Federal Capital Territory",
+    mapUrl:
+      "https://maps.google.com/?q=Theodak+Plaza,+Plot+1008+National+Hospital+Road,+Ali+Muhammad+Zarah+St,+Central+Business+District,+Abuja+900103",
     embedUrl:
-      "https://maps.google.com/maps?q=Abuja%20Nigeria&t=&z=12&ie=UTF8&iwloc=&output=embed",
+      "https://maps.google.com/maps?q=Theodak+Plaza,+Plot+1008+National+Hospital+Road,+Ali+Muhammad+Zarah+St,+Central+Business+District,+Abuja+900103&z=16&ie=UTF8&iwloc=&output=embed",
   },
   hours: [
     { label: "Shop & IV", value: "Walk-in welcome" },

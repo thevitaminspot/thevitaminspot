@@ -21,6 +21,7 @@ export type CatalogProduct = {
   sku: string;
   stock: number;
   featured: boolean;
+  isActive?: boolean;
   categorySlug: string;
   images: { url: string; alt: string }[];
 };

@@ -3,22 +3,26 @@ import { products, infusions } from "@/lib/catalog";
 import { site } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ["", "/shop", "/infusions", "/book", "/about", "/contact"].map(
-    (path) => ({
-      url: `${site.url}${path}`,
-      lastModified: new Date(),
-    }),
-  );
+  const staticRoutes = ["", "/shop", "/infusions", "/about", "/contact"].map((path) => ({
+    url: `${site.url}${path}`,
+    lastModified: new Date(),
+    changeFrequency: path === "" ? ("weekly" as const) : ("monthly" as const),
+    priority: path === "" ? 1 : 0.8,
+  }));
 
   return [
     ...staticRoutes,
     ...products.map((product) => ({
       url: `${site.url}/shop/${product.slug}`,
       lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
     })),
     ...infusions.map((drip) => ({
-      url: `${site.url}/infusions#${drip.slug}`,
+      url: `${site.url}/infusions?drip=${drip.slug}`,
       lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.75,
     })),
   ];
 }

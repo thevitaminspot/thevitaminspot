@@ -1,17 +1,21 @@
 import { InfusionCatalog } from "@/components/admin/infusion-catalog";
-import { getAdminUser } from "@/lib/admin";
-import { listInfusions } from "@/lib/data";
+import { DatabaseSetup, SeedCatalogueButton } from "@/components/admin/setup";
+import { requireAdmin } from "@/lib/admin";
+import { listManagedInfusions } from "@/lib/data";
 import { listLibraryImages } from "@/lib/library-images";
 
+export const metadata = { title: "Infusions" };
+
 export default async function AdminInfusionsPage() {
-  const admin = await getAdminUser();
-  if (!admin) return <p>Sign in to manage infusions.</p>;
-  const [rows, library] = await Promise.all([listInfusions(), listLibraryImages()]);
+  await requireAdmin();
+  const [rows, library] = await Promise.all([listManagedInfusions(), listLibraryImages()]);
+  if (!rows) return <DatabaseSetup />;
 
   return (
     <div>
       <h1 className="font-display text-4xl">Infusions</h1>
       <p className="mt-2 text-sm text-deep/60">Price and deposit are in naira. Duration is in minutes.</p>
+      {rows.length === 0 ? <SeedCatalogueButton label="Load starter sessions" /> : null}
       <InfusionCatalog infusions={rows} library={library} />
     </div>
   );

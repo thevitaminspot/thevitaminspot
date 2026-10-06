@@ -29,7 +29,9 @@ export default function AboutPage() {
           <dl className="mt-10 grid gap-4 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-[11px] tracking-[0.2em] text-sage uppercase">Where</dt>
-              <dd className="mt-1 text-deep">Abuja. Message before you come if you want a time held.</dd>
+              <dd className="mt-1 text-deep">
+                {site.address.full}. Message before you come if you want a time held.
+              </dd>
             </div>
             <div>
               <dt className="text-[11px] tracking-[0.2em] text-sage uppercase">WhatsApp</dt>

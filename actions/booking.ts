@@ -1,18 +1,19 @@
 "use server";
 
 import { headers } from "next/headers";
-import { bookingDetailsSchema } from "@/lib/env";
+import { parseBookingDetails } from "@/lib/env";
 import { listSlots } from "@/lib/availability";
 import { findInfusion } from "@/lib/data";
 import { tryPrisma } from "@/lib/db";
-import { findLocalAppointment, readLocalAppointments, saveLocalAppointment, updateLocalAppointment } from "@/lib/local-store";
-import { sendMail } from "@/lib/email";
+import { attachCustomer, getSessionProfile } from "@/lib/auth";
+import { findLocalAppointment, updateLocalAppointment } from "@/lib/local-store";
+import { escapeHtml, sendBookingConfirmed, sendBookingReceived, sendMail } from "@/lib/email";
 import { hasPaystack } from "@/lib/env";
+import { formatNaira } from "@/lib/money";
 import { initializePaystack } from "@/lib/paystack";
 import { rateLimit } from "@/lib/rate-limit";
 import { site, whatsappHref } from "@/lib/site";
 import { createToken } from "@/lib/tokens";
-import { getSessionUser } from "@/lib/supabase/server";
 
 export async function fetchSlots(date: string, slug: string) {
   const drip = await findInfusion(slug);
@@ -35,8 +36,8 @@ export async function createBooking(input: {
     return { error: "Please wait a moment before booking again." };
   }
 
-  const details = bookingDetailsSchema.safeParse(input);
-  if (!details.success) return { error: "Please complete your details." };
+  const details = parseBookingDetails(input);
+  if (!details.ok) return { error: details.error };
 
   const drip = await findInfusion(input.slug);
   if (!drip) return { error: "That drip isn’t available." };
@@ -47,34 +48,7 @@ export async function createBooking(input: {
 
   const prisma = await tryPrisma();
   if (!prisma) {
-    const taken = await readLocalAppointments();
-    const clash = taken.some(
-      (row) =>
-        (row.status === "PENDING" || row.status === "CONFIRMED") &&
-        startsAt < new Date(row.endsAt) &&
-        endsAt > new Date(row.startsAt),
-    );
-    if (clash) return { error: "That hour has just been taken. Please choose another." };
-    const token = createToken();
-    await saveLocalAppointment({
-      id: `apt-${token.slice(0, 8)}`,
-      accessToken: token,
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-      name: details.data.name,
-      email: details.data.email,
-      phone: details.data.phone,
-      notes: details.data.notes ?? "",
-      status: "PENDING",
-      serviceName: drip.name,
-      serviceSlug: drip.slug,
-    });
-    return {
-      token,
-      whatsapp: whatsappHref(
-        `I have booked ${drip.name} at The Vitamin Spot for ${startsAt.toLocaleString("en-NG")}.`,
-      ),
-    };
+    return { error: "Bookings need the Neon database. Add DATABASE_URL and load the catalogue in admin." };
   }
 
   const clash = await prisma.appointment.findFirst({
@@ -86,7 +60,7 @@ export async function createBooking(input: {
   });
   if (clash) return { error: "That hour has just been taken. Please choose another." };
 
-  const user = await getSessionUser();
+  const user = await attachCustomer(await getSessionProfile());
   const token = createToken();
 
   const appointment = await prisma.appointment.create({
@@ -117,54 +91,66 @@ export async function createBooking(input: {
           },
         },
       },
-      ...(user?.email
-        ? {
-            user: {
-              connectOrCreate: {
-                where: { email: user.email },
-                create: {
-                  email: user.email,
-                  name: user.user_metadata?.name,
-                },
-              },
-            },
-          }
-        : {}),
+      user,
     },
   });
 
   const manageUrl = `${site.url}/appointments/${token}`;
-  await sendMail({
+  await sendBookingReceived({
     to: details.data.email,
-    subject: `Your booking at ${site.name}`,
-    html: `<p>Dear ${details.data.name},</p><p>Your ${drip.name} is held for ${startsAt.toLocaleString("en-NG")}.</p><p><a href="${manageUrl}">View or change your appointment</a></p>`,
-  });
+    name: details.data.name,
+    serviceName: drip.name,
+    startsAt,
+    manageUrl,
+    deposit: drip.deposit,
+    sessionPrice: drip.price,
+  }).catch(() => undefined);
 
-  if (input.payDeposit && drip.deposit > 0 && hasPaystack()) {
-    const reference = `apt_${appointment.id}`;
-    const payment = await initializePaystack({
-      email: details.data.email,
-      amount: drip.deposit,
-      reference,
-      callbackUrl: `${site.url}/appointments/${token}`,
-      metadata: { purpose: "APPOINTMENT_DEPOSIT", appointmentId: appointment.id },
-    });
-    await prisma.payment.create({
-      data: {
-        purpose: "APPOINTMENT_DEPOSIT",
+  await sendMail({
+    to: process.env.ADMIN_EMAIL ?? site.email,
+    subject: `New booking: ${drip.name}`,
+    html: `<p>${escapeHtml(details.data.name)} booked <strong>${escapeHtml(drip.name)}</strong> for ${escapeHtml(startsAt.toLocaleString("en-NG"))}.</p><p>${drip.deposit > 0 ? `Deposit: ${escapeHtml(formatNaira(drip.deposit))}.` : "No deposit required."}</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
+  }).catch(() => undefined);
+
+  if (input.payDeposit) {
+    if (!hasPaystack()) {
+      return { error: "Online payments are not configured yet. Book without a deposit or try again later." };
+    }
+    if (drip.deposit <= 0) {
+      return { error: "This session does not have an online deposit. Use Confirm booking instead." };
+    }
+
+    try {
+      const reference = `apt_${appointment.id}`;
+      const payment = await initializePaystack({
+        email: details.data.email,
         amount: drip.deposit,
-        paystackReference: reference,
-        paystackAccessCode: payment.access_code,
-        appointmentId: appointment.id,
-      },
-    });
-    return {
-      token,
-      whatsapp: whatsappHref(
-        `I have booked ${drip.name} at The Vitamin Spot for ${startsAt.toLocaleString("en-NG")}.`,
-      ),
-      checkoutUrl: payment.authorization_url,
-    };
+        reference,
+        callbackUrl: manageUrl,
+        metadata: { purpose: "APPOINTMENT_DEPOSIT", appointmentId: appointment.id },
+      });
+      await prisma.payment.create({
+        data: {
+          purpose: "APPOINTMENT_DEPOSIT",
+          amount: drip.deposit,
+          paystackReference: reference,
+          paystackAccessCode: payment.access_code,
+          appointmentId: appointment.id,
+        },
+      });
+      return {
+        token,
+        whatsapp: whatsappHref(
+          `I have booked ${drip.name} at The Vitamin Spot for ${startsAt.toLocaleString("en-NG")}.`,
+        ),
+        checkoutUrl: payment.authorization_url,
+      };
+    } catch (error) {
+      await prisma.appointment.delete({ where: { id: appointment.id } }).catch(() => undefined);
+      const message =
+        error instanceof Error ? error.message : "Could not start the deposit payment.";
+      return { error: message };
+    }
   }
 
   return {
@@ -173,6 +159,65 @@ export async function createBooking(input: {
       `I have booked ${drip.name} at The Vitamin Spot for ${startsAt.toLocaleString("en-NG")}.`,
     ),
   };
+}
+
+export async function resumeAppointmentDeposit(token: string) {
+  const prisma = await tryPrisma();
+  if (!prisma) return { error: "Bookings need the database." };
+  if (!hasPaystack()) return { error: "Online payments are not configured yet." };
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { accessToken: token },
+    include: { service: true, payment: true },
+  });
+  if (!appointment) return { error: "Booking not found." };
+  if (appointment.status === "CONFIRMED") return { error: "This booking is already confirmed." };
+  if (appointment.service.deposit <= 0) {
+    return { error: "This session does not require a deposit." };
+  }
+  if (appointment.payment?.status === "PAID") {
+    return { error: "Deposit already paid." };
+  }
+
+  const reference = appointment.payment?.paystackReference ?? `apt_${appointment.id}`;
+  const manageUrl = `${site.url}/appointments/${token}`;
+
+  try {
+    const payment = await initializePaystack({
+      email: appointment.email,
+      amount: appointment.service.deposit,
+      reference,
+      callbackUrl: manageUrl,
+      metadata: { purpose: "APPOINTMENT_DEPOSIT", appointmentId: appointment.id },
+    });
+
+    if (appointment.payment) {
+      await prisma.payment.update({
+        where: { id: appointment.payment.id },
+        data: {
+          amount: appointment.service.deposit,
+          paystackAccessCode: payment.access_code,
+          status: "PENDING",
+        },
+      });
+    } else {
+      await prisma.payment.create({
+        data: {
+          purpose: "APPOINTMENT_DEPOSIT",
+          amount: appointment.service.deposit,
+          paystackReference: reference,
+          paystackAccessCode: payment.access_code,
+          appointmentId: appointment.id,
+        },
+      });
+    }
+
+    return { checkoutUrl: payment.authorization_url };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not start the deposit payment.",
+    };
+  }
 }
 
 export async function updateAppointment(
@@ -193,7 +238,7 @@ export async function updateAppointment(
 
   const appointment = await prisma.appointment.findUnique({
     where: { accessToken: token },
-    include: { service: true },
+    include: { service: true, payment: true },
   });
   if (!appointment) return { error: "Appointment not found." };
 
@@ -224,5 +269,24 @@ export async function updateAppointment(
     where: { id: appointment.id },
     data: { startsAt, endsAt, status: "CONFIRMED" },
   });
+
+  const depositPaid =
+    appointment.payment?.status === "PAID" ? appointment.payment.amount : undefined;
+  const depositDue =
+    appointment.service.deposit > 0 && appointment.payment?.status !== "PAID"
+      ? appointment.service.deposit
+      : undefined;
+
+  await sendBookingConfirmed({
+    to: appointment.email,
+    name: appointment.name,
+    serviceName: appointment.service.name,
+    startsAt,
+    manageUrl: `${site.url}/appointments/${token}`,
+    depositPaid,
+    depositDue,
+    sessionPrice: appointment.service.price,
+  }).catch(() => undefined);
+
   return { ok: true };
 }

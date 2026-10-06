@@ -14,19 +14,20 @@ import {
   uploadProductImage,
 } from "@/actions/admin";
 import { categories, type CatalogInfusion, type CatalogProduct } from "@/lib/catalog";
+import { adminFormControl, adminFormSelect, adminFormTextarea } from "@/components/ui/form-styles";
 
 function naira(kobo: number) {
   return Math.round(kobo / 100);
 }
 
-const field =
-  "w-full rounded-lg border border-deep/15 bg-white px-3 py-2 text-sm text-deep";
+const field = adminFormControl;
+const area = adminFormTextarea;
 
 function CategoryField({ value }: { value?: string }) {
   return (
     <label className="text-sm text-deep">
       Category
-      <select name="categorySlug" defaultValue={value ?? categories[0]?.slug} className={`${field} mt-1`}>
+      <select name="categorySlug" defaultValue={value ?? categories[0]?.slug} className={`${adminFormSelect} mt-1`}>
         {categories.map((category) => (
           <option key={category.slug} value={category.slug}>
             {category.name}
@@ -42,6 +43,15 @@ function FeaturedField({ checked }: { checked?: boolean }) {
     <label className="flex items-center gap-2 text-sm text-deep">
       <input type="checkbox" name="featured" defaultChecked={checked} />
       Show on the homepage
+    </label>
+  );
+}
+
+function ActiveField({ checked = true }: { checked?: boolean }) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-deep">
+      <input type="checkbox" name="active" defaultChecked={checked} />
+      For sale
     </label>
   );
 }
@@ -68,6 +78,7 @@ export function AddProductForm({ library }: { library: string[] }) {
           const result = await createProduct({
             name: String(data.get("name") ?? ""),
             priceNaira: Number(data.get("price")),
+            compareAtPriceNaira: data.get("compareAtPrice") ? Number(data.get("compareAtPrice")) : undefined,
             stock: Number(data.get("stock")),
             tagline: String(data.get("tagline") ?? ""),
             description: String(data.get("description") ?? ""),
@@ -75,6 +86,7 @@ export function AddProductForm({ library }: { library: string[] }) {
             ingredients: String(data.get("ingredients") ?? ""),
             usage: String(data.get("usage") ?? ""),
             featured: data.get("featured") === "on",
+            isActive: data.get("active") === "on",
             categorySlug: String(data.get("categorySlug") ?? ""),
             images,
           });
@@ -89,12 +101,16 @@ export function AddProductForm({ library }: { library: string[] }) {
     >
       <input name="name" required placeholder="Name" aria-label="Name" className={field} />
       <input name="tagline" placeholder="Tagline" aria-label="Tagline" className={field} />
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-3">
         <input name="price" required type="number" min={1} placeholder="Price (₦)" aria-label="Price in naira" className={field} />
-        <input name="stock" required type="number" min={0} placeholder="Stock" aria-label="Stock" className={field} />
+        <input name="compareAtPrice" type="number" min={0} placeholder="Compare-at Price (₦) optional" aria-label="Original price" className={field} />
+        <input name="stock" required type="number" min={0} placeholder="Stock quantity" aria-label="Stock" className={field} />
       </div>
       <CategoryField />
-      <FeaturedField />
+      <div className="flex flex-wrap gap-4">
+        <FeaturedField />
+        <ActiveField />
+      </div>
       <label className="text-sm text-deep">
         Description
         <textarea name="description" className={`${area} mt-1`} />
@@ -122,9 +138,6 @@ export function AddProductForm({ library }: { library: string[] }) {
     </form>
   );
 }
-
-const area =
-  "min-h-24 w-full rounded-lg border border-deep/15 bg-white px-3 py-2 text-sm text-deep";
 
 function PicturePicker({
   images,
@@ -194,7 +207,7 @@ function PicturePicker({
           ))}
         </select>
         <label className="rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase">
-          Upload
+          Upload picture
           <input
             type="file"
             accept="image/*"
@@ -246,6 +259,7 @@ export function ProductEditor({
             id: product.id,
             name: String(data.get("name") ?? ""),
             priceNaira: Number(data.get("price")),
+            compareAtPriceNaira: data.get("compareAtPrice") ? Number(data.get("compareAtPrice")) : undefined,
             stock: Number(data.get("stock")),
             tagline: String(data.get("tagline") ?? ""),
             description: String(data.get("description") ?? ""),
@@ -253,6 +267,7 @@ export function ProductEditor({
             ingredients: String(data.get("ingredients") ?? ""),
             usage: String(data.get("usage") ?? ""),
             featured: data.get("featured") === "on",
+            isActive: data.get("active") === "on",
             categorySlug: String(data.get("categorySlug") ?? ""),
             images,
           });
@@ -270,28 +285,55 @@ export function ProductEditor({
         placeholder="Tagline"
         className={field}
       />
-      <div className="grid gap-3 md:grid-cols-2">
-        <input
-          name="price"
-          required
-          type="number"
-          min={0}
-          defaultValue={naira(product.price)}
-          className={field}
-          aria-label="Price in naira"
-        />
-        <input
-          name="stock"
-          required
-          type="number"
-          min={0}
-          defaultValue={product.stock}
-          className={field}
-          aria-label="Stock"
-        />
+      <div className="grid gap-3 md:grid-cols-3">
+        <div>
+          <label className="block text-xs font-medium uppercase tracking-wider text-deep/60">
+            Price in Naira (₦)
+          </label>
+          <input
+            name="price"
+            required
+            type="number"
+            min={0}
+            defaultValue={naira(product.price)}
+            className={`${field} mt-1`}
+            aria-label="Price in naira"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium uppercase tracking-wider text-deep/60">
+            Compare-at / Strike Price (₦)
+          </label>
+          <input
+            name="compareAtPrice"
+            type="number"
+            min={0}
+            defaultValue={product.compareAtPrice ? naira(product.compareAtPrice) : ""}
+            placeholder="e.g. 50000 (optional)"
+            className={`${field} mt-1`}
+            aria-label="Compare-at price in naira"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium uppercase tracking-wider text-deep/60">
+            Current Stock Level
+          </label>
+          <input
+            name="stock"
+            required
+            type="number"
+            min={0}
+            defaultValue={product.stock}
+            className={`${field} mt-1`}
+            aria-label="Stock"
+          />
+        </div>
       </div>
       <CategoryField value={product.categorySlug} />
-      <FeaturedField checked={product.featured} />
+      <div className="flex flex-wrap gap-4">
+        <FeaturedField checked={product.featured} />
+        <ActiveField checked={product.isActive !== false} />
+      </div>
       <label className="text-sm text-deep">
         Description
         <textarea
@@ -544,7 +586,7 @@ function InfusionFields({
           className={field}
         />
       </div>
-      <label className="text-sm text-deep">
+      <div className="text-sm text-deep">
         Picture
         <select
           aria-label="Session picture"
@@ -560,7 +602,25 @@ function InfusionFields({
             </option>
           ))}
         </select>
-      </label>
+        <label className="mt-2 inline-flex rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase">
+          Upload picture
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              const body = new FormData();
+              body.set("file", file);
+              void uploadProductImage(body).then((result) => {
+                if ("url" in result && result.url) onImage(result.url);
+              });
+            }}
+          />
+        </label>
+      </div>
       {image ? (
         <Image src={image} alt="" width={320} height={200} className="aspect-[8/5] w-48 rounded-lg object-cover" />
       ) : null}
