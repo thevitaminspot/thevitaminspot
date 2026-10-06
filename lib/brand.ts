@@ -1,5 +1,13 @@
 export const brand = {
   name: "The Vitamin Spot",
+  /** Pin icon only — nav, footer, favicon-style uses */
+  mark: {
+    src: "/brand/logo.png",
+    alt: "The Vitamin Spot",
+    width: 495,
+    height: 495,
+  },
+  /** Full logo with wordmark — Open Graph and structured data */
   logo: {
     src: "/brand/logo.jpg",
     alt: "The Vitamin Spot",

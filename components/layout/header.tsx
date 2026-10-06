@@ -1,11 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, ShoppingBag, X } from "lucide-react";
 import { AccountButton } from "@/components/layout/account-button";
-import { BrandMark } from "@/components/layout/brand-mark";
+import { brand } from "@/lib/brand";
 import { site } from "@/lib/site";
 import { useCartStore } from "@/stores/cart-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -62,7 +63,14 @@ function MobileNav({
         aria-label="Mobile"
       >
         <div className="flex items-center justify-between border-b border-deep/10 px-5 py-4">
-          <BrandMark size={36} aria-hidden />
+          <Image
+            src={brand.mark.src}
+            alt=""
+            width={36}
+            height={36}
+            className="size-9 object-contain"
+            aria-hidden
+          />
           <button
             type="button"
             onClick={onClose}
@@ -143,7 +151,14 @@ export function Header() {
       <header className="sticky top-0 z-40 border-b border-deep/10 bg-cream/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-2.5 sm:px-5 md:px-8 md:py-3">
           <Link href="/" className="flex min-w-0 items-center" onClick={closeNav} aria-label={site.name}>
-            <BrandMark size={44} />
+            <Image
+              src={brand.mark.src}
+              alt={brand.mark.alt}
+              width={44}
+              height={44}
+              className="size-10 object-contain md:size-11"
+              priority
+            />
           </Link>
 
           <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
