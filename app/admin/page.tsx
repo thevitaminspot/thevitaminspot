@@ -56,7 +56,7 @@ export default async function AdminPage() {
   const [orders, paid, depositRevenue, pendingBookings, soon, low, productCount] =
     await Promise.all([
       prisma.order.findMany({
-        where: { status: { in: ["PENDING", "PAID", "PACKED", "OUT_FOR_DELIVERY"] } },
+        where: { status: { in: ["PAID", "PACKED", "OUT_FOR_DELIVERY"] } },
         orderBy: { createdAt: "desc" },
         take: 8,
       }),

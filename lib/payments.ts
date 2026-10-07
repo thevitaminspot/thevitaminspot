@@ -14,6 +14,12 @@ export type PaystackWebhookCharge = {
   currency: string;
 };
 
+export type PaystackVerifyResult =
+  | { outcome: "paid" }
+  | { outcome: "failed" }
+  | { outcome: "skipped" }
+  | { outcome: "error"; message: string };
+
 export async function settlePaystackReference(reference: string, outcome: "success" | "failed") {
   const prisma = await tryPrisma();
   if (!prisma) return;
@@ -28,12 +34,17 @@ export async function settlePaystackReference(reference: string, outcome: "succe
   if (!payment) return;
 
   if (outcome === "failed") {
-    if (payment.status === "PENDING") {
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: "FAILED" },
-      });
+    if (payment.status === "PAID") return;
+
+    if (payment.purpose === "ORDER" && payment.orderId) {
+      await prisma.order.delete({ where: { id: payment.orderId } }).catch(() => undefined);
+      return;
     }
+
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "FAILED" },
+    });
     return;
   }
 
@@ -129,7 +140,7 @@ export async function settlePaystackReference(reference: string, outcome: "succe
 
     const adminMail = await sendMail({
       to: process.env.ADMIN_EMAIL ?? site.email,
-      subject: `Paid: ${payment.order.orderNumber}`,
+      subject: `New order ${payment.order.orderNumber}`,
       html: `<p>${escapeHtml(payment.order.name)} paid ${escapeHtml(payment.order.orderNumber)}.</p><p><a href="${escapeHtml(`${site.url}/admin/orders/${payment.order.id}`)}">Open in admin</a></p>`,
     });
     if (!adminMail.ok) {
@@ -218,18 +229,22 @@ export async function handlePaystackWebhookCharge(data: PaystackWebhookCharge) {
   return { ok: true as const };
 }
 
-export async function confirmPaystackReturn(reference: string | undefined) {
-  if (!reference || !hasPaystack()) return;
+export async function confirmPaystackReturn(
+  reference: string | undefined,
+): Promise<PaystackVerifyResult> {
+  if (!reference || !hasPaystack()) return { outcome: "skipped" };
 
   try {
     const transaction = await verifyPaystackTransaction(reference);
     const prisma = await tryPrisma();
-    const payment = prisma
-      ? await prisma.payment.findUnique({ where: { paystackReference: reference } })
-      : null;
+    if (!prisma) {
+      return { outcome: "error", message: "Checkout needs the database." };
+    }
+
+    const payment = await prisma.payment.findUnique({ where: { paystackReference: reference } });
     if (!payment) {
       console.info("[paystack:return] unknown reference", reference);
-      return;
+      return { outcome: "error", message: "Payment not found." };
     }
 
     const expectedCurrency = payment.currency || "NGN";
@@ -239,7 +254,7 @@ export async function confirmPaystackReturn(reference: string | undefined) {
 
     if (transaction.status === "success" && amountMatches && currencyMatches) {
       await settlePaystackReference(reference, "success");
-      return;
+      return { outcome: "paid" };
     }
 
     if (transaction.status === "success" && (!amountMatches || !currencyMatches)) {
@@ -248,13 +263,17 @@ export async function confirmPaystackReturn(reference: string | undefined) {
         expected: { amount: payment.amount, currency: expectedCurrency },
         received: { amount: transaction.amount, currency: receivedCurrency },
       });
-      return;
+      await settlePaystackReference(reference, "failed");
+      return { outcome: "failed" };
     }
 
-    if (transaction.status === "failed" || transaction.status === "abandoned") {
-      await settlePaystackReference(reference, "failed");
-    }
+    await settlePaystackReference(reference, "failed");
+    return { outcome: "failed" };
   } catch (error) {
     console.error("[paystack:return]", reference, error);
+    return {
+      outcome: "error",
+      message: error instanceof Error ? error.message : "Paystack could not verify that payment.",
+    };
   }
 }

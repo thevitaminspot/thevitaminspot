@@ -7,10 +7,9 @@ export const orderGroupMeta = [
   {
     key: "attention",
     title: "Needs attention",
-    description: "Unpaid or paid and waiting to be packed.",
+    description: "Paid and waiting to be packed.",
     uncapped: true,
-    match: (order: OrderRow) =>
-      order.status === "PENDING" || order.status === "PAID",
+    match: (order: OrderRow) => order.status === "PAID",
   },
   {
     key: "fulfillment",

@@ -18,12 +18,13 @@ export function OrderPaymentActions({
   const [error, setError] = useState("");
 
   if (orderStatus === "PAID" || paymentStatus === "PAID") return null;
+  if (orderStatus === "CANCELLED") return null;
 
   return (
     <div className="mt-8 rounded-2xl border border-deep/10 bg-cream/40 p-5">
       <p className="text-sm text-deep/75">
         {paymentStatus === "FAILED"
-          ? "Payment was cancelled or did not go through."
+          ? "Payment did not go through."
           : "This order is waiting for payment."}
       </p>
       {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}

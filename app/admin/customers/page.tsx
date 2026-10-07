@@ -11,6 +11,7 @@ export default async function AdminCustomersPage() {
   if (!prisma) return <DatabaseSetup />;
 
   const orders = await prisma.order.findMany({
+    where: { payment: { status: "PAID" } },
     orderBy: { createdAt: "desc" },
     select: {
       email: true,
@@ -37,7 +38,7 @@ export default async function AdminCustomersPage() {
       last: order.createdAt,
     };
     current.orders += 1;
-    if (order.status !== "CANCELLED" && order.status !== "PENDING") current.spent += order.total;
+    if (order.status !== "CANCELLED") current.spent += order.total;
     if (order.createdAt > current.last) current.last = order.createdAt;
     people.set(order.email, current);
   }
