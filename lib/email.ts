@@ -1,33 +1,12 @@
 import "server-only";
+import { Resend } from "resend";
 import { formatNaira } from "@/lib/money";
 import { site } from "@/lib/site";
 
-const resendApiUrl = "https://api.resend.com/emails";
-
-type ResendError = {
-  message?: string;
-  error?: { message?: string };
-};
-
-export function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-export function sanitizeEmailSubject(value: string) {
-  return value.replace(/[\r\n]/g, " ").trim();
-}
-
-function adminEmail() {
-  return (process.env.ADMIN_EMAIL ?? site.email).toLowerCase();
-}
-
 const verifiedFromDomain = "thevitaminspotltd.com";
 const defaultFrom = `${site.name} <hello@${verifiedFromDomain}>`;
+
+let resendClient: Resend | null = null;
 
 function extractFromEmail(from: string) {
   const match = from.match(/<([^>]+)>/);
@@ -46,58 +25,38 @@ function primaryFrom() {
   return configured;
 }
 
-function resendErrorMessage(error: ResendError | null | undefined) {
-  if (!error) return "Unknown Resend error";
-  if (typeof error.message === "string" && error.message) return error.message;
-  if (typeof error.error?.message === "string" && error.error.message) return error.error.message;
-  return "Unknown Resend error";
+function getResendClient() {
+  const key = process.env.RESEND_API_KEY?.trim();
+  if (!key) return null;
+  resendClient ??= new Resend(key);
+  return resendClient;
 }
 
-function isDomainError(message: string) {
-  return /not verified|verify your domain/i.test(message);
+export function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-function isTestSenderLimit(message: string) {
-  return /only send testing emails to your own email/i.test(message);
+export function sanitizeEmailSubject(value: string) {
+  return value.replace(/[\r\n]/g, " ").trim();
 }
 
 export function canSendEmail() {
-  return Boolean(process.env.RESEND_API_KEY);
+  return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
-async function deliver(
-  input: { to: string; subject: string; html: string; replyTo?: string },
-  from: string,
-) {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    return { data: null, error: { message: "Resend is not configured." } satisfies ResendError };
-  }
-
-  const response = await fetch(resendApiUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [input.to],
-      subject: sanitizeEmailSubject(input.subject),
-      html: input.html,
-      reply_to: input.replyTo ?? site.email,
-    }),
-  });
-
-  const payload = (await response.json().catch(() => ({}))) as
-    | { id?: string }
-    | ResendError;
-
-  if (!response.ok) {
-    return { data: null, error: payload as ResendError };
-  }
-
-  return { data: payload as { id?: string }, error: null };
+export function emailConfigStatus() {
+  const key = process.env.RESEND_API_KEY?.trim();
+  const from = primaryFrom();
+  return {
+    configured: Boolean(key),
+    from,
+    vercelEnv: process.env.VERCEL_ENV ?? null,
+  };
 }
 
 export type SendMailResult =
@@ -110,25 +69,34 @@ export async function sendMail(input: {
   html: string;
   replyTo?: string;
 }): Promise<SendMailResult> {
-  if (!process.env.RESEND_API_KEY) {
-    console.info("[email:skipped] Set RESEND_API_KEY in .env.", input.subject, input.to);
+  const client = getResendClient();
+  if (!client) {
+    console.error(
+      "[email:missing-key] RESEND_API_KEY is not set on this deployment.",
+      input.subject,
+      input.to,
+      process.env.VERCEL_ENV ?? "local",
+    );
     return { ok: false as const, error: "Resend is not configured." };
   }
 
   const from = primaryFrom();
-  const { data, error } = await deliver(input, from);
+  const { data, error } = await client.emails.send({
+    from,
+    to: input.to,
+    subject: sanitizeEmailSubject(input.subject),
+    html: input.html,
+    replyTo: input.replyTo ?? site.email,
+  });
+
   if (!error) {
+    console.info("[email:sent]", input.subject, input.to, data?.id ?? "");
     return { ok: true as const, id: data?.id, provider: "resend" as const, from };
   }
 
-  const lastError = resendErrorMessage(error);
-  if (isDomainError(lastError) || isTestSenderLimit(lastError)) {
-    console.error("[email:domain]", lastError, "from", from, "to", input.to);
-  } else {
-    console.error("[email:not-sent]", lastError, "from", from, "to", input.to);
-  }
-
-  return { ok: false as const, error: lastError };
+  const message = error.message || "Unknown Resend error";
+  console.error("[email:not-sent]", message, "from", from, "to", input.to);
+  return { ok: false as const, error: message };
 }
 
 const orderStatusCopy: Record<string, string> = {

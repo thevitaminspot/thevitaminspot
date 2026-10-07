@@ -114,20 +114,26 @@ export async function settlePaystackReference(reference: string, outcome: "succe
   });
 
   if (paid && payment.order) {
-    await sendOrderUpdate({
+    const customerMail = await sendOrderUpdate({
       to: payment.order.email,
       name: payment.order.name,
       orderNumber: payment.order.orderNumber,
       status: "PAID",
       total: payment.order.total,
       trackUrl: `${site.url}/orders/${payment.order.accessToken}`,
-    }).catch(() => undefined);
+    });
+    if (!customerMail.ok) {
+      console.error("[paystack:email] customer order confirmation failed", customerMail.error);
+    }
 
-    await sendMail({
+    const adminMail = await sendMail({
       to: process.env.ADMIN_EMAIL ?? site.email,
       subject: `Paid: ${payment.order.orderNumber}`,
       html: `<p>${escapeHtml(payment.order.name)} paid ${escapeHtml(payment.order.orderNumber)}.</p><p><a href="${escapeHtml(`${site.url}/admin/orders/${payment.order.id}`)}">Open in admin</a></p>`,
-    }).catch(() => undefined);
+    });
+    if (!adminMail.ok) {
+      console.error("[paystack:email] admin paid notification failed", adminMail.error);
+    }
 
     const order = await prisma.order.findUnique({ where: { id: payment.orderId! } });
     if (order?.notes?.includes("stock ran short")) {
@@ -141,21 +147,28 @@ export async function settlePaystackReference(reference: string, outcome: "succe
 
   if (paid && payment.appointment) {
     const appointment = payment.appointment;
-    await notifyBookingDepositPaid({
-      to: appointment.email,
-      name: appointment.name,
-      serviceName: appointment.service.name,
-      startsAt: appointment.startsAt,
-      manageUrl: `${site.url}/appointments/${appointment.accessToken}`,
-      depositAmount: payment.amount,
-      sessionPrice: appointment.service.price,
-    }).catch(() => undefined);
+    try {
+      await notifyBookingDepositPaid({
+        to: appointment.email,
+        name: appointment.name,
+        serviceName: appointment.service.name,
+        startsAt: appointment.startsAt,
+        manageUrl: `${site.url}/appointments/${appointment.accessToken}`,
+        depositAmount: payment.amount,
+        sessionPrice: appointment.service.price,
+      });
+    } catch (error) {
+      console.error("[paystack:email] booking deposit confirmation failed", error);
+    }
 
-    await sendMail({
+    const adminMail = await sendMail({
       to: process.env.ADMIN_EMAIL ?? site.email,
       subject: `Deposit paid: ${appointment.service.name}`,
       html: `<p>${escapeHtml(appointment.name)} paid a deposit of ${escapeHtml(formatNaira(payment.amount))} for ${escapeHtml(appointment.service.name)} on ${escapeHtml(appointment.startsAt.toLocaleString("en-NG"))}.</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
-    }).catch(() => undefined);
+    });
+    if (!adminMail.ok) {
+      console.error("[paystack:email] admin deposit notification failed", adminMail.error);
+    }
   }
 }
 

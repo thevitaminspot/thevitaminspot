@@ -111,11 +111,14 @@ export async function createCheckout(
 
   const checkoutReturnUrl = `${site.url}/checkout?order=${accessToken}`;
   // Customer gets a confirmation after Paystack succeeds; admin alert sends now.
-  await sendMail({
+  const adminMail = await sendMail({
     to: process.env.ADMIN_EMAIL || site.email,
     subject: `New order ${orderNumber}`,
     html: `<p>${escapeHtml(parsed.data.name)} placed ${escapeHtml(orderNumber)}.</p><p><a href="${escapeHtml(`${site.url}/admin/orders/${order.id}`)}">Open it in admin</a></p>`,
   });
+  if (!adminMail.ok) {
+    console.error("[checkout:email] admin new-order notification failed", adminMail.error);
+  }
 
   if (!hasPaystack()) {
     return { token: accessToken };
