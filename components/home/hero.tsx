@@ -13,15 +13,17 @@ export function Hero({
     <section className="hero-stage text-cream">
       <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 py-12 md:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
         <div>
-          <h1 className="font-display text-[4.6rem] leading-[0.8] sm:text-[6.5rem]">
+          <h1 className="animate-hero-in font-display text-[4.6rem] leading-[0.8] sm:text-[6.5rem]">
             The packs.
           </h1>
-          <p className="font-display mt-3 text-3xl text-tint sm:text-5xl">A chair for the drip.</p>
-          <p className="mt-6 max-w-md text-base leading-7 text-cream/75">
+          <p className="animate-hero-in hero-delay-1 font-display mt-3 text-3xl text-tint sm:text-5xl">
+            A chair for the drip.
+          </p>
+          <p className="animate-hero-in hero-delay-2 mt-6 max-w-md text-base leading-7 text-cream/75">
             Supplements and vitamins you can take home, and IV sessions in the lounge. Shop the
             packs, or book the hour.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="animate-hero-in hero-delay-3 mt-8 flex flex-wrap gap-3">
             <Button href="/shop" variant="cream">
               Shop the packs
             </Button>
@@ -34,7 +36,7 @@ export function Hero({
           </div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[460px] lg:max-w-none">
+        <div className="animate-hero-in hero-delay-2 relative mx-auto w-full max-w-[460px] lg:max-w-none">
           <div className="relative h-[480px] overflow-hidden rounded-t-[200px] rounded-b-[1.75rem] border border-cream/15 shadow-[0_30px_80px_rgba(0,0,0,0.28)] sm:h-[560px]">
             <Image
               src="/images/lifestyle/table-02.jpg"
@@ -49,7 +51,7 @@ export function Hero({
           {lead?.image ? (
             <Link
               href={lead.href}
-              className="absolute -bottom-2 -left-2 flex w-[210px] items-center gap-3 rounded-2xl border border-cream/20 bg-cream p-2 text-deep shadow-xl sm:-left-8"
+              className="animate-hero-in hero-delay-4 absolute -bottom-2 -left-2 flex w-[210px] items-center gap-3 rounded-2xl border border-cream/20 bg-cream p-2 text-deep shadow-xl sm:-left-8"
             >
               <Image
                 src={lead.image}
@@ -69,7 +71,7 @@ export function Hero({
       </div>
 
       {packs.length > 0 ? (
-        <div className="border-t border-cream/10">
+        <div className="animate-hero-in hero-delay-5 border-t border-cream/10">
           <ul className="mx-auto grid max-w-[1200px] sm:grid-cols-2 lg:grid-cols-3">
             {packs.slice(0, 3).map((pack) => (
               <li key={pack.href} className="border-cream/10 sm:border-l first:sm:border-l-0">

@@ -149,7 +149,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-deep/10 bg-cream/95 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-deep/10 bg-cream/95 backdrop-blur-md transition-[background-color,box-shadow] duration-300">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-2.5 sm:px-5 md:px-8 md:py-3">
           <Link href="/" className="flex min-w-0 items-center gap-2.5" onClick={closeNav}>
             <Image
