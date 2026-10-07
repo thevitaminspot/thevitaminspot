@@ -133,6 +133,27 @@ export async function createBooking(input: {
 
   const manageUrl = `${site.url}/appointments/${token}`;
 
+  await notifyBookingReceived({
+    to: details.data.email,
+    name: details.data.name,
+    serviceName: drip.name,
+    startsAt,
+    manageUrl,
+    deposit: drip.deposit,
+    sessionPrice: drip.price,
+  }).catch((error) => {
+    console.error("[booking:create] customer email failed", error);
+  });
+
+  await notifyAdminNewBooking({
+    name: details.data.name,
+    serviceName: drip.name,
+    startsAt,
+    deposit: drip.deposit,
+  }).catch((error) => {
+    console.error("[booking:create] admin email failed", error);
+  });
+
   if (input.payDeposit) {
     if (!hasPaystack()) {
       return { error: "Online payments are not configured yet. Book without a deposit or try again later." };

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { ChevronDown, ChevronLeft } from "lucide-react";
-import { createBooking, fetchSlots, sendBookingNotifications } from "@/actions/booking";
+import { createBooking, fetchSlots } from "@/actions/booking";
 import { parseBookingDetails } from "@/lib/env";
 import { nairaLabel } from "@/lib/money";
 import type { CatalogInfusion } from "@/lib/catalog";
@@ -271,14 +271,6 @@ export function BookingFlow({
       if ("error" in result && result.error) {
         setError(result.error);
         return;
-      }
-      if ("token" in result && result.token) {
-        const mail = await sendBookingNotifications(result.token).catch(() => ({
-          error: "Could not send confirmation email.",
-        }));
-        if (mail && "error" in mail && mail.error) {
-          console.warn("[booking] confirmation email:", mail.error);
-        }
       }
       if ("checkoutUrl" in result && result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
