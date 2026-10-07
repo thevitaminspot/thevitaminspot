@@ -19,13 +19,13 @@ export function CartDrawer() {
       {/* Backdrop */}
       <button
         type="button"
-        className="absolute inset-0 bg-ink/60"
+        className="animate-backdrop-in absolute inset-0 bg-ink/60"
         aria-label="Close cart"
         onClick={close}
       />
 
       {/* Drawer */}
-      <aside className="relative z-10 flex h-full w-full max-w-md flex-col bg-cream shadow-2xl transition-transform duration-300">
+      <aside className="animate-drawer-in relative z-10 flex h-full w-full max-w-md flex-col bg-cream shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-deep/10 px-6 py-5">
           <div className="flex items-center gap-2.5">

@@ -25,7 +25,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       >
         <Header />
       </Suspense>
-      {children}
+      <div className="page-enter">{children}</div>
       <Footer packs={packs} />
       <CartDrawerLoader />
     </>

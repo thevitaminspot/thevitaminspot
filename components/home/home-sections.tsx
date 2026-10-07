@@ -9,17 +9,19 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
   return (
     <section id="the-range" className="range-wash px-5 py-20 md:px-8 md:py-28">
       <div className="mx-auto max-w-6xl">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <h2 className="font-display max-w-2xl text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
-            The packs.
-          </h2>
-          <Link
-            href="/shop"
-            className="text-xs font-medium tracking-[0.15em] text-deep/70 uppercase transition hover:text-deep"
-          >
-            See all packs
-          </Link>
-        </div>
+        <Reveal>
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <h2 className="font-display max-w-2xl text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
+              The packs.
+            </h2>
+            <Link
+              href="/shop"
+              className="text-xs font-medium tracking-[0.15em] text-deep/70 uppercase transition hover:text-deep"
+            >
+              See all packs
+            </Link>
+          </div>
+        </Reveal>
       </div>
 
       {products.length === 0 ? (
@@ -35,7 +37,7 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
             const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price;
 
             return (
-              <Reveal key={product.id}>
+              <Reveal key={product.id} delay={(index % 4) * 80}>
                 <article className="grid items-center gap-8 md:grid-cols-12 lg:gap-12">
                   <div className={`relative md:col-span-7 ${index % 2 ? "md:order-2" : ""}`}>
                     <div className="relative overflow-hidden rounded-2xl border border-deep/10 bg-tint/40 shadow-sm transition duration-500 hover:shadow-md">
@@ -131,7 +133,7 @@ export function WalkIn() {
   return (
     <section className="px-5 py-16 md:px-8 md:py-24">
       <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2 md:gap-16">
-        <div className="relative h-72 overflow-hidden bg-tint/40 md:aspect-[4/5] md:h-auto">
+        <Reveal className="relative h-72 overflow-hidden bg-tint/40 md:aspect-[4/5] md:h-auto">
           <Image
             src="/images/lifestyle/table-01.jpg"
             alt="Vitamin packs open on a table"
@@ -140,8 +142,8 @@ export function WalkIn() {
             className="object-cover"
             sizes="(min-width: 768px) 50vw, 100vw"
           />
-        </div>
-        <div>
+        </Reveal>
+        <Reveal delay={100}>
           <h2 className="font-display text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
             Come in for a drip.
           </h2>
@@ -179,7 +181,7 @@ export function WalkIn() {
               WhatsApp us
             </a>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

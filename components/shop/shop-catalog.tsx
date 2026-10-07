@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/shop/product-card";
 import type { CatalogCategory, CatalogProduct } from "@/lib/catalog";
 import { formSearch } from "@/components/ui/form-styles";
+import { Reveal } from "@/components/ui/reveal";
 
 export function ShopCatalog({
   products,
@@ -127,8 +128,10 @@ export function ShopCatalog({
         </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:gap-8">
-          {filtered.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {filtered.map((product, index) => (
+            <Reveal key={product.id} delay={(index % 6) * 60}>
+              <ProductCard product={product} />
+            </Reveal>
           ))}
         </div>
       )}

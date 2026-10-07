@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Reveal } from "@/components/ui/reveal";
 
 const faqs = [
   {
@@ -39,37 +40,52 @@ export function Faq() {
   return (
     <section className="px-5 py-20 md:px-8 md:py-28">
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,18rem)_1fr] lg:gap-20">
-        <div>
+        <Reveal>
           <h2 className="font-display text-4xl leading-tight text-deep md:text-5xl">Good to know.</h2>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-deep/70">
             Delivery, drips, and paying. Ask us if yours isn’t here.
           </p>
-        </div>
-        <div className="border-t border-deep/15">
-          {faqs.map((faq, index) => {
-            const isOpen = open === index;
-            return (
-              <div key={faq.question} className="border-b border-deep/15">
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpen(isOpen ? null : index)}
-                  className="flex w-full items-center justify-between gap-6 py-5 text-left"
-                >
-                  <span className="font-display text-xl leading-snug text-deep md:text-2xl">
-                    {faq.question}
-                  </span>
-                  <span aria-hidden="true" className="text-lg text-deep/40">
-                    {isOpen ? "–" : "+"}
-                  </span>
-                </button>
-                {isOpen ? (
-                  <p className="max-w-xl pb-5 text-sm leading-relaxed text-deep/75">{faq.answer}</p>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
+        </Reveal>
+        <Reveal delay={80}>
+          <div className="border-t border-deep/15">
+            {faqs.map((faq, index) => {
+              const isOpen = open === index;
+              return (
+                <div key={faq.question} className="border-b border-deep/15">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpen(isOpen ? null : index)}
+                    className="flex w-full items-center justify-between gap-6 py-5 text-left transition-colors hover:text-sage"
+                  >
+                    <span className="font-display text-xl leading-snug text-deep md:text-2xl">
+                      {faq.question}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className={`text-lg text-deep/40 transition-transform duration-300 ${isOpen ? "rotate-45" : ""}`}
+                    >
+                      +
+                    </span>
+                  </button>
+                  <div
+                    className="grid transition-[grid-template-rows,opacity] duration-300 ease-out"
+                    style={{
+                      gridTemplateRows: isOpen ? "1fr" : "0fr",
+                      opacity: isOpen ? 1 : 0,
+                    }}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="max-w-xl pb-5 text-sm leading-relaxed text-deep/75">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Reveal>
       </div>
     </section>
   );
