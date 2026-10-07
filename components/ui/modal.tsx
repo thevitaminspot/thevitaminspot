@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { interactiveControl } from "@/components/ui/form-styles";
 
 export function Modal({
   open,
@@ -44,7 +45,7 @@ export function Modal({
       <button
         type="button"
         aria-label="Close dialog"
-        className="absolute inset-0 bg-deep/40 backdrop-blur-[2px]"
+        className={`absolute inset-0 bg-deep/40 backdrop-blur-[2px] ${interactiveControl}`}
         onClick={onClose}
       />
       <div

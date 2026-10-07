@@ -7,7 +7,6 @@ import {
   MessageCircle,
   Package,
   Phone,
-  ShieldCheck,
   User,
 } from "lucide-react";
 import { OrderActions } from "@/components/admin/order-actions";
@@ -18,8 +17,8 @@ import {
 } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
+import { TimeAgo } from "@/components/ui/time-ago";
 import { formatNaira } from "@/lib/money";
-import { formatTimeAgo } from "@/lib/time-ago";
 
 export const metadata = { title: "Order Details · Admin" };
 
@@ -72,7 +71,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
             <AdminStatusBadge status={order.status} />
           </div>
           <p className="mt-2 text-sm text-deep/55">
-            Placed {formatTimeAgo(order.createdAt)} ·{" "}
+            Placed <TimeAgo value={order.createdAt} /> ·{" "}
             {order.createdAt.toLocaleString("en-NG")} · {order.fulfillment}
           </p>
         </div>
@@ -83,9 +82,9 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         {/* Left Column: Order Items */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <AdminDetailCard title="Items in order" icon={<Package className="size-4" />}>
 
             <ul className="mt-4 divide-y divide-deep/10">
@@ -120,16 +119,16 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
             </dl>
           </AdminDetailCard>
 
-          <section className="rounded-2xl border border-deep/10 bg-cream/30 p-5">
+          <section className="min-w-0 rounded-2xl border border-deep/10 bg-cream/30 p-5">
             <p className="text-xs font-medium text-deep/70">Customer Public Tracking Link</p>
-            <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-deep/10 bg-white p-3">
-              <span className="truncate text-xs text-deep/70">
+            <div className="mt-2 flex flex-col gap-2 rounded-xl border border-deep/10 bg-white p-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+              <p className="min-w-0 break-all font-mono text-xs leading-relaxed text-deep/70">
                 /orders/{order.accessToken}
-              </span>
+              </p>
               <Link
                 href={`/orders/${order.accessToken}`}
                 target="_blank"
-                className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-deep hover:text-sage"
+                className="inline-flex shrink-0 items-center gap-1 self-start text-xs font-semibold text-deep hover:text-sage"
               >
                 <span>Open View</span>
                 <ExternalLink className="size-3" />
@@ -139,36 +138,24 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
         </div>
 
         {/* Right Column: Fulfillment, Contact, & Status Controls */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Status Pipeline & Controls */}
           <AdminDetailCard title="Fulfillment">
             <OrderActions
               id={order.id}
               status={order.status}
               paymentStatus={order.payment?.status}
+              paystackReference={order.payment?.paystackReference}
+              fulfillment={order.fulfillment}
             />
-
-            <div className="mt-5 rounded-xl border border-deep/10 bg-cream/40 p-4 text-xs text-deep/70">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="size-4 text-sage" />
-                <span className="font-medium text-deep">
-                  Paystack · {order.payment?.status ?? "Unpaid"}
-                </span>
-              </div>
-              {order.payment?.paystackReference ? (
-                <p className="mt-1 font-mono text-[11px] text-deep/60">
-                  Ref: {order.payment.paystackReference}
-                </p>
-              ) : null}
-            </div>
           </AdminDetailCard>
 
           <AdminDetailCard title="Customer" icon={<User className="size-4" />}>
 
             <div className="mt-4 space-y-2 text-xs leading-relaxed text-deep/80">
               <p className="text-sm font-semibold text-deep">{order.name}</p>
-              <p className="text-deep/70">{order.email}</p>
-              <p className="text-deep/70">{order.phone}</p>
+              <p className="break-all text-deep/70">{order.email}</p>
+              <p className="break-all text-deep/70">{order.phone}</p>
             </div>
 
             {/* Quick Contact Buttons */}

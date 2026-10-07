@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { updateAppointmentStatus } from "@/actions/admin";
 import { Modal } from "@/components/ui/modal";
+import { interactiveControl } from "@/components/ui/form-styles";
 import { adminFormTextarea } from "@/components/ui/form-styles";
 
 export function AppointmentCancelConfirm({
@@ -71,7 +72,7 @@ export function AppointmentCancelConfirm({
             type="button"
             disabled={pending}
             onClick={close}
-            className="rounded-xl border border-deep/15 px-4 py-2.5 text-[11px] tracking-[0.12em] text-deep uppercase transition hover:bg-cream/40 disabled:opacity-50"
+            className={`rounded-xl border border-deep/15 px-4 py-2.5 text-[11px] tracking-[0.12em] text-deep uppercase transition hover:bg-cream/40 disabled:opacity-50 ${interactiveControl}`}
           >
             Keep booking
           </button>
@@ -89,7 +90,7 @@ export function AppointmentCancelConfirm({
                 close();
               });
             }}
-            className="rounded-xl bg-red-800 px-4 py-2.5 text-[11px] tracking-[0.12em] text-cream uppercase transition hover:bg-red-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`rounded-xl bg-red-800 px-4 py-2.5 text-[11px] tracking-[0.12em] text-cream uppercase transition hover:bg-red-900 disabled:opacity-60 ${interactiveControl}`}
           >
             {pending ? "Cancelling…" : "Confirm cancellation"}
           </button>

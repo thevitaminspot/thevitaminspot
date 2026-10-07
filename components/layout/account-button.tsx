@@ -6,9 +6,15 @@ import Link from "next/link";
 export function AccountButton({
   className = "",
   onNavigate,
+  userButtonAppearance,
 }: {
   className?: string;
   onNavigate?: () => void;
+  userButtonAppearance?: {
+    elements?: {
+      userButtonAvatarBox?: string;
+    };
+  };
 }) {
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     return (
@@ -31,11 +37,13 @@ export function AccountButton({
             Account
           </Link>
           <UserButton
-            appearance={{
-              elements: {
-                userButtonAvatarBox: "size-7 ring-1 ring-deep/20",
-              },
-            }}
+            appearance={
+              userButtonAppearance ?? {
+                elements: {
+                  userButtonAvatarBox: "size-7 ring-1 ring-deep/20",
+                },
+              }
+            }
           />
         </div>
       </Show>

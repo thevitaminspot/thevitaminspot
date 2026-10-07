@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { seedCatalogue } from "@/actions/admin";
+import { adminButtonPrimary } from "@/components/ui/form-styles";
 
 export function DatabaseSetup() {
   return (
@@ -34,7 +35,7 @@ export function SeedCatalogueButton({ label = "Load starter catalogue" }: { labe
             if ("ok" in result) router.refresh();
           });
         }}
-        className="rounded-lg bg-deep px-4 py-2 text-[11px] tracking-[0.12em] text-cream uppercase"
+        className={adminButtonPrimary}
       >
         {pending ? "Loading" : label}
       </button>

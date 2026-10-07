@@ -1,6 +1,65 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { interactiveControl } from "@/components/ui/form-styles";
+
+export function AdminFeedback({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss: () => void;
+}) {
+  if (!message) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-tint/60 px-4 py-2.5 text-xs text-deep">
+      <span>{message}</span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className={`shrink-0 text-deep/50 transition hover:text-deep ${interactiveControl}`}
+      >
+        <X className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+export function AdminFormPanel({
+  title,
+  description,
+  onCancel,
+  children,
+  className = "",
+}: {
+  title: string;
+  description?: string;
+  onCancel: () => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`scroll-mt-24 rounded-2xl border border-deep/15 bg-white p-6 shadow-md ${className}`}
+    >
+      <div className="mb-4 flex items-start justify-between gap-4 border-b border-deep/10 pb-3">
+        <div className="min-w-0">
+          <p className="font-display text-xl text-deep">{title}</p>
+          {description ? <p className="mt-1 text-xs text-deep/60">{description}</p> : null}
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`shrink-0 rounded-lg border border-deep/15 px-3 py-1.5 text-xs font-medium tracking-[0.08em] text-deep uppercase transition hover:bg-tint ${interactiveControl}`}
+        >
+          Cancel
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export function AdminBackLink({ href, label }: { href: string; label: string }) {
   return (
@@ -79,7 +138,7 @@ export function AdminQuickAction({
   return (
     <Link
       href={href}
-      className="inline-flex items-center rounded-full border border-deep/12 bg-white px-4 py-2 text-[11px] tracking-[0.1em] text-deep/70 uppercase transition hover:border-sage/50 hover:bg-cream/40 hover:text-deep"
+      className={`inline-flex items-center rounded-full border border-deep/12 bg-white px-4 py-2 text-[11px] tracking-[0.1em] text-deep/70 uppercase transition hover:border-sage/50 hover:bg-cream/40 hover:text-deep ${interactiveControl}`}
     >
       {children}
     </Link>
@@ -137,9 +196,20 @@ export function AdminSection({
   );
 }
 
-export function AdminPanel({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function AdminPanel({
+  children,
+  className = "",
+  clip = true,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** Set false when rows have popovers/menus that extend outside the panel. */
+  clip?: boolean;
+}) {
   return (
-    <div className={`overflow-hidden rounded-2xl border border-deep/10 bg-white ${className}`}>
+    <div
+      className={`rounded-2xl border border-deep/10 bg-white ${clip ? "overflow-hidden" : "overflow-visible"} ${className}`}
+    >
       {children}
     </div>
   );
@@ -181,7 +251,7 @@ export function AdminDetailCard({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-deep/10 bg-white p-5 sm:p-6 ${className}`}
+      className={`min-w-0 rounded-2xl border border-deep/10 bg-white p-5 sm:p-6 ${className}`}
     >
       <div className="flex items-center gap-2">
         {icon ? <span className="text-sage">{icon}</span> : null}
@@ -192,10 +262,17 @@ export function AdminDetailCard({
   );
 }
 
-export function AdminTableWrap({ children }: { children: ReactNode }) {
+export function AdminTableWrap({
+  children,
+  footer,
+}: {
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
   return (
     <AdminPanel>
       <div className="overflow-x-auto">{children}</div>
+      {footer}
     </AdminPanel>
   );
 }

@@ -329,6 +329,19 @@ export async function createInfusion(input: InfusionInput) {
   return { ok: true as const };
 }
 
+export async function toggleInfusionActive(id: string) {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  const existing = await prisma.infusionService.findUnique({ where: { id } });
+  if (!existing) return { error: "Infusion not found." };
+  await prisma.infusionService.update({
+    where: { id },
+    data: { isActive: !existing.isActive },
+  });
+  refreshShop();
+  return { ok: true as const, isActive: !existing.isActive };
+}
+
 export async function deleteInfusion(id: string) {
   const prisma = await database();
   if ("error" in prisma) return prisma;
@@ -337,11 +350,12 @@ export async function deleteInfusion(id: string) {
   const booked = await prisma.appointment.count({ where: { serviceId: id } });
   if (booked > 0) {
     await prisma.infusionService.update({ where: { id }, data: { isActive: false } });
-  } else {
-    await prisma.infusionService.delete({ where: { id } });
+    refreshShop();
+    return { ok: true as const, mode: "hidden" as const, bookings: booked };
   }
+  await prisma.infusionService.delete({ where: { id } });
   refreshShop();
-  return { ok: true as const };
+  return { ok: true as const, mode: "deleted" as const };
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus) {
@@ -355,6 +369,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     status: order.status,
     total: order.total,
     trackUrl: `${site.url}/orders/${order.accessToken}`,
+    fulfillment: order.fulfillment,
   }).catch(() => undefined);
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);

@@ -21,18 +21,6 @@ body {
   font-family: var(--font-sans), sans-serif;
 }
 
-button:not(:disabled),
-[type="button"]:not(:disabled),
-[type="submit"]:not(:disabled),
-[type="reset"]:not(:disabled),
-[role="button"]:not([aria-disabled="true"]) {
-  cursor: pointer;
-}
-
-button:disabled {
-  cursor: not-allowed;
-}
-
 ::selection {
   background: var(--color-tint);
   color: var(--color-deep);
@@ -131,4 +119,32 @@ button:disabled {
   .marquee-track {
     animation: none;
   }
+}
+
+/* Interactive controls — unlayered so this wins over Tailwind base/utilities. */
+button:not(:disabled):not([disabled]),
+[type="button"]:not(:disabled):not([disabled]),
+[type="submit"]:not(:disabled):not([disabled]),
+[type="reset"]:not(:disabled):not([disabled]),
+[role="button"]:not([aria-disabled="true"]),
+select:not(:disabled):not([disabled]),
+summary:not([aria-disabled="true"]),
+label[for]:not([aria-disabled="true"]),
+label:has(input[type="file"]:not(:disabled)),
+label:has(input[type="checkbox"]:not(:disabled)),
+label:has(input[type="radio"]:not(:disabled)),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+a[href] {
+  cursor: pointer;
+}
+
+button:disabled,
+button[disabled],
+select:disabled,
+select[disabled],
+input:disabled,
+input[disabled],
+[aria-disabled="true"] {
+  cursor: not-allowed;
 }

@@ -121,6 +121,7 @@ export async function settlePaystackReference(reference: string, outcome: "succe
       status: "PAID",
       total: payment.order.total,
       trackUrl: `${site.url}/orders/${payment.order.accessToken}`,
+      fulfillment: payment.order.fulfillment,
     });
     if (!customerMail.ok) {
       console.error("[paystack:email] customer order confirmation failed", customerMail.error);

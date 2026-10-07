@@ -1,6 +1,6 @@
 import { DatabaseSetup } from "@/components/admin/setup";
 import { AdminOrderGroups } from "@/components/admin/order-list";
-import { AdminEmptyState, AdminPageHeader } from "@/components/admin/ui";
+import { AdminPageHeader } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { groupAdminOrders } from "@/lib/admin-orders";
 import { tryPrisma } from "@/lib/db";
@@ -28,11 +28,7 @@ export default async function AdminOrdersPage() {
         description="Grouped by what needs doing first. Times show how long ago each order was placed."
       />
 
-      {rows.length === 0 ? (
-        <AdminEmptyState>No orders yet.</AdminEmptyState>
-      ) : (
-        <AdminOrderGroups groups={groups} />
-      )}
+      <AdminOrderGroups groups={groups} />
     </div>
   );
 }

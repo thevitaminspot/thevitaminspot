@@ -1,9 +1,8 @@
+import { AdminBlockedDatesList } from "@/components/admin/blocked-dates-list";
 import { BlockDateForm } from "@/components/admin/block-date-form";
 import { DatabaseSetup } from "@/components/admin/setup";
 import {
-  AdminEmptyState,
   AdminPageHeader,
-  AdminPanel,
   AdminSection,
   AdminTableCell,
   AdminTableHead,
@@ -64,27 +63,13 @@ export default async function AdminAvailabilityPage() {
       </div>
 
       <AdminSection title="Blocked dates" className="mt-10">
-        <AdminPanel>
-          {blocked.length === 0 ? (
-            <AdminEmptyState>No blocked dates.</AdminEmptyState>
-          ) : (
-            <ul className="divide-y divide-deep/6">
-              {blocked.map((row) => (
-                <li key={row.id} className="px-5 py-3.5 text-sm text-deep/75">
-                  {row.date.toLocaleDateString("en-NG", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                  {row.reason ? (
-                    <span className="text-deep/45"> · {row.reason}</span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </AdminPanel>
+        <AdminBlockedDatesList
+          rows={blocked.map((row) => ({
+            id: row.id,
+            date: row.date.toISOString(),
+            reason: row.reason,
+          }))}
+        />
       </AdminSection>
     </div>
   );
