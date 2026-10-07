@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 
 export const metadata = { title: "Customers" };
+export const instant = false;
 
 export default async function AdminCustomersPage() {
   await requireAdmin();

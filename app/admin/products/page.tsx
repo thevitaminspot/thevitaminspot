@@ -5,6 +5,7 @@ import { listManagedProducts } from "@/lib/data";
 import { listLibraryImages } from "@/lib/library-images";
 
 export const metadata = { title: "Products" };
+export const instant = false;
 
 export default async function AdminProductsPage() {
   await requireAdmin();

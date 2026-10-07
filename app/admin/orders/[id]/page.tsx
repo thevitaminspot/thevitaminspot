@@ -15,12 +15,14 @@ import {
   AdminDetailCard,
   AdminStatusBadge,
 } from "@/components/admin/ui";
+import { fulfillmentLabel } from "@/lib/admin-orders";
 import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatNaira } from "@/lib/money";
 
 export const metadata = { title: "Order Details · Admin" };
+export const instant = false;
 
 function cleanWaPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -68,7 +70,13 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           <p className="text-[11px] tracking-[0.18em] text-sage uppercase">Shop</p>
           <div className="mt-1 flex flex-wrap items-center gap-3">
             <h1 className="font-display text-3xl text-deep md:text-4xl">{order.orderNumber}</h1>
-            <AdminStatusBadge status={order.status} />
+            <AdminStatusBadge
+              status={order.status}
+              label={fulfillmentLabel(
+                order.status,
+                order.fulfillment === "PICKUP" ? "PICKUP" : "DELIVERY",
+              )}
+            />
           </div>
           <p className="mt-2 text-sm text-deep/55">
             Placed <TimeAgo value={order.createdAt} /> ·{" "}
@@ -145,8 +153,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
               id={order.id}
               status={order.status}
               paymentStatus={order.payment?.status}
-              paystackReference={order.payment?.paystackReference}
-              fulfillment={order.fulfillment}
+              fulfillment={order.fulfillment === "PICKUP" ? "PICKUP" : "DELIVERY"}
             />
           </AdminDetailCard>
 

@@ -5,6 +5,7 @@ import { listManagedInfusions } from "@/lib/data";
 import { listLibraryImages } from "@/lib/library-images";
 
 export const metadata = { title: "Infusions" };
+export const instant = false;
 
 export default async function AdminInfusionsPage() {
   await requireAdmin();

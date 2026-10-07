@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 
 export const metadata = { title: "Delivery Zones" };
+export const instant = false;
 
 export default async function AdminZonesPage() {
   await requireAdmin();

@@ -31,7 +31,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
   }
 
   return (
-    <article className="group panel flex h-full flex-col overflow-hidden rounded-2xl border border-deep/10 bg-white transition-all duration-300 hover:border-deep/20 hover:shadow-lg">
+    <article className="group panel flex h-full flex-col overflow-hidden rounded-2xl border border-deep/10 bg-white transition-colors duration-300 hover:border-deep/20">
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-tint/30">
         <Link href={`/shop/${product.slug}`} className="block size-full">
           {photo ? (
@@ -117,8 +117,8 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
                 isOutOfStock
                   ? "cursor-not-allowed bg-deep/5 text-deep/30"
                   : justAdded
-                    ? "bg-sage text-deep shadow-sm"
-                    : "border border-deep/20 bg-cream/50 text-deep hover:bg-deep hover:text-cream hover:shadow-md"
+                    ? "bg-sage text-deep"
+                    : "border border-deep/20 bg-cream/50 text-deep hover:bg-deep hover:text-cream"
               }`}
             >
               {justAdded ? <span>Added</span> : isOutOfStock ? <span>Sold out</span> : <span>Add</span>}

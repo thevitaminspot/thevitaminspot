@@ -1,46 +1,64 @@
-type OrderRow = {
-  status: string;
-  createdAt: Date;
-};
+export type AdminOrderStatus =
+  | "PENDING"
+  | "PAID"
+  | "PACKED"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "CANCELLED";
 
-export const orderGroupMeta = [
-  {
-    key: "attention",
-    title: "Needs attention",
-    description: "Paid and waiting to be packed.",
-    uncapped: true,
-    match: (order: OrderRow) => order.status === "PAID",
-  },
-  {
-    key: "fulfillment",
-    title: "In fulfillment",
-    description: "Packed or on the way to the customer.",
-    label: "in fulfillment",
-    match: (order: OrderRow) =>
-      order.status === "PACKED" || order.status === "OUT_FOR_DELIVERY",
-  },
-  {
-    key: "closed",
-    title: "Completed",
-    description: "Delivered or cancelled orders.",
-    label: "completed",
-    match: (order: OrderRow) =>
-      order.status === "DELIVERED" || order.status === "CANCELLED",
-  },
-] as const;
+export type AdminFulfillment = "DELIVERY" | "PICKUP";
 
-export function groupAdminOrders<T extends OrderRow>(rows: T[]) {
-  const sorted = [...rows].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+export type OrderQueue = "open" | "fulfilled" | "cancelled" | "all";
 
-  return orderGroupMeta
-    .map((group) => {
-      const { match, ...meta } = group;
-      return {
-        ...meta,
-        rows: sorted.filter(match),
-      };
-    })
-    .filter((group) => group.rows.length > 0);
+export function isOpenOrder(status: string) {
+  return status === "PAID" || status === "PACKED" || status === "OUT_FOR_DELIVERY";
 }
+
+export function orderQueue(status: string): Exclude<OrderQueue, "all"> {
+  if (status === "DELIVERED") return "fulfilled";
+  if (status === "CANCELLED") return "cancelled";
+  return "open";
+}
+
+export function fulfillmentLabel(status: string, fulfillment: AdminFulfillment) {
+  if (status === "CANCELLED") return "Cancelled";
+  if (status === "DELIVERED") return fulfillment === "PICKUP" ? "Picked up" : "Delivered";
+  if (status === "OUT_FOR_DELIVERY") return "Out for delivery";
+  if (status === "PACKED") return fulfillment === "PICKUP" ? "Ready for pickup" : "Packed";
+  if (status === "PAID") return "Unfulfilled";
+  return "Unpaid";
+}
+
+export function nextOrderStep(
+  status: AdminOrderStatus,
+  fulfillment: AdminFulfillment,
+): { status: AdminOrderStatus; label: string } | null {
+  if (status === "PAID") {
+    return fulfillment === "PICKUP"
+      ? { status: "PACKED", label: "Mark ready for pickup" }
+      : { status: "PACKED", label: "Mark as packed" };
+  }
+  if (status === "PACKED") {
+    return fulfillment === "PICKUP"
+      ? { status: "DELIVERED", label: "Mark as picked up" }
+      : { status: "OUT_FOR_DELIVERY", label: "Mark out for delivery" };
+  }
+  if (status === "OUT_FOR_DELIVERY") {
+    return { status: "DELIVERED", label: "Mark as delivered" };
+  }
+  return null;
+}
+
+export function canTransitionOrder(
+  from: AdminOrderStatus,
+  to: AdminOrderStatus,
+  fulfillment: AdminFulfillment,
+) {
+  if (to === "CANCELLED") return from !== "DELIVERED" && from !== "CANCELLED";
+  return nextOrderStep(from, fulfillment)?.status === to;
+}
+
+export const orderSteps = (fulfillment: AdminFulfillment): AdminOrderStatus[] =>
+  fulfillment === "PICKUP"
+    ? ["PAID", "PACKED", "DELIVERED"]
+    : ["PAID", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED"];

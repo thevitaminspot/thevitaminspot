@@ -13,8 +13,10 @@ import { DatabaseSetup, SeedCatalogueButton } from "@/components/admin/setup";
 import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 import { formatNaira } from "@/lib/money";
+import { getSiteTraffic } from "@/lib/site-analytics";
 
 export const metadata = { title: "Admin" };
+export const instant = false;
 
 const lagos = "Africa/Lagos";
 
@@ -53,7 +55,7 @@ export default async function AdminPage() {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
 
-  const [orders, paid, depositRevenue, pendingBookings, soon, low, productCount] =
+  const [orders, paid, depositRevenue, pendingBookings, soon, low, productCount, traffic] =
     await Promise.all([
       prisma.order.findMany({
         where: { status: { in: ["PAID", "PACKED", "OUT_FOR_DELIVERY"] } },
@@ -83,6 +85,7 @@ export default async function AdminPage() {
         take: 6,
       }),
       prisma.product.count(),
+      getSiteTraffic(),
     ]);
 
   const orderRevenue = paid._sum.total ?? 0;
@@ -122,7 +125,7 @@ export default async function AdminPage() {
         <AdminQuickAction href="/admin/messages">Read messages</AdminQuickAction>
       </AdminQuickActions>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <AdminStatCard href="/admin/orders" label="Open orders" value={String(orders.length)} />
         <AdminStatCard
           href="/admin/orders"
@@ -139,6 +142,17 @@ export default async function AdminPage() {
           href="/admin/products"
           label="Low stock alerts"
           value={String(low.length)}
+        />
+        <AdminStatCard
+          label="Visitors · 7 days"
+          value={traffic.status === "ready" ? traffic.visitors.toLocaleString("en-NG") : "—"}
+          hint={
+            traffic.status === "ready"
+              ? `${traffic.pageviews.toLocaleString("en-NG")} page views · ${traffic.todayVisitors.toLocaleString("en-NG")} visitors today`
+              : traffic.status === "unconfigured"
+                ? "Enable Web Analytics on Vercel, then set VERCEL_API_TOKEN"
+                : "Visits could not be loaded"
+          }
         />
       </div>
 

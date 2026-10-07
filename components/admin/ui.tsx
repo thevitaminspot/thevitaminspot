@@ -41,7 +41,7 @@ export function AdminFormPanel({
 }) {
   return (
     <div
-      className={`scroll-mt-24 rounded-2xl border border-deep/15 bg-white p-6 shadow-md ${className}`}
+      className={`scroll-mt-24 rounded-2xl border border-deep/15 bg-white p-6 ${className}`}
     >
       <div className="mb-4 flex items-start justify-between gap-4 border-b border-deep/10 pb-3">
         <div className="min-w-0">
@@ -151,19 +151,24 @@ export function AdminStatCard({
   value,
   hint,
 }: {
-  href: string;
+  href?: string;
   label: string;
   value: string;
   hint?: string;
 }) {
-  return (
-    <Link
-      href={href}
-      className="block rounded-2xl border border-deep/10 bg-white p-5 transition hover:border-deep/20 hover:shadow-[0_16px_48px_-28px_rgba(11,44,33,0.25)]"
-    >
+  const className = "block rounded-2xl border border-deep/10 bg-white p-5 transition hover:border-deep/20";
+  const body = (
+    <>
       <span className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">{label}</span>
       <span className="mt-3 block font-display text-3xl text-deep">{value}</span>
       {hint ? <span className="mt-2 block text-xs leading-5 text-deep/45">{hint}</span> : null}
+    </>
+  );
+
+  if (!href) return <div className={className}>{body}</div>;
+  return (
+    <Link href={href} className={className}>
+      {body}
     </Link>
   );
 }
@@ -334,14 +339,49 @@ const statusTone: Record<string, string> = {
   COMPLETED: "bg-deep/5 text-deep/70 ring-deep/10",
 };
 
-export function AdminStatusBadge({ status }: { status: string }) {
+export function AdminStatusBadge({ status, label }: { status: string; label?: string }) {
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-[10px] tracking-[0.12em] uppercase ring-1 ring-inset ${
         statusTone[status] ?? "bg-white text-deep/60 ring-deep/10"
       }`}
     >
-      {status.replaceAll("_", " ")}
+      {label ?? status.replaceAll("_", " ")}
     </span>
+  );
+}
+
+export function AdminFilterTabs({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: { id: string; label: string; count: number }[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="mb-4 flex gap-1 overflow-x-auto border-b border-deep/10">
+      {tabs.map((tab) => {
+        const active = tab.id === value;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onChange(tab.id)}
+            className={`shrink-0 border-b-2 px-3 py-2.5 text-sm transition ${interactiveControl} ${
+              active
+                ? "border-deep font-medium text-deep"
+                : "border-transparent text-deep/50 hover:text-deep"
+            }`}
+          >
+            {tab.label}
+            <span className={`ml-1.5 tabular-nums ${active ? "text-deep/55" : "text-deep/35"}`}>
+              {tab.count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
+import { canTransitionOrder } from "@/lib/admin-orders";
 import { getAdminProfile } from "@/lib/auth";
 import { categories, type CatalogInfusion } from "@/lib/catalog";
 import { tryPrisma } from "@/lib/db";
@@ -377,6 +378,17 @@ export async function deleteInfusion(id: string) {
 export async function updateOrderStatus(id: string, status: OrderStatus) {
   const prisma = await database();
   if ("error" in prisma) return prisma;
+  const current = await prisma.order.findUnique({ where: { id } });
+  if (!current) return { error: "Order not found." };
+  if (
+    !canTransitionOrder(
+      current.status,
+      status,
+      current.fulfillment === "PICKUP" ? "PICKUP" : "DELIVERY",
+    )
+  ) {
+    return { error: "That status change is not allowed." };
+  }
   const order = await prisma.order.update({ where: { id }, data: { status } });
   await sendOrderUpdate({
     to: order.email,
@@ -400,6 +412,15 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
     include: { service: true, payment: true },
   });
   if (!existing) return { error: "Appointment not found." };
+  const allowed: Record<string, AppointmentStatus[]> = {
+    PENDING: ["CONFIRMED", "CANCELLED"],
+    CONFIRMED: ["COMPLETED", "CANCELLED"],
+    COMPLETED: [],
+    CANCELLED: [],
+  };
+  if (!allowed[existing.status]?.includes(status)) {
+    return { error: "That status change is not allowed." };
+  }
   const manageUrl = `${site.url}/appointments/${existing.accessToken}`;
   const depositPaid =
     existing.payment?.status === "PAID" ? existing.payment.amount : undefined;

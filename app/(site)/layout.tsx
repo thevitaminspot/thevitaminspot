@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
@@ -28,6 +29,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <div className="page-enter">{children}</div>
       <Footer packs={packs} />
       <CartDrawerLoader />
+      <Analytics />
     </>
   );
 }

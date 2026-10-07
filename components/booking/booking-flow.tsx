@@ -300,7 +300,7 @@ export function BookingFlow({
           if (step < stepTitles.length - 1) next();
           else void confirm(false);
         }}
-        className="overflow-hidden rounded-xl border border-deep/10 bg-white shadow-sm"
+        className="overflow-hidden rounded-xl border border-deep/10 bg-white"
       >
         <header className="border-b border-deep/10 px-5 py-4 sm:px-6">
           {step > 0 ? (

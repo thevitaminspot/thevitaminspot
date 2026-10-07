@@ -1,11 +1,11 @@
+import { AdminOrders } from "@/components/admin/order-list";
 import { DatabaseSetup } from "@/components/admin/setup";
-import { AdminOrderGroups } from "@/components/admin/order-list";
 import { AdminPageHeader } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
-import { groupAdminOrders } from "@/lib/admin-orders";
 import { tryPrisma } from "@/lib/db";
 
 export const metadata = { title: "Orders" };
+export const instant = false;
 
 export default async function AdminOrdersPage() {
   await requireAdmin();
@@ -19,17 +19,15 @@ export default async function AdminOrdersPage() {
     include: { payment: true, items: true },
   });
 
-  const groups = groupAdminOrders(rows);
-
   return (
     <div>
       <AdminPageHeader
         eyebrow="Shop"
         title="Orders"
-        description="Grouped by what needs doing first. Times show how long ago each order was placed."
+        description="Paid orders only. Open covers anything still being packed or delivered."
       />
 
-      <AdminOrderGroups groups={groups} />
+      <AdminOrders rows={rows} />
     </div>
   );
 }
