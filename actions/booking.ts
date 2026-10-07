@@ -7,7 +7,9 @@ import { findInfusion } from "@/lib/data";
 import { tryPrisma } from "@/lib/db";
 import { attachCustomer, getSessionProfile } from "@/lib/auth";
 import { findLocalAppointment, updateLocalAppointment } from "@/lib/local-store";
+import { cancelReasonLabel, isBookingCancelReason } from "@/lib/booking-cancel";
 import {
+  notifyAdminBookingCancelled,
   notifyAdminNewBooking,
   notifyBookingCancelled,
   notifyBookingConfirmed,
@@ -262,19 +264,95 @@ export async function resumeAppointmentDeposit(token: string) {
   }
 }
 
-export async function updateAppointment(
+function buildCancellationNote(reason: string, details?: string, existingNotes?: string | null) {
+  const lines = [
+    `[Cancelled by guest ${new Date().toISOString()}]`,
+    `Reason: ${cancelReasonLabel(reason)}`,
+  ];
+  if (details?.trim()) lines.push(`Details: ${details.trim()}`);
+  if (existingNotes?.trim()) {
+    lines.push("", "---", existingNotes.trim());
+  }
+  return lines.join("\n");
+}
+
+export async function cancelAppointment(
   token: string,
-  action: "cancel" | "reschedule",
-  start?: string,
+  input: { reason: string; details?: string; acknowledged: boolean },
 ) {
+  if (!input.acknowledged) {
+    return { error: "Please confirm you understand the cancellation policy." };
+  }
+  if (!isBookingCancelReason(input.reason)) {
+    return { error: "Please choose why you are cancelling." };
+  }
+  if (input.reason === "other" && !input.details?.trim()) {
+    return { error: "Please tell us a little more when choosing “Something else”." };
+  }
+
   const prisma = await tryPrisma();
   if (!prisma) {
     const appointment = await findLocalAppointment(token);
     if (!appointment) return { error: "Appointment not found." };
-    if (action === "cancel") {
-      await updateLocalAppointment(appointment.id, { status: "CANCELLED" });
-      return { ok: true };
-    }
+    await updateLocalAppointment(appointment.id, { status: "CANCELLED" });
+    return { ok: true as const };
+  }
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { accessToken: token },
+    include: { service: true, payment: true },
+  });
+  if (!appointment) return { error: "Appointment not found." };
+  if (appointment.status === "CANCELLED") {
+    return { error: "This booking is already cancelled." };
+  }
+  if (appointment.status === "COMPLETED") {
+    return { error: "This session has already taken place and cannot be cancelled online." };
+  }
+
+  const manageUrl = `${site.url}/appointments/${token}`;
+  const depositPaid = appointment.payment?.status === "PAID" ? appointment.payment.amount : undefined;
+  const reasonLabel = cancelReasonLabel(input.reason);
+
+  await prisma.appointment.update({
+    where: { id: appointment.id },
+    data: {
+      status: "CANCELLED",
+      notes: buildCancellationNote(input.reason, input.details, appointment.notes),
+    },
+  });
+
+  await notifyBookingCancelled({
+    to: appointment.email,
+    name: appointment.name,
+    serviceName: appointment.service.name,
+    startsAt: appointment.startsAt,
+    manageUrl,
+    reason: reasonLabel,
+    depositPaid,
+  }).catch((error) => {
+    console.error("[booking:cancel] customer email failed", error);
+  });
+
+  await notifyAdminBookingCancelled({
+    name: appointment.name,
+    email: appointment.email,
+    serviceName: appointment.service.name,
+    startsAt: appointment.startsAt,
+    reason: reasonLabel,
+    details: input.details?.trim(),
+    depositPaid,
+    cancelledBy: "guest",
+  }).catch((error) => {
+    console.error("[booking:cancel] admin email failed", error);
+  });
+
+  return { ok: true as const };
+}
+
+export async function updateAppointment(token: string, start: string) {
+  const prisma = await tryPrisma();
+  if (!prisma) {
     return { error: "Choose a new time from the booking page." };
   }
 
@@ -283,20 +361,8 @@ export async function updateAppointment(
     include: { service: true, payment: true },
   });
   if (!appointment) return { error: "Appointment not found." };
-
-  if (action === "cancel") {
-    await prisma.appointment.update({
-      where: { id: appointment.id },
-      data: { status: "CANCELLED" },
-    });
-    await notifyBookingCancelled({
-      to: appointment.email,
-      name: appointment.name,
-      serviceName: appointment.service.name,
-      startsAt: appointment.startsAt,
-      manageUrl: `${site.url}/appointments/${token}`,
-    }).catch(() => undefined);
-    return { ok: true };
+  if (appointment.status === "CANCELLED") {
+    return { error: "This booking was cancelled. Book a new session instead." };
   }
 
   if (!start) return { error: "Choose a new time." };

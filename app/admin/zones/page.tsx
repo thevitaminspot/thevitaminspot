@@ -1,5 +1,6 @@
 import { DatabaseSetup, SeedCatalogueButton } from "@/components/admin/setup";
 import { AddZoneForm, ZoneForm } from "@/components/admin/zone-form";
+import { AdminPageHeader, AdminPanel } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 import { formatNaira } from "@/lib/money";
@@ -16,41 +17,42 @@ export default async function AdminZonesPage() {
 
   return (
     <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-4xl text-deep">Delivery Zones</h1>
-          <p className="mt-1 text-sm text-deep/60">
-            {activeCount} active of {zones.length} zones. Direct Abuja courier rates and delivery timelines.
-          </p>
-        </div>
-        <AddZoneForm />
-      </div>
+      <AdminPageHeader
+        eyebrow="Shop"
+        title="Delivery"
+        description={`${activeCount} active of ${zones.length} zones. Abuja courier rates and delivery timelines.`}
+        action={<AddZoneForm />}
+      />
 
       {zones.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-deep/10 bg-white p-6">
+        <AdminPanel className="p-6">
           <p className="text-sm text-deep/70">No delivery zones configured in Neon yet.</p>
-          <SeedCatalogueButton label="Load Abuja Starter Zones" />
-        </div>
-      ) : (
-        <div className="mt-6 overflow-hidden rounded-xl border border-deep/10 bg-white shadow-sm">
-          <div className="border-b border-deep/10 bg-cream/30 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-deep/60">
-            Current Fulfillment Rates
+          <div className="mt-4">
+            <SeedCatalogueButton label="Load Abuja Starter Zones" />
           </div>
-          <ul className="divide-y divide-deep/10">
+        </AdminPanel>
+      ) : (
+        <AdminPanel>
+          <div className="border-b border-deep/8 bg-cream/20 px-5 py-3 text-[11px] tracking-[0.14em] text-deep/45 uppercase">
+            Current rates
+          </div>
+          <ul className="divide-y divide-deep/6">
             {zones.map((zone) => (
               <li
                 key={zone.id}
-                className="flex flex-col gap-4 p-4 hover:bg-cream/20 md:flex-row md:items-center md:justify-between"
+                className="flex flex-col gap-4 p-5 transition hover:bg-cream/20 md:flex-row md:items-center md:justify-between"
               >
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-deep">{zone.name}</span>
                     <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                        zone.isActive ? "bg-tint/70 text-deep" : "bg-deep/10 text-deep/50"
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[10px] tracking-[0.12em] uppercase ring-1 ring-inset ${
+                        zone.isActive
+                          ? "bg-sage/15 text-deep ring-sage/30"
+                          : "bg-deep/[0.04] text-deep/50 ring-deep/10"
                       }`}
                     >
-                      {zone.isActive ? "Live in checkout" : "Disabled"}
+                      {zone.isActive ? "Live" : "Off"}
                     </span>
                   </div>
                   <p className="mt-0.5 text-xs text-deep/50">
@@ -66,7 +68,7 @@ export default async function AdminZonesPage() {
               </li>
             ))}
           </ul>
-        </div>
+        </AdminPanel>
       )}
     </div>
   );

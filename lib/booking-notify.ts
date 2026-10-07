@@ -56,9 +56,38 @@ export async function notifyBookingCancelled(input: {
   serviceName: string;
   startsAt: Date;
   manageUrl: string;
+  reason?: string;
+  depositPaid?: number;
 }) {
   const result = await sendBookingCancelled(input);
   logEmail("booking-cancelled", result, input.to);
+  if (!result.ok) throw new Error(result.error);
+}
+
+export async function notifyAdminBookingCancelled(input: {
+  name: string;
+  email: string;
+  serviceName: string;
+  startsAt: Date;
+  reason: string;
+  details?: string;
+  depositPaid?: number;
+  cancelledBy: "guest" | "admin";
+}) {
+  const when = input.startsAt.toLocaleString("en-NG");
+  const depositLine =
+    input.depositPaid && input.depositPaid > 0
+      ? `<p><strong>Deposit paid:</strong> ${escapeHtml(formatNaira(input.depositPaid))}. Review refund requests manually if needed.</p>`
+      : "";
+  const detailsLine = input.details
+    ? `<p><strong>Guest note:</strong> ${escapeHtml(input.details)}</p>`
+    : "";
+  const result = await sendMail({
+    to: process.env.ADMIN_EMAIL ?? site.email,
+    subject: `Booking cancelled: ${input.serviceName}`,
+    html: `<p><strong>${escapeHtml(input.name)}</strong> (${escapeHtml(input.email)}) cancelled <strong>${escapeHtml(input.serviceName)}</strong> on ${escapeHtml(when)}.</p><p><strong>Reason:</strong> ${escapeHtml(input.reason)}</p><p><strong>Cancelled by:</strong> ${input.cancelledBy === "guest" ? "Guest (online)" : "Admin"}</p>${detailsLine}${depositLine}<p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
+  });
+  logEmail("booking-admin-cancelled", result, process.env.ADMIN_EMAIL ?? site.email);
   if (!result.ok) throw new Error(result.error);
 }
 

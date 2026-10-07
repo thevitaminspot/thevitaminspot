@@ -32,6 +32,7 @@ export default async function AppointmentPage({
         serviceSlug: row.service.slug,
         durationMin: row.service.durationMin,
         deposit: row.service.deposit,
+        depositPaid: paidDeposit,
         startsAt: row.startsAt,
         name: row.name,
         email: row.email,
@@ -44,6 +45,8 @@ export default async function AppointmentPage({
           serviceName: local.serviceName,
           serviceSlug: local.serviceSlug,
           durationMin: (await findInfusion(local.serviceSlug))?.durationMin ?? 45,
+          deposit: (await findInfusion(local.serviceSlug))?.deposit,
+          depositPaid: false,
           startsAt: new Date(local.startsAt),
           name: local.name,
           email: local.email,
@@ -60,28 +63,52 @@ export default async function AppointmentPage({
 
   return (
     <main className="mx-auto max-w-xl px-5 py-16">
-      <p className="text-[11px] tracking-[0.28em] text-sage uppercase">{appointment.status}</p>
+      <p
+        className={`text-[11px] tracking-[0.28em] uppercase ${
+          appointment.status === "CANCELLED"
+            ? "text-deep/45"
+            : appointment.status === "CONFIRMED"
+              ? "text-sage"
+              : "text-deep/55"
+        }`}
+      >
+        {appointment.status === "CANCELLED"
+          ? "Cancelled"
+          : appointment.status === "CONFIRMED"
+            ? "Confirmed"
+            : appointment.status === "COMPLETED"
+              ? "Completed"
+              : "Pending confirmation"}
+      </p>
       <h1 className="font-display mt-3 text-5xl">{appointment.serviceName}</h1>
       <p className="mt-5 leading-8 text-deep/70">
         {appointment.startsAt.toLocaleString("en-NG")}
         <br />
         {appointment.name} · {appointment.email}
       </p>
-      {"showPayDeposit" in appointment && appointment.showPayDeposit ? (
+      {appointment.status !== "CANCELLED" &&
+      "showPayDeposit" in appointment &&
+      appointment.showPayDeposit ? (
         <PayDepositButton token={token} deposit={appointment.deposit} />
       ) : null}
-      <a
-        href={whatsappHref(
-          `My Vitamin Spot booking is ${appointment.serviceName} on ${appointment.startsAt.toLocaleString("en-NG")}.`,
-        )}
-        className="mt-6 inline-flex rounded-lg border border-deep/15 px-5 py-3 text-[11px] tracking-[0.18em] text-deep uppercase"
-      >
-        Share on WhatsApp
-      </a>
+      {appointment.status !== "CANCELLED" ? (
+        <a
+          href={whatsappHref(
+            `My Vitamin Spot booking is ${appointment.serviceName} on ${appointment.startsAt.toLocaleString("en-NG")}.`,
+          )}
+          className="mt-6 inline-flex rounded-lg border border-deep/15 px-5 py-3 text-[11px] tracking-[0.18em] text-deep uppercase"
+        >
+          Share on WhatsApp
+        </a>
+      ) : null}
       <AppointmentManager
         token={token}
         slug={appointment.serviceSlug}
-        durationMin={appointment.durationMin}
+        serviceName={appointment.serviceName}
+        startsAt={appointment.startsAt}
+        status={appointment.status}
+        deposit={"deposit" in appointment ? appointment.deposit : undefined}
+        depositPaid={"depositPaid" in appointment ? appointment.depositPaid : undefined}
       />
     </main>
   );

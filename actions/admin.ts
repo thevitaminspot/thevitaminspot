@@ -5,6 +5,7 @@ import { getAdminProfile } from "@/lib/auth";
 import { categories, type CatalogInfusion } from "@/lib/catalog";
 import { tryPrisma } from "@/lib/db";
 import {
+  notifyAdminBookingCancelled,
   notifyBookingCancelled,
   notifyBookingConfirmed,
 } from "@/lib/booking-notify";
@@ -395,6 +396,18 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
       serviceName: existing.service.name,
       startsAt: existing.startsAt,
       manageUrl,
+      reason: "Cancelled by The Vitamin Spot",
+      depositPaid,
+    }).catch(() => undefined);
+
+    await notifyAdminBookingCancelled({
+      name: existing.name,
+      email: existing.email,
+      serviceName: existing.service.name,
+      startsAt: existing.startsAt,
+      reason: "Cancelled by admin",
+      depositPaid,
+      cancelledBy: "admin",
     }).catch(() => undefined);
   }
   revalidatePath("/admin/appointments");

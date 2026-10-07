@@ -1,4 +1,9 @@
 import { DatabaseSetup } from "@/components/admin/setup";
+import {
+  AdminEmptyState,
+  AdminMessageCard,
+  AdminPageHeader,
+} from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 
@@ -16,19 +21,25 @@ export default async function AdminMessagesPage() {
 
   return (
     <div>
-      <h1 className="font-display text-4xl">Messages</h1>
-      <p className="mt-2 text-sm text-deep/60">Notes from the contact form and the mailing list. Copies also go out through Resend.</p>
+      <AdminPageHeader
+        eyebrow="Inbox"
+        title="Messages"
+        description="Notes from the contact form and mailing list. Copies also go out through Resend."
+      />
+
       {rows.length === 0 ? (
-        <p className="mt-6 text-sm text-deep/60">No messages yet.</p>
+        <AdminEmptyState>No messages yet.</AdminEmptyState>
       ) : (
-        <ul className="mt-6 space-y-3">
+        <ul className="space-y-3">
           {rows.map((row) => (
-            <li key={row.id} className="rounded-lg border border-deep/10 bg-white px-4 py-4">
-              <p className="text-sm text-deep/50">
-                {row.createdAt.toLocaleString("en-NG")} · {row.name} · {row.email}
-                {row.phone ? ` · ${row.phone}` : ""}
-              </p>
-              <p className="mt-2 text-sm leading-7">{row.message}</p>
+            <li key={row.id}>
+              <AdminMessageCard
+                meta={`${row.createdAt.toLocaleString("en-NG")} · ${row.name} · ${row.email}${
+                  row.phone ? ` · ${row.phone}` : ""
+                }`}
+              >
+                {row.message}
+              </AdminMessageCard>
             </li>
           ))}
         </ul>
