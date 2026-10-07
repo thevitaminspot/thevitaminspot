@@ -7,6 +7,7 @@ import { confirmPaystackReturn } from "@/lib/payments";
 import { whatsappHref } from "@/lib/site";
 
 export const metadata = { title: "Your appointment", robots: { index: false, follow: false } };
+export const instant = false;
 
 export default async function AppointmentPage({
   params,

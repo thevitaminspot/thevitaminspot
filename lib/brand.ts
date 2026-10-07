@@ -4,8 +4,8 @@ export const brand = {
   mark: {
     src: "/brand/logo.png",
     alt: "The Vitamin Spot",
-    width: 495,
-    height: 495,
+    width: 97,
+    height: 128,
   },
   /** Full logo with wordmark — Open Graph and structured data */
   logo: {

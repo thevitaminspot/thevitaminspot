@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { BookingFlow } from "@/components/booking/booking-flow";
 import { listInfusions } from "@/lib/data";
 
@@ -8,12 +9,23 @@ export const metadata = {
   alternates: { canonical: "/infusions" },
 };
 
+async function InfusionPicker({
+  searchParams,
+  drips,
+}: {
+  searchParams: PageProps<"/infusions">["searchParams"];
+  drips: Awaited<ReturnType<typeof listInfusions>>;
+}) {
+  const params = await searchParams;
+  const initialSlug = typeof params.drip === "string" ? params.drip : undefined;
+
+  return <BookingFlow drips={drips} initialSlug={initialSlug} />;
+}
+
 export default async function InfusionsPage({
   searchParams,
 }: PageProps<"/infusions">) {
   const drips = await listInfusions();
-  const params = await searchParams;
-  const initialSlug = typeof params.drip === "string" ? params.drip : undefined;
 
   return (
     <main className="px-5 py-12 md:py-16">
@@ -24,7 +36,15 @@ export default async function InfusionsPage({
         </p>
       </div>
       <div className="mx-auto mt-8 max-w-md">
-        <BookingFlow drips={drips} initialSlug={initialSlug} />
+        <Suspense
+          fallback={
+            <div className="rounded-2xl border border-deep/10 bg-white/60 px-4 py-10 text-center text-sm text-deep/50">
+              Loading drips…
+            </div>
+          }
+        >
+          <InfusionPicker searchParams={searchParams} drips={drips} />
+        </Suspense>
       </div>
       <p className="mx-auto mt-8 max-w-md text-center text-xs leading-relaxed text-deep/45">
         Tell us if you’re pregnant, on medication, or have allergies. This is wellness care, not

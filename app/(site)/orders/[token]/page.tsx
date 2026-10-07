@@ -4,6 +4,7 @@ import { formatNaira } from "@/lib/money";
 import { confirmPaystackReturn } from "@/lib/payments";
 
 export const metadata = { title: "Order", robots: { index: false, follow: false } };
+export const instant = false;
 
 export default async function OrderPage({
   params,

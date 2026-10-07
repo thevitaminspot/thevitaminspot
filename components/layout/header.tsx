@@ -147,8 +147,6 @@ export function Header() {
     closeNav();
   }, [pathname, closeNav]);
 
-  if (pathname.startsWith("/admin")) return null;
-
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-deep/10 bg-cream/95 backdrop-blur-md">
@@ -159,8 +157,8 @@ export function Header() {
               alt=""
               width={44}
               height={44}
+              sizes="44px"
               className="size-10 shrink-0 object-contain md:size-11"
-              priority
               aria-hidden
             />
             <span className="font-display truncate text-lg tracking-[0.03em] sm:text-xl">

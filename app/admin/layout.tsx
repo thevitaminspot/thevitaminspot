@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin";
 import { hasClerk } from "@/lib/auth";
 
 export const metadata = { robots: { index: false, follow: false } };
+export const instant = false;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   if (!hasClerk()) {

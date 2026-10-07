@@ -56,6 +56,7 @@ export function Hero({
                 alt=""
                 width={72}
                 height={72}
+                sizes="64px"
                 className="size-16 shrink-0 rounded-xl object-cover"
               />
               <span>
@@ -79,6 +80,7 @@ export function Hero({
                       alt=""
                       width={64}
                       height={64}
+                      sizes="56px"
                       className="size-14 rounded-xl object-cover"
                     />
                   ) : (

@@ -1,8 +1,6 @@
 import { handlePaystackWebhookCharge } from "@/lib/payments";
 import { verifyPaystackSignature } from "@/lib/paystack";
 
-export const runtime = "nodejs";
-
 type PaystackEvent = {
   event: string;
   data?: {

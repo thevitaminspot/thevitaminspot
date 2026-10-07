@@ -1,4 +1,5 @@
-import { Faq, ProductStories, WalkIn } from "@/components/home/home-sections";
+import { Faq } from "@/components/home/faq";
+import { ProductStories, WalkIn } from "@/components/home/home-sections";
 import { Hero } from "@/components/home/hero";
 import { listProducts } from "@/lib/data";
 import { site } from "@/lib/site";
