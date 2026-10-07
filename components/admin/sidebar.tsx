@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { interactiveControl } from "@/components/ui/form-styles";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
@@ -72,7 +73,7 @@ function SidebarNav({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-2">
+    <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-2">
       {navGroups.map((group) => (
         <div key={group.label}>
           <p className="mb-2 px-3 text-[10px] tracking-[0.22em] text-cream/35 uppercase">
@@ -87,7 +88,7 @@ function SidebarNav({
                   <Link
                     href={link.href}
                     onClick={onNavigate}
-                    className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
+                    className={`group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
                       active
                         ? "bg-cream/12 font-medium text-cream shadow-[inset_0_0_0_1px_rgba(244,239,228,0.12)]"
                         : "text-cream/60 hover:bg-cream/[0.06] hover:text-cream/90"
@@ -116,18 +117,33 @@ function SidebarNav({
 
 function SidebarFooter({ email }: { email?: string }) {
   return (
-    <div className="border-t border-cream/10 px-5 py-5">
-      <Link
-        href="/shop"
-        className="inline-flex text-[11px] tracking-[0.14em] text-cream/45 uppercase transition hover:text-cream"
-      >
-        View shop →
-      </Link>
-      <div className="mt-4 flex items-center gap-3">
-        <AccountButton />
-        {email ? (
-          <span className="min-w-0 truncate text-xs text-cream/40">{email}</span>
-        ) : null}
+    <div className="mt-auto shrink-0 border-t border-cream/15 px-4 py-4">
+      <div className="rounded-xl bg-cream/10 p-3.5 ring-1 ring-cream/20">
+        <Link
+          href="/shop"
+          className="flex cursor-pointer items-center justify-between rounded-lg border border-cream/25 bg-cream/10 px-3 py-2.5 text-sm font-medium text-cream transition hover:bg-cream/20 hover:text-white"
+        >
+          View shop
+          <span className="text-cream/80" aria-hidden>
+            →
+          </span>
+        </Link>
+
+        <div className="mt-3.5 border-t border-cream/15 pt-3.5">
+          <div className="flex items-center gap-3">
+            <AccountButton
+              className="text-sm font-medium text-cream hover:text-white"
+              userButtonAppearance={{
+                elements: {
+                  userButtonAvatarBox: "size-8 ring-2 ring-cream/40",
+                },
+              }}
+            />
+          </div>
+          {email ? (
+            <p className="mt-2.5 truncate text-xs leading-5 text-cream/75">{email}</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -167,13 +183,15 @@ export function AdminSidebar({
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="relative hidden md:flex md:min-h-screen md:w-[17rem] md:shrink-0 md:flex-col md:border-r md:border-cream/10 md:bg-deep">
+      <aside className="relative hidden md:sticky md:top-0 md:flex md:h-screen md:w-[17rem] md:shrink-0 md:flex-col md:border-r md:border-cream/10 md:bg-deep">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_50%_at_0%_0%,rgba(139,165,117,0.18),transparent_55%),radial-gradient(ellipse_60%_40%_at_100%_100%,rgba(207,225,175,0.08),transparent_50%)]"
           aria-hidden
         />
-        <div className="relative flex min-h-screen flex-1 flex-col">
-          <SidebarBrand />
+        <div className="relative flex h-full min-h-0 flex-1 flex-col">
+          <div className="shrink-0">
+            <SidebarBrand />
+          </div>
           <SidebarNav pathname={pathname} />
           <SidebarFooter email={email} />
         </div>
@@ -185,17 +203,17 @@ export function AdminSidebar({
           <button
             type="button"
             aria-label="Close menu"
-            className="absolute inset-0 bg-deep/60 backdrop-blur-[2px]"
+            className={`absolute inset-0 bg-deep/60 backdrop-blur-[2px] ${interactiveControl}`}
             onClick={onMobileClose}
           />
-          <aside className="relative flex h-full w-[min(100%,18rem)] flex-col bg-deep shadow-2xl">
-            <div className="flex items-center justify-between border-b border-cream/10 pr-3">
+          <aside className="relative flex h-full min-h-0 w-[min(100%,18rem)] flex-col bg-deep shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-cream/10 pr-3">
               <SidebarBrand />
               <button
                 type="button"
                 aria-label="Close"
                 onClick={onMobileClose}
-                className="rounded-lg p-2 text-cream/70 hover:bg-cream/10 hover:text-cream"
+                className={`rounded-lg p-2 text-cream/70 hover:bg-cream/10 hover:text-cream ${interactiveControl}`}
               >
                 <X className="size-5" />
               </button>
@@ -224,7 +242,7 @@ export function AdminMobileBar({
         type="button"
         aria-label="Open admin menu"
         onClick={onOpen}
-        className="inline-flex items-center gap-2 rounded-lg border border-deep/10 bg-white px-3 py-2 text-sm text-deep"
+        className={`inline-flex items-center gap-2 rounded-lg border border-deep/10 bg-white px-3 py-2 text-sm text-deep ${interactiveControl}`}
       >
         <Menu className="size-4" aria-hidden />
         Menu

@@ -8,6 +8,7 @@ export const orderGroupMeta = [
     key: "attention",
     title: "Needs attention",
     description: "Unpaid or paid and waiting to be packed.",
+    uncapped: true,
     match: (order: OrderRow) =>
       order.status === "PENDING" || order.status === "PAID",
   },
@@ -15,6 +16,7 @@ export const orderGroupMeta = [
     key: "fulfillment",
     title: "In fulfillment",
     description: "Packed or on the way to the customer.",
+    label: "in fulfillment",
     match: (order: OrderRow) =>
       order.status === "PACKED" || order.status === "OUT_FOR_DELIVERY",
   },
@@ -22,6 +24,7 @@ export const orderGroupMeta = [
     key: "closed",
     title: "Completed",
     description: "Delivered or cancelled orders.",
+    label: "completed",
     match: (order: OrderRow) =>
       order.status === "DELIVERED" || order.status === "CANCELLED",
   },
@@ -33,9 +36,12 @@ export function groupAdminOrders<T extends OrderRow>(rows: T[]) {
   );
 
   return orderGroupMeta
-    .map((group) => ({
-      ...group,
-      rows: sorted.filter(group.match),
-    }))
+    .map((group) => {
+      const { match, ...meta } = group;
+      return {
+        ...meta,
+        rows: sorted.filter(match),
+      };
+    })
     .filter((group) => group.rows.length > 0);
 }

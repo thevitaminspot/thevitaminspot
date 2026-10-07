@@ -99,14 +99,141 @@ export async function sendMail(input: {
   return { ok: false as const, error: message };
 }
 
-const orderStatusCopy: Record<string, string> = {
-  PENDING: "is waiting for payment",
-  PAID: "is paid and being prepared",
-  PACKED: "is packed",
-  OUT_FOR_DELIVERY: "is on the way",
-  DELIVERED: "has been delivered",
-  CANCELLED: "has been cancelled",
+type FulfillmentMethod = "DELIVERY" | "PICKUP";
+
+const brand = {
+  deep: "#0b2c21",
+  cream: "#faf7f2",
+  sage: "#7a9e8e",
+  tint: "#f0ebe3",
 };
+
+function emailLayout(input: {
+  eyebrow: string;
+  headline: string;
+  body: string;
+  cta?: { label: string; href: string };
+  footnote?: string;
+}) {
+  const cta = input.cta
+    ? `<p style="margin:28px 0 0;">
+        <a href="${escapeHtml(input.cta.href)}" style="display:inline-block;padding:14px 28px;background:${brand.deep};color:${brand.cream};text-decoration:none;border-radius:10px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-family:Georgia,'Times New Roman',serif;">
+          ${escapeHtml(input.cta.label)}
+        </a>
+      </p>`
+    : "";
+
+  const footnote = input.footnote
+    ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:${brand.deep}99;">${input.footnote}</p>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:${brand.tint};font-family:Georgia,'Times New Roman',serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${brand.tint};">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;border:1px solid ${brand.deep}14;overflow:hidden;">
+          <tr>
+            <td style="background:${brand.deep};padding:28px 32px;">
+              <p style="margin:0;font-size:11px;letter-spacing:0.22em;color:${brand.sage};text-transform:uppercase;">${escapeHtml(site.name)}</p>
+              <h1 style="margin:10px 0 0;font-size:26px;line-height:1.2;font-weight:400;color:${brand.cream};">${escapeHtml(input.headline)}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.18em;color:${brand.sage};text-transform:uppercase;">${escapeHtml(input.eyebrow)}</p>
+              <div style="font-size:15px;line-height:1.7;color:${brand.deep};">${input.body}</div>
+              ${footnote}
+              ${cta}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 32px;background:${brand.tint};border-top:1px solid ${brand.deep}10;">
+              <p style="margin:0;font-size:12px;line-height:1.6;color:${brand.deep}88;">
+                Questions? Reply to this email or WhatsApp us at ${escapeHtml(site.phone)}.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function orderStatusContent(
+  status: string,
+  fulfillment: FulfillmentMethod,
+): { subject: string; headline: string; body: string; footnote?: string } {
+  const pickup = fulfillment === "PICKUP";
+  const shop = site.address.label;
+
+  switch (status) {
+    case "PAID":
+      return {
+        subject: pickup
+          ? "Payment received — we're getting your order ready"
+          : "Payment received — we're preparing your order",
+        headline: pickup ? "Ready soon for pickup" : "We're on it",
+        body: pickup
+          ? `<p style="margin:0 0 12px;">Thanks for your order. We've received your payment and we're preparing everything for pickup at our shop.</p>
+             <p style="margin:0;">We'll let you know the moment it's ready to collect.</p>`
+          : `<p style="margin:0 0 12px;">Thanks for your order. Payment is confirmed and we're preparing your items now.</p>
+             <p style="margin:0;">You'll hear from us again when your order ships.</p>`,
+      };
+    case "PACKED":
+      return pickup
+        ? {
+            subject: "Your order is ready for pickup",
+            headline: "Ready for pickup",
+            body: `<p style="margin:0 0 12px;">Good news — your order is packed and waiting for you.</p>
+                   <p style="margin:0;">Pop in whenever suits you. We're at <strong>${escapeHtml(shop)}</strong>.</p>`,
+            footnote: `Bring your order number. If you need directions, reply and we'll help.`,
+          }
+        : {
+            subject: "Your order is packed",
+            headline: "Packed & ready",
+            body: `<p style="margin:0 0 12px;">Your order is packed and queued for dispatch.</p>
+                   <p style="margin:0;">We'll notify you once it's on the way.</p>`,
+          };
+    case "OUT_FOR_DELIVERY":
+      return {
+        subject: "Your order is on the way",
+        headline: "Out for delivery",
+        body: `<p style="margin:0 0 12px;">Your order has left the shop and is heading your way.</p>
+               <p style="margin:0;">Keep your phone handy in case our courier needs to reach you.</p>`,
+      };
+    case "DELIVERED":
+      return pickup
+        ? {
+            subject: "Thanks for picking up",
+            headline: "Enjoy your order",
+            body: `<p style="margin:0 0 12px;">Thanks for collecting your order — we hope you love everything.</p>
+                   <p style="margin:0;">Need anything else? We're always here.</p>`,
+          }
+        : {
+            subject: "Your order has been delivered",
+            headline: "Delivered",
+            body: `<p style="margin:0 0 12px;">Your order has been delivered. We hope everything arrived just right.</p>
+                   <p style="margin:0;">If anything looks off, reply and we'll sort it out.</p>`,
+          };
+    case "CANCELLED":
+      return {
+        subject: "Your order was cancelled",
+        headline: "Order cancelled",
+        body: `<p style="margin:0;">Your order has been cancelled. If this wasn't expected or you'd like to place a new one, just reply to this email.</p>`,
+      };
+    default:
+      return {
+        subject: "Order update",
+        headline: "Order update",
+        body: `<p style="margin:0;">There's an update on your order. Check the link below for the latest status.</p>`,
+      };
+  }
+}
 
 export async function sendOrderUpdate(input: {
   to: string;
@@ -115,12 +242,22 @@ export async function sendOrderUpdate(input: {
   status: string;
   total: number;
   trackUrl: string;
+  fulfillment?: FulfillmentMethod;
 }) {
-  const line = orderStatusCopy[input.status] ?? "has been updated";
+  const fulfillment = input.fulfillment ?? "DELIVERY";
+  const copy = orderStatusContent(input.status, fulfillment);
+  const totalLine = `<p style="margin:16px 0 0;padding:14px 16px;background:${brand.tint};border-radius:10px;font-size:14px;color:${brand.deep};"><strong>Order ${escapeHtml(input.orderNumber)}</strong> · ${escapeHtml(formatNaira(input.total))}</p>`;
+
   return sendMail({
     to: input.to,
-    subject: `Order ${input.orderNumber} ${line}`,
-    html: `<p>Dear ${escapeHtml(input.name)},</p><p>Order ${escapeHtml(input.orderNumber)} ${escapeHtml(line)}. Total ${escapeHtml(formatNaira(input.total))}.</p><p><a href="${escapeHtml(input.trackUrl)}">View the order</a></p>`,
+    subject: `${copy.subject} · ${input.orderNumber}`,
+    html: emailLayout({
+      eyebrow: `Dear ${input.name}`,
+      headline: copy.headline,
+      body: `${copy.body}${totalLine}`,
+      footnote: copy.footnote,
+      cta: { label: "View your order", href: input.trackUrl },
+    }),
   });
 }
 

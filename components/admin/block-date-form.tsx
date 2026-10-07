@@ -1,7 +1,7 @@
 "use client";
 
 import { blockDate } from "@/actions/admin";
-import { adminFormControl } from "@/components/ui/form-styles";
+import { adminButtonPrimary, adminFormControl } from "@/components/ui/form-styles";
 
 export function BlockDateForm() {
   return (
@@ -15,9 +15,7 @@ export function BlockDateForm() {
     >
       <input type="date" name="date" required className={adminFormControl} />
       <input name="reason" placeholder="Reason" className={adminFormControl} />
-      <button className="rounded-lg bg-deep px-4 py-2 text-[11px] tracking-[0.1em] text-cream uppercase">
-        Block date
-      </button>
+      <button className={adminButtonPrimary}>Block date</button>
     </form>
   );
 }

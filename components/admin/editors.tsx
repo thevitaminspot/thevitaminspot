@@ -7,14 +7,19 @@ import {
   acceptAppointment,
   createInfusion,
   createProduct,
-  deleteInfusion,
-  deleteProduct,
   updateInfusion,
   updateProduct,
   uploadProductImage,
 } from "@/actions/admin";
 import { categories, type CatalogInfusion, type CatalogProduct } from "@/lib/catalog";
-import { adminFormControl, adminFormSelect, adminFormTextarea } from "@/components/ui/form-styles";
+import {
+  adminButtonDanger,
+  adminButtonPrimary,
+  adminFormControl,
+  adminFormSelect,
+  adminFormTextarea,
+  interactiveControl,
+} from "@/components/ui/form-styles";
 
 function naira(kobo: number) {
   return Math.round(kobo / 100);
@@ -56,9 +61,19 @@ function ActiveField({ checked = true }: { checked?: boolean }) {
   );
 }
 
-export function AddProductForm({ library }: { library: string[] }) {
+type FormCallbacks = {
+  onSuccess?: () => void;
+  onError?: (message: string) => void;
+};
+
+export function AddProductForm({
+  library,
+  onSuccess,
+  onError,
+}: {
+  library: string[];
+} & FormCallbacks) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
   const [images, setImages] = useState<{ url: string; alt: string }[]>([]);
 
@@ -90,11 +105,13 @@ export function AddProductForm({ library }: { library: string[] }) {
             categorySlug: String(data.get("categorySlug") ?? ""),
             images,
           });
-          setMessage("error" in result && result.error ? result.error : "Product added.");
           if ("ok" in result) {
             form.reset();
             setImages([]);
             router.refresh();
+            onSuccess?.();
+          } else {
+            onError?.(result.error || "Could not add product.");
           }
         });
       }}
@@ -127,14 +144,17 @@ export function AddProductForm({ library }: { library: string[] }) {
         How to take it
         <textarea name="usage" className={`${area} mt-1`} />
       </label>
-      <PicturePicker images={images} library={library} onAdd={addImage} onChange={setImages} onUpload={start} onError={setMessage} />
-      <button
-        disabled={pending}
-        className="rounded-lg bg-deep px-4 py-2 text-[11px] tracking-[0.16em] text-cream uppercase md:w-fit"
-      >
-        Add product
+      <PicturePicker
+        images={images}
+        library={library}
+        onAdd={addImage}
+        onChange={setImages}
+        onUpload={start}
+        onError={(error) => onError?.(error)}
+      />
+      <button disabled={pending} className={`md:w-fit ${adminButtonPrimary}`}>
+        {pending ? "Adding…" : "Add product"}
       </button>
-      {message ? <p className="text-sm">{message}</p> : null}
     </form>
   );
 }
@@ -181,7 +201,7 @@ function PicturePicker({
             />
             <button
               type="button"
-              className="text-[11px] tracking-[0.14em] uppercase"
+              className={`text-[11px] tracking-[0.14em] uppercase ${interactiveControl}`}
               onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))}
             >
               Remove
@@ -206,7 +226,9 @@ function PicturePicker({
             </option>
           ))}
         </select>
-        <label className="rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase">
+        <label
+          className={`rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${interactiveControl}`}
+        >
           Upload picture
           <input
             type="file"
@@ -234,12 +256,16 @@ function PicturePicker({
 export function ProductEditor({
   product,
   library,
+  onSuccess,
+  onError,
+  onDelete,
 }: {
   product: CatalogProduct;
   library: string[];
-}) {
+} & FormCallbacks & {
+    onDelete?: () => void;
+  }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
   const [images, setImages] = useState(product.images);
 
@@ -271,8 +297,12 @@ export function ProductEditor({
             categorySlug: String(data.get("categorySlug") ?? ""),
             images,
           });
-          setMessage("error" in result && result.error ? result.error : "Saved.");
-          if ("ok" in result) router.refresh();
+          if ("ok" in result) {
+            router.refresh();
+            onSuccess?.();
+          } else {
+            onError?.(result.error || "Could not save.");
+          }
         });
       }}
     >
@@ -369,31 +399,18 @@ export function ProductEditor({
         onAdd={addImage}
         onChange={setImages}
         onUpload={(work) => start(async () => work())}
-        onError={setMessage}
+        onError={(error) => onError?.(error)}
       />
 
       <div className="flex flex-wrap gap-3">
-        <button
-          disabled={pending}
-          className="rounded-lg bg-deep px-4 py-2 text-[11px] tracking-[0.16em] text-cream uppercase"
-        >
-          Save
+        <button disabled={pending} className={adminButtonPrimary}>
+          {pending ? "Saving…" : "Save changes"}
         </button>
-        <button
-          type="button"
-          disabled={pending}
-          className="rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.16em] uppercase"
-          onClick={() => {
-            start(async () => {
-              const result = await deleteProduct(product.id);
-              setMessage("error" in result && result.error ? result.error : "Deleted.");
-              if ("ok" in result) router.refresh();
-            });
-          }}
-        >
-          Delete
-        </button>
-        {message ? <p className="self-center text-sm">{message}</p> : null}
+        {onDelete ? (
+          <button type="button" disabled={pending} className={adminButtonDanger} onClick={onDelete}>
+            Delete
+          </button>
+        ) : null}
       </div>
     </form>
   );
@@ -413,9 +430,14 @@ function infusionPayload(data: FormData, image: string) {
   };
 }
 
-export function AddInfusionForm({ library }: { library: string[] }) {
+export function AddInfusionForm({
+  library,
+  onSuccess,
+  onError,
+}: {
+  library: string[];
+} & FormCallbacks) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [image, setImage] = useState("");
   const [pending, start] = useTransition();
 
@@ -428,23 +450,21 @@ export function AddInfusionForm({ library }: { library: string[] }) {
         const form = event.currentTarget;
         start(async () => {
           const result = await createInfusion(infusionPayload(data, image));
-          setMessage("error" in result && result.error ? result.error : "Session added.");
           if ("ok" in result) {
             form.reset();
             setImage("");
             router.refresh();
+            onSuccess?.();
+          } else {
+            onError?.(result.error || "Could not add session.");
           }
         });
       }}
     >
       <InfusionFields library={library} image={image} onImage={setImage} />
-      <button
-        disabled={pending}
-        className="rounded-lg bg-deep px-4 py-2 text-[11px] tracking-[0.16em] text-cream uppercase md:w-fit"
-      >
-        Add session
+      <button disabled={pending} className={`md:w-fit ${adminButtonPrimary}`}>
+        {pending ? "Adding…" : "Add session"}
       </button>
-      {message ? <p className="text-sm">{message}</p> : null}
     </form>
   );
 }
@@ -452,12 +472,16 @@ export function AddInfusionForm({ library }: { library: string[] }) {
 export function InfusionEditor({
   infusion,
   library,
+  onSuccess,
+  onError,
+  onDelete,
 }: {
   infusion: CatalogInfusion;
   library: string[];
-}) {
+} & FormCallbacks & {
+    onDelete?: () => void;
+  }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [image, setImage] = useState(infusion.image);
   const [pending, start] = useTransition();
 
@@ -472,35 +496,25 @@ export function InfusionEditor({
             id: infusion.id,
             ...infusionPayload(data, image),
           });
-          setMessage("error" in result && result.error ? result.error : "Saved.");
-          if ("ok" in result) router.refresh();
+          if ("ok" in result) {
+            router.refresh();
+            onSuccess?.();
+          } else {
+            onError?.(result.error || "Could not save.");
+          }
         });
       }}
     >
       <InfusionFields infusion={infusion} library={library} image={image} onImage={setImage} />
       <div className="flex flex-wrap gap-3">
-        <button
-          disabled={pending}
-          className="rounded-lg bg-deep px-4 py-2 text-[11px] tracking-[0.16em] text-cream uppercase"
-        >
-          Save
+        <button disabled={pending} className={adminButtonPrimary}>
+          {pending ? "Saving…" : "Save changes"}
         </button>
-        <button
-          type="button"
-          disabled={pending}
-          className="rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.16em] uppercase"
-          onClick={() => {
-            if (!window.confirm(`Delete ${infusion.name}?`)) return;
-            start(async () => {
-              const result = await deleteInfusion(infusion.id);
-              setMessage("error" in result && result.error ? result.error : "Deleted.");
-              if ("ok" in result) router.refresh();
-            });
-          }}
-        >
-          Delete
-        </button>
-        {message ? <p className="self-center text-sm">{message}</p> : null}
+        {onDelete ? (
+          <button type="button" disabled={pending} className={adminButtonDanger} onClick={onDelete}>
+            Delete
+          </button>
+        ) : null}
       </div>
     </form>
   );
@@ -638,7 +652,7 @@ export function AcceptAppointmentButton({ id, status }: { id: string; status: st
     <button
       type="button"
       disabled={pending || status === "CANCELLED"}
-      className="rounded-lg bg-deep px-4 py-2 text-[11px] tracking-[0.16em] text-cream uppercase disabled:opacity-40"
+      className={`${adminButtonPrimary} disabled:opacity-40`}
       onClick={() => {
         start(async () => {
           const result = await acceptAppointment(id);

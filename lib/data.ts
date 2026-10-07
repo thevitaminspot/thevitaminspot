@@ -102,7 +102,10 @@ export async function listInfusions() {
 export async function listManagedInfusions() {
   const prisma = await tryPrisma();
   if (!prisma) return null;
-  const rows = await prisma.infusionService.findMany({ orderBy: { name: "asc" } });
+  const rows = await prisma.infusionService.findMany({
+    orderBy: { name: "asc" },
+    include: { _count: { select: { appointments: true } } },
+  });
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -116,6 +119,7 @@ export async function listManagedInfusions() {
     deposit: row.deposit,
     featured: row.featured,
     isActive: row.isActive,
+    appointmentCount: row._count.appointments,
     image: row.image,
   }));
 }

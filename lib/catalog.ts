@@ -39,6 +39,7 @@ export type CatalogInfusion = {
   deposit: number;
   featured: boolean;
   isActive?: boolean;
+  appointmentCount?: number;
   image: string;
 };
 

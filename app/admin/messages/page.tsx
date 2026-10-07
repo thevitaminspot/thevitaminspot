@@ -1,9 +1,6 @@
+import { AdminMessageList } from "@/components/admin/message-list";
 import { DatabaseSetup } from "@/components/admin/setup";
-import {
-  AdminEmptyState,
-  AdminMessageCard,
-  AdminPageHeader,
-} from "@/components/admin/ui";
+import { AdminPageHeader } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 
@@ -27,23 +24,16 @@ export default async function AdminMessagesPage() {
         description="Notes from the contact form and mailing list. Copies also go out through Resend."
       />
 
-      {rows.length === 0 ? (
-        <AdminEmptyState>No messages yet.</AdminEmptyState>
-      ) : (
-        <ul className="space-y-3">
-          {rows.map((row) => (
-            <li key={row.id}>
-              <AdminMessageCard
-                meta={`${row.createdAt.toLocaleString("en-NG")} · ${row.name} · ${row.email}${
-                  row.phone ? ` · ${row.phone}` : ""
-                }`}
-              >
-                {row.message}
-              </AdminMessageCard>
-            </li>
-          ))}
-        </ul>
-      )}
+      <AdminMessageList
+        rows={rows.map((row) => ({
+          id: row.id,
+          createdAt: row.createdAt.toISOString(),
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          message: row.message,
+        }))}
+      />
     </div>
   );
 }

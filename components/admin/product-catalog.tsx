@@ -1,24 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import {
-  AlertTriangle,
-  Check,
-  Eye,
-  EyeOff,
-  Minus,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Sparkles,
-  X,
-} from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { AlertTriangle, Eye, EyeOff, Minus, Plus, Search, Sparkles } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteProduct, toggleProductActive, updateProductStock } from "@/actions/admin";
+import { AdminActionMenu } from "@/components/admin/action-menu";
 import { AddProductForm, ProductEditor } from "@/components/admin/editors";
-import { adminFormSearch } from "@/components/ui/form-styles";
+import { AdminShowMoreFooter, useCollapsibleList } from "@/components/admin/show-more";
+import { AdminEmptyState, AdminFeedback, AdminFormPanel, AdminPageHeader } from "@/components/admin/ui";
+import { useScrollIntoView } from "@/components/admin/use-scroll-into-view";
+import { adminButtonPrimary, adminButtonTab, adminFormSearch } from "@/components/ui/form-styles";
 import { formatNaira } from "@/lib/money";
 import type { CatalogProduct } from "@/lib/catalog";
 
@@ -30,29 +22,12 @@ export function ProductCatalog({
   library: string[];
 }) {
   const router = useRouter();
-  const [openId, setOpenId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<"all" | "active" | "hidden" | "low_stock">("all");
   const [pending, start] = useTransition();
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    function onPointer(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) setOpenId(null);
-    }
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpenId(null);
-    }
-    document.addEventListener("mousedown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
 
   const counts = useMemo(() => {
     return {
@@ -79,15 +54,27 @@ export function ProductCatalog({
     });
   }, [products, query, tab]);
 
+  const list = useCollapsibleList(filtered, { resetKey: `${tab}:${query}` });
+
+  const editing = products.find((product) => product.id === editingId);
+  const addFormRef = useScrollIntoView<HTMLDivElement>(adding ? "add" : null);
+  const editFormRef = useScrollIntoView<HTMLDivElement>(editingId);
+
+  function openEdit(productId: string) {
+    setEditingId(productId);
+    setAdding(false);
+  }
+
   function remove(product: CatalogProduct) {
-    setOpenId(null);
     if (!window.confirm(`Delete ${product.name}?`)) return;
     start(async () => {
       const result = await deleteProduct(product.id);
-      setMessage("error" in result && result.error ? result.error : `${product.name} deleted.`);
       if ("ok" in result) {
         if (editingId === product.id) setEditingId(null);
+        setMessage(`${product.name} deleted.`);
         router.refresh();
+      } else {
+        setMessage(result.error || "Could not delete.");
       }
     });
   }
@@ -119,62 +106,83 @@ export function ProductCatalog({
     });
   }
 
-  const editing = products.find((product) => product.id === editingId);
-
   return (
-    <div className="mt-8">
-      {/* Top Header & Actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-display text-2xl text-deep">Product Catalogue</h2>
-          <p className="mt-0.5 text-xs text-deep/60">
-            Manage your daily vitamin packs, formulations, pricing, and live inventory.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setAdding((value) => !value);
-            if (editingId) setEditingId(null);
-          }}
-          className="inline-flex items-center gap-2 rounded-xl bg-deep px-5 py-2.5 text-xs font-medium tracking-wider text-cream uppercase transition hover:bg-deep/90 shadow-sm"
-        >
-          {adding ? "Close Form" : "+ New Product"}
-        </button>
-      </div>
+    <div>
+      <AdminPageHeader
+        eyebrow="Shop"
+        title="Products"
+        description="Manage formulations, pricing, and live inventory. Prices are in naira."
+        action={
+          <button
+            type="button"
+            onClick={() => {
+              setAdding((value) => !value);
+              if (!adding) setEditingId(null);
+            }}
+            className={adminButtonPrimary}
+          >
+            {adding ? "Close form" : "+ New product"}
+          </button>
+        }
+      />
+
+      {products.length === 0 && !adding ? (
+        <AdminEmptyState>Nothing is in the catalogue yet.</AdminEmptyState>
+      ) : null}
 
       {adding ? (
-        <div className="mt-6 rounded-2xl border border-deep/10 bg-white p-6 shadow-sm">
-          <h3 className="font-display text-lg text-deep">Add New Product Formulation</h3>
-          <p className="mt-1 text-xs text-deep/60">
-            Upload pictures and set how many you have.
-          </p>
-          <div className="mt-5">
-            <AddProductForm library={library} />
-          </div>
+        <div ref={addFormRef} className="mt-6">
+          <AdminFormPanel
+            title="Add new product"
+            description="Upload pictures and set how many you have in stock."
+            onCancel={() => setAdding(false)}
+          >
+            <AddProductForm
+              library={library}
+              onSuccess={() => {
+                setAdding(false);
+                setMessage("Product added.");
+              }}
+              onError={setMessage}
+            />
+          </AdminFormPanel>
+        </div>
+      ) : null}
+
+      {editing ? (
+        <div ref={editFormRef} className="mt-6">
+          <AdminFormPanel
+            title={`Editing ${editing.name}`}
+            description="Update prices, ingredients, benefits, compare-at pricing, and pictures."
+            onCancel={() => setEditingId(null)}
+          >
+            <ProductEditor
+              key={editing.id}
+              product={editing}
+              library={library}
+              onSuccess={() => {
+                setEditingId(null);
+                setMessage(`${editing.name} saved.`);
+              }}
+              onError={setMessage}
+              onDelete={() => remove(editing)}
+            />
+          </AdminFormPanel>
         </div>
       ) : null}
 
       {message ? (
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-tint/60 px-4 py-2.5 text-xs text-deep">
-          <span>{message}</span>
-          <button
-            type="button"
-            onClick={() => setMessage("")}
-            className="text-deep/50 hover:text-deep"
-          >
-            <X className="size-3.5" />
-          </button>
+        <div className="mt-4">
+          <AdminFeedback message={message} onDismiss={() => setMessage("")} />
         </div>
       ) : null}
 
-      {/* Filter Tabs and Search Bar */}
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-1.5 rounded-xl border border-deep/10 bg-white p-1">
           <button
             type="button"
             onClick={() => setTab("all")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+            className={`${adminButtonTab} ${
               tab === "all" ? "bg-deep text-cream" : "text-deep/70 hover:bg-tint"
             }`}
           >
@@ -183,7 +191,7 @@ export function ProductCatalog({
           <button
             type="button"
             onClick={() => setTab("active")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+            className={`${adminButtonTab} ${
               tab === "active" ? "bg-deep text-cream" : "text-deep/70 hover:bg-tint"
             }`}
           >
@@ -192,7 +200,7 @@ export function ProductCatalog({
           <button
             type="button"
             onClick={() => setTab("hidden")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+            className={`${adminButtonTab} ${
               tab === "hidden" ? "bg-deep text-cream" : "text-deep/70 hover:bg-tint"
             }`}
           >
@@ -201,7 +209,7 @@ export function ProductCatalog({
           <button
             type="button"
             onClick={() => setTab("low_stock")}
-            className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+            className={`${adminButtonTab} flex items-center gap-1 ${
               tab === "low_stock" ? "bg-amber-600 text-white" : "text-deep/70 hover:bg-tint"
             }`}
           >
@@ -221,38 +229,32 @@ export function ProductCatalog({
         </div>
       </div>
 
-      {/* Product List */}
-      <div className="mt-4 overflow-hidden rounded-2xl border border-deep/10 bg-white shadow-xs">
+      <div className="mt-4 rounded-2xl border border-deep/10 bg-white shadow-xs">
         {filtered.length === 0 ? (
           <div className="p-8 text-center text-xs text-deep/60">
             No products match the selected criteria.
           </div>
         ) : (
           <ul className="divide-y divide-deep/10">
-            {filtered.map((product) => {
+            {list.visible.map((product) => {
               const photo = product.images[0];
-              const open = openId === product.id;
               const isHidden = product.isActive === false;
               const isLowStock = product.stock <= 5;
               const hasDiscount =
                 product.compareAtPrice && product.compareAtPrice > product.price;
+              const isEditing = editingId === product.id;
 
               return (
                 <li
                   key={product.id}
                   className={`flex flex-col gap-3 p-4 transition sm:flex-row sm:items-center sm:justify-between ${
                     isHidden ? "bg-tint/20 opacity-80" : "hover:bg-cream/20"
-                  } ${open ? "relative z-20" : ""}`}
+                  } ${isEditing ? "bg-sage/10 ring-1 ring-inset ring-sage/30" : ""}`}
                 >
-                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-1 items-center gap-3.5">
                     <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-deep/10 bg-tint/40">
                       {photo ? (
-                        <Image
-                          src={photo.url}
-                          alt=""
-                          fill
-                          className="object-cover"
-                        />
+                        <Image src={photo.url} alt="" fill className="object-cover" />
                       ) : (
                         <div className="size-full bg-tint" />
                       )}
@@ -260,7 +262,7 @@ export function ProductCatalog({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-medium text-sm text-deep">{product.name}</p>
+                        <p className="truncate text-sm font-medium text-deep">{product.name}</p>
                         {product.featured ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-sage/20 px-2 py-0.5 text-[10px] font-semibold text-deep uppercase">
                             <Sparkles className="size-2.5 text-sage" />
@@ -276,6 +278,11 @@ export function ProductCatalog({
                             Live
                           </span>
                         )}
+                        {isEditing ? (
+                          <span className="rounded-full bg-deep px-2 py-0.5 text-[10px] font-medium text-cream uppercase">
+                            Editing
+                          </span>
+                        ) : null}
                       </div>
 
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-deep/60">
@@ -293,7 +300,6 @@ export function ProductCatalog({
                     </div>
                   </div>
 
-                  {/* Stock Level Quick Stepper & Visibility Switch */}
                   <div className="flex items-center justify-between gap-4 sm:justify-end">
                     <div className="flex items-center gap-2">
                       <div className="flex items-center rounded-lg border border-deep/15 bg-white p-0.5">
@@ -301,7 +307,7 @@ export function ProductCatalog({
                           type="button"
                           disabled={pending || product.stock <= 0}
                           onClick={() => handleAdjustStock(product, product.stock - 1)}
-                          className="flex size-6 items-center justify-center rounded-md text-deep/70 hover:bg-tint disabled:opacity-30"
+                          className="flex size-6 cursor-pointer items-center justify-center rounded-md text-deep/70 hover:bg-tint disabled:cursor-not-allowed disabled:opacity-30"
                           title="Reduce stock"
                         >
                           <Minus className="size-3" />
@@ -321,7 +327,7 @@ export function ProductCatalog({
                           type="button"
                           disabled={pending}
                           onClick={() => handleAdjustStock(product, product.stock + 1)}
-                          className="flex size-6 items-center justify-center rounded-md text-deep/70 hover:bg-tint disabled:opacity-30"
+                          className="flex size-6 cursor-pointer items-center justify-center rounded-md text-deep/70 hover:bg-tint disabled:cursor-not-allowed disabled:opacity-30"
                           title="Add stock"
                         >
                           <Plus className="size-3" />
@@ -333,7 +339,7 @@ export function ProductCatalog({
                         disabled={pending}
                         onClick={() => handleToggleActive(product)}
                         title={isHidden ? "Make visible in store" : "Hide from store"}
-                        className={`rounded-lg p-2 transition ${
+                        className={`cursor-pointer rounded-lg p-2 transition disabled:cursor-not-allowed ${
                           isHidden
                             ? "bg-deep/10 text-deep/60 hover:bg-deep/20"
                             : "bg-sage/20 text-deep hover:bg-sage/30"
@@ -343,85 +349,44 @@ export function ProductCatalog({
                       </button>
                     </div>
 
-                    {/* Actions Menu */}
-                    <div className="relative" ref={open ? menuRef : undefined}>
-                      <button
-                        type="button"
-                        aria-label={`Actions for ${product.name}`}
-                        aria-expanded={open}
-                        className="rounded-lg p-2 text-deep/70 hover:bg-tint"
-                        onClick={() => setOpenId(open ? null : product.id)}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </button>
-
-                      {open ? (
-                        <div
-                          role="menu"
-                          className="absolute right-0 z-30 mt-1 w-44 rounded-xl border border-deep/10 bg-white py-1.5 shadow-lg"
-                        >
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="block w-full px-4 py-2 text-left text-xs text-deep hover:bg-tint"
-                            onClick={() => {
-                              setEditingId(product.id);
-                              setOpenId(null);
-                              setAdding(false);
-                            }}
-                          >
-                            Edit Formulation
-                          </button>
-                          <Link
-                            role="menuitem"
-                            href={`/shop/${product.slug}`}
-                            target="_blank"
-                            className="block px-4 py-2 text-xs text-deep hover:bg-tint"
-                            onClick={() => setOpenId(null)}
-                          >
-                            View on Store ↗
-                          </Link>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            disabled={pending}
-                            className="block w-full px-4 py-2 text-left text-xs text-red-600 hover:bg-red-50 disabled:opacity-40"
-                            onClick={() => remove(product)}
-                          >
-                            Delete Product
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
+                    <AdminActionMenu
+                      label={`Actions for ${product.name}`}
+                      disabled={pending}
+                      items={[
+                        {
+                          label: "Edit formulation",
+                          onClick: () => openEdit(product.id),
+                        },
+                        {
+                          type: "link",
+                          label: "View on store ↗",
+                          href: `/shop/${product.slug}`,
+                          external: true,
+                        },
+                        {
+                          label: "Delete product",
+                          tone: "danger",
+                          disabled: pending,
+                          onClick: () => remove(product),
+                        },
+                      ]}
+                    />
                   </div>
                 </li>
               );
             })}
           </ul>
         )}
+        {list.collapsible ? (
+          <AdminShowMoreFooter
+            expanded={list.expanded}
+            total={list.total}
+            hiddenCount={list.hiddenCount}
+            label="products"
+            onToggle={() => list.setExpanded((value) => !value)}
+          />
+        ) : null}
       </div>
-
-      {/* Edit Drawer / Form */}
-      {editing ? (
-        <div className="mt-8 rounded-2xl border border-deep/15 bg-white p-6 shadow-md">
-          <div className="mb-4 flex items-center justify-between gap-4 border-b border-deep/10 pb-3">
-            <div>
-              <p className="font-display text-xl text-deep">Editing {editing.name}</p>
-              <p className="text-xs text-deep/60">
-                Update prices, ingredients, benefits, compare-at pricing, and pictures.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="rounded-lg border border-deep/15 px-3 py-1.5 text-xs font-medium text-deep uppercase hover:bg-tint"
-              onClick={() => setEditingId(null)}
-            >
-              Cancel
-            </button>
-          </div>
-          <ProductEditor key={editing.id} product={editing} library={library} />
-        </div>
-      ) : null}
     </div>
   );
 }

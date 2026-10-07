@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { updateAppointmentStatus, updateOrderStatus } from "@/actions/admin";
 import { AppointmentCancelConfirm } from "@/components/admin/appointment-cancel-confirm";
-import { adminFormSelect } from "@/components/ui/form-styles";
+import { adminFormSelect, interactiveControl } from "@/components/ui/form-styles";
 
 export function OrderStatusForm({
   id,
@@ -27,7 +27,9 @@ export function OrderStatusForm({
           <option key={item}>{item}</option>
         ))}
       </select>
-      <button className="ml-2 text-[10px] tracking-widest uppercase">Save</button>
+      <button className={`ml-2 text-[10px] tracking-widest uppercase ${interactiveControl}`}>
+        Save
+      </button>
     </form>
   );
 }
@@ -76,7 +78,7 @@ export function AppointmentStatusForm({
           value={currentStatus}
           disabled={pending || status === "CANCELLED"}
           aria-label="Booking status"
-          className={`min-w-[9.25rem] appearance-none rounded-lg border py-2 pl-3 pr-9 text-sm font-medium transition focus:border-deep/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${appointmentStatusStyle[currentStatus] ?? "border-deep/15 bg-white text-deep"}`}
+          className={`min-w-[9.25rem] cursor-pointer appearance-none rounded-lg border py-2 pl-3 pr-9 text-sm font-medium transition focus:border-deep/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${appointmentStatusStyle[currentStatus] ?? "border-deep/15 bg-white text-deep"}`}
           onChange={(event) => {
             const value = event.target.value;
             if (value === "CANCELLED" && currentStatus !== "CANCELLED") {

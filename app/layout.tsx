@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { StripCursorRefs } from "@/components/dev/strip-cursor-refs";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
@@ -47,26 +48,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const stripCursorRefs = `(function(){
-  var attr = "data-cursor-ref";
-  function strip(node){
-    if(!node || node.nodeType !== 1) return;
-    if(node.hasAttribute(attr)) node.removeAttribute(attr);
-    var found = node.querySelectorAll("[" + attr + "]");
-    for(var i = 0; i < found.length; i++) found[i].removeAttribute(attr);
-  }
-  strip(document.documentElement);
-  var observer = new MutationObserver(function(records){
-    for(var i = 0; i < records.length; i++){
-      var record = records[i];
-      if(record.type === "attributes") record.target.removeAttribute(attr);
-      else for(var j = 0; j < record.addedNodes.length; j++) strip(record.addedNodes[j]);
-    }
-  });
-  observer.observe(document.documentElement, {subtree:true, childList:true, attributes:true, attributeFilter:[attr]});
-  window.__stopStrippingCursorRefs = function(){ observer.disconnect(); };
-})();`;
-
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -113,9 +94,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         suppressHydrationWarning
         className={`${display.variable} ${sans.variable} bg-cream font-sans text-ink antialiased`}
       >
-        {process.env.NODE_ENV === "development" ? (
-          <script dangerouslySetInnerHTML={{ __html: stripCursorRefs }} />
-        ) : null}
+        {process.env.NODE_ENV === "development" ? <StripCursorRefs /> : null}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
