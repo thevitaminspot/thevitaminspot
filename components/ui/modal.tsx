@@ -54,7 +54,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`relative z-10 max-h-[min(90vh,640px)] w-full overflow-y-auto rounded-2xl border border-deep/10 bg-white shadow-xl ${
+        className={`relative z-10 max-h-[min(90vh,640px)] w-full overflow-y-auto rounded-2xl border border-deep/10 bg-white ${
           size === "sm" ? "max-w-sm" : "max-w-md"
         }`}
       >

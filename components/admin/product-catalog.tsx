@@ -229,7 +229,7 @@ export function ProductCatalog({
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-deep/10 bg-white shadow-xs">
+      <div className="mt-4 rounded-2xl border border-deep/10 bg-white">
         {filtered.length === 0 ? (
           <div className="p-8 text-center text-xs text-deep/60">
             No products match the selected criteria.

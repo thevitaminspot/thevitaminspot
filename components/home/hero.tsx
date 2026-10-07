@@ -37,7 +37,7 @@ export function Hero({
         </div>
 
         <div className="animate-hero-in hero-delay-2 relative mx-auto w-full max-w-[460px] lg:max-w-none">
-          <div className="relative h-[480px] overflow-hidden rounded-t-[200px] rounded-b-[1.75rem] border border-cream/15 shadow-[0_30px_80px_rgba(0,0,0,0.28)] sm:h-[560px]">
+          <div className="relative h-[480px] overflow-hidden rounded-t-[200px] rounded-b-[1.75rem] border border-cream/15 sm:h-[560px]">
             <Image
               src="/images/lifestyle/table-02.jpg"
               alt="Cranberry, tomato yeast, and collagen open on a table"
@@ -51,7 +51,7 @@ export function Hero({
           {lead?.image ? (
             <Link
               href={lead.href}
-              className="animate-hero-in hero-delay-4 absolute -bottom-2 -left-2 flex w-[210px] items-center gap-3 rounded-2xl border border-cream/20 bg-cream p-2 text-deep shadow-xl sm:-left-8"
+              className="animate-hero-in hero-delay-4 absolute -bottom-2 -left-2 flex w-[210px] items-center gap-3 rounded-2xl border border-cream/20 bg-cream p-2 text-deep sm:-left-8"
             >
               <Image
                 src={lead.image}

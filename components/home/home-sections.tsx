@@ -40,7 +40,7 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
               <Reveal key={product.id} delay={(index % 4) * 80}>
                 <article className="grid items-center gap-8 md:grid-cols-12 lg:gap-12">
                   <div className={`relative md:col-span-7 ${index % 2 ? "md:order-2" : ""}`}>
-                    <div className="relative overflow-hidden rounded-2xl border border-deep/10 bg-tint/40 shadow-sm transition duration-500 hover:shadow-md">
+                    <div className="relative overflow-hidden rounded-2xl border border-deep/10 bg-tint/40">
                       {image ? (
                         <Image
                           src={image}
@@ -62,7 +62,7 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
 
                     {poster && poster !== image ? (
                       <div
-                        className={`absolute -bottom-5 hidden w-36 overflow-hidden rounded-xl border-4 border-cream shadow-lg md:block ${
+                        className={`absolute -bottom-5 hidden w-36 overflow-hidden rounded-xl border-4 border-cream md:block ${
                           index % 2 ? "-left-6" : "-right-6"
                         }`}
                       >

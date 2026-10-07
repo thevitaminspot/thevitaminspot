@@ -40,7 +40,7 @@ export function ContactForm() {
   }
 
   return (
-    <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+    <section className="rounded-3xl bg-white p-6 sm:p-8">
       <h2 className="font-display text-4xl text-deep">Send us a note.</h2>
       <p className="mt-2 text-sm leading-6 text-deep/65">
         A pack, a drip, or a visit. We reply by email. WhatsApp is faster if you need us today.

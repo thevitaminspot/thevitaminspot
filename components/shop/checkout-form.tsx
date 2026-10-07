@@ -100,7 +100,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
 
   if (items.length === 0 && !pending) {
     return (
-      <div className="my-10 rounded-3xl border border-deep/10 bg-white p-10 text-center shadow-xs md:p-14">
+      <div className="my-10 rounded-3xl border border-deep/10 bg-white p-10 text-center md:p-14">
         <h2 className="font-display text-3xl text-deep md:text-4xl">Your bag is empty</h2>
         <p className="mx-auto mt-2.5 max-w-md text-sm leading-relaxed text-deep/70">
           Add a pack first. Drips are booked on their own page.
@@ -166,7 +166,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
       {/* Left Column: Form Details */}
       <div className="space-y-8 lg:col-span-7">
         {/* Step 1: Customer Info */}
-        <section className="rounded-2xl border border-deep/10 bg-white p-6 shadow-xs sm:p-8">
+        <section className="rounded-2xl border border-deep/10 bg-white p-6 sm:p-8">
           <div className="flex items-center gap-2.5">
             <span className="flex size-6 items-center justify-center rounded-full bg-deep text-xs font-semibold text-cream">
               1
@@ -222,7 +222,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         </section>
 
         {/* Step 2: Fulfillment */}
-        <section className="rounded-2xl border border-deep/10 bg-white p-6 shadow-xs sm:p-8">
+        <section className="rounded-2xl border border-deep/10 bg-white p-6 sm:p-8">
           <div className="flex items-center gap-2.5">
             <span className="flex size-6 items-center justify-center rounded-full bg-deep text-xs font-semibold text-cream">
               2
@@ -316,7 +316,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         </section>
 
         {/* Step 3: Courier Notes */}
-        <section className="rounded-2xl border border-deep/10 bg-white p-6 shadow-xs sm:p-8">
+        <section className="rounded-2xl border border-deep/10 bg-white p-6 sm:p-8">
           <div className="flex items-center gap-2.5">
             <span className="flex size-6 items-center justify-center rounded-full bg-deep text-xs font-semibold text-cream">
               3
@@ -338,7 +338,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
 
       {/* Right Column: Order Summary & Payment Button */}
       <div className="lg:sticky lg:top-24 lg:col-span-5">
-        <div className="rounded-3xl border border-deep/10 bg-white p-6 shadow-md sm:p-8">
+        <div className="rounded-3xl border border-deep/10 bg-white p-6 sm:p-8">
           <h2 className="font-display text-2xl text-deep">Order Summary</h2>
 
           {/* Itemized lines */}

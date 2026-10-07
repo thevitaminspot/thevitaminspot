@@ -16,6 +16,8 @@ import { tryPrisma } from "@/lib/db";
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+export const instant = false;
+
 export default async function AdminAvailabilityPage() {
   await requireAdmin();
   const prisma = await tryPrisma();

@@ -87,7 +87,7 @@ export default async function AccountPage() {
         <ul className="mt-4 space-y-3">
           {orders.map((order) => (
             <li key={order.id}>
-              <div className="relative rounded-2xl border border-deep/10 bg-white px-5 py-4 transition hover:border-deep/30 hover:shadow-sm">
+              <div className="relative rounded-2xl border border-deep/10 bg-white px-5 py-4 transition hover:border-deep/30">
                 <Link
                   href={`/orders/${order.accessToken}`}
                   className="absolute inset-0 rounded-2xl"
@@ -110,7 +110,7 @@ export default async function AccountPage() {
         <ul className="mt-4 space-y-3">
           {appointments.map((appointment) => (
             <li key={appointment.id}>
-              <div className="relative rounded-2xl border border-deep/10 bg-white px-5 py-4 transition hover:border-deep/30 hover:shadow-sm">
+              <div className="relative rounded-2xl border border-deep/10 bg-white px-5 py-4 transition hover:border-deep/30">
                 <Link
                   href={`/appointments/${appointment.accessToken}`}
                   className="absolute inset-0 rounded-2xl"
