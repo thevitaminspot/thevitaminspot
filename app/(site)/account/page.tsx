@@ -5,6 +5,7 @@ import { hasClerk } from "@/lib/env";
 import { formatNaira } from "@/lib/money";
 
 export const metadata = { title: "Account", robots: { index: false, follow: false } };
+export const instant = false;
 
 export default async function AccountPage() {
   if (!hasClerk()) {
@@ -61,21 +62,21 @@ export default async function AccountPage() {
   }
 
   const prisma = await tryPrisma();
-  const orders = prisma
-    ? await prisma.order.findMany({
-        where: { email: profile.email },
-        orderBy: { createdAt: "desc" },
-        take: 12,
-      })
-    : [];
-  const appointments = prisma
-    ? await prisma.appointment.findMany({
-        where: { email: profile.email },
-        include: { service: true },
-        orderBy: { startsAt: "desc" },
-        take: 12,
-      })
-    : [];
+  const [orders, appointments] = prisma
+    ? await Promise.all([
+        prisma.order.findMany({
+          where: { email: profile.email },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+        }),
+        prisma.appointment.findMany({
+          where: { email: profile.email },
+          include: { service: true },
+          orderBy: { startsAt: "desc" },
+          take: 12,
+        }),
+      ])
+    : [[], []];
 
   return (
     <main className="mx-auto max-w-4xl px-5 py-16">

@@ -1,8 +1,5 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { brand } from "@/lib/brand";
 import { site, whatsappHref } from "@/lib/site";
 
@@ -13,10 +10,6 @@ const links = [
 ];
 
 export function Footer({ packs }: { packs: { href: string; label: string }[] }) {
-  const pathname = usePathname();
-
-  if (pathname.startsWith("/admin")) return null;
-
   return (
     <footer className="bg-deep text-cream">
       <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
@@ -28,6 +21,7 @@ export function Footer({ packs }: { packs: { href: string; label: string }[] }) 
                 alt=""
                 width={48}
                 height={48}
+                sizes="48px"
                 className="size-12 shrink-0 object-contain"
                 aria-hidden
               />

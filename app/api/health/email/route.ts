@@ -1,8 +1,6 @@
 import { emailConfigStatus } from "@/lib/email";
 import { resolveSiteUrl } from "@/lib/site";
 
-export const runtime = "nodejs";
-
 export async function GET() {
   const email = emailConfigStatus();
   return Response.json({

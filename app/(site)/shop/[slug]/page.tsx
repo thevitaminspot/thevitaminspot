@@ -34,6 +34,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
             alt={product.images[0]?.alt ?? product.name}
             width={900}
             height={1100}
+            sizes="(min-width: 1024px) 50vw, 100vw"
             className="w-full rounded-xl object-cover"
             priority
           />
@@ -45,6 +46,8 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
                 alt={image.alt}
                 width={280}
                 height={280}
+                loading="lazy"
+                sizes="(min-width: 1024px) 15vw, 30vw"
                 className="aspect-square rounded-lg object-cover"
               />
             ))}

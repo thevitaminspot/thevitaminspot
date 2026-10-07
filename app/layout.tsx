@@ -1,28 +1,24 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { StripCursorRefs } from "@/components/dev/strip-cursor-refs";
-import { Footer } from "@/components/layout/footer";
-import { Header } from "@/components/layout/header";
-import { ScrollToTop } from "@/components/layout/scroll-to-top";
-import { CartDrawer } from "@/components/shop/cart-drawer";
 import { Providers } from "@/components/providers";
 import { brand } from "@/lib/brand";
 import { infusions } from "@/lib/catalog";
-import { listProducts } from "@/lib/data";
 import { site } from "@/lib/site";
 import "./globals.css";
 
 const display = Fraunces({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal"],
+  weight: ["400", "600"],
   variable: "--font-display",
+  display: "swap",
 });
 
 const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--font-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -83,13 +79,13 @@ const jsonLd = {
   ],
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const packs = (await listProducts())
-    .filter((product) => product.featured)
-    .map((product) => ({ href: `/shop/${product.slug}`, label: product.name }));
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://imagedelivery.net" />
+        <link rel="dns-prefetch" href="https://img.clerk.com" />
+      </head>
       <body
         suppressHydrationWarning
         className={`${display.variable} ${sans.variable} bg-cream font-sans text-ink antialiased`}
@@ -99,13 +95,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <Providers>
-          <ScrollToTop />
-          <Header />
-          {children}
-          <Footer packs={packs} />
-          <CartDrawer />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { getAdminProfile } from "@/lib/auth";
 import { categories, type CatalogInfusion } from "@/lib/catalog";
 import { tryPrisma } from "@/lib/db";
@@ -26,6 +27,8 @@ function slugify(value: string) {
 }
 
 function refreshShop(slug?: string) {
+  revalidateTag(CACHE_TAGS.products, "max");
+  revalidateTag(CACHE_TAGS.categories, "max");
   revalidatePath("/");
   revalidatePath("/shop");
   revalidatePath("/admin");
@@ -35,6 +38,19 @@ function refreshShop(slug?: string) {
   revalidatePath("/admin/zones");
   revalidatePath("/infusions");
   if (slug) revalidatePath(`/shop/${slug}`);
+}
+
+function refreshInfusions() {
+  revalidateTag(CACHE_TAGS.infusions, "max");
+  revalidatePath("/infusions");
+  revalidatePath("/admin/infusions");
+  revalidatePath("/book");
+}
+
+function refreshZones() {
+  revalidateTag(CACHE_TAGS.zones, "max");
+  revalidatePath("/admin/zones");
+  revalidatePath("/checkout");
 }
 
 function lines(value: string) {
@@ -312,7 +328,7 @@ export async function updateInfusion(input: InfusionInput & { id: string }) {
   const existing = await prisma.infusionService.findUnique({ where: { id: input.id } });
   if (!existing) return { error: "Infusion not found." };
   await prisma.infusionService.update({ where: { id: input.id }, data: fields });
-  refreshShop();
+  refreshInfusions();
   return { ok: true as const };
 }
 
@@ -325,7 +341,7 @@ export async function createInfusion(input: InfusionInput) {
   await prisma.infusionService.create({
     data: { ...fields, slug, isActive: true },
   });
-  refreshShop();
+  refreshInfusions();
   return { ok: true as const };
 }
 
@@ -338,7 +354,7 @@ export async function toggleInfusionActive(id: string) {
     where: { id },
     data: { isActive: !existing.isActive },
   });
-  refreshShop();
+  refreshInfusions();
   return { ok: true as const, isActive: !existing.isActive };
 }
 
@@ -350,11 +366,11 @@ export async function deleteInfusion(id: string) {
   const booked = await prisma.appointment.count({ where: { serviceId: id } });
   if (booked > 0) {
     await prisma.infusionService.update({ where: { id }, data: { isActive: false } });
-    refreshShop();
+    refreshInfusions();
     return { ok: true as const, mode: "hidden" as const, bookings: booked };
   }
   await prisma.infusionService.delete({ where: { id } });
-  refreshShop();
+  refreshInfusions();
   return { ok: true as const, mode: "deleted" as const };
 }
 
@@ -484,8 +500,7 @@ export async function updateZone(input: { id: string; feeNaira: number; eta: str
       isActive: input.isActive,
     },
   });
-  revalidatePath("/admin/zones");
-  revalidatePath("/checkout");
+  refreshZones();
   return { ok: true as const };
 }
 
@@ -510,8 +525,7 @@ export async function createZone(input: { name: string; feeNaira: number; eta: s
       isActive: input.isActive,
     },
   });
-  revalidatePath("/admin/zones");
-  revalidatePath("/checkout");
+  refreshZones();
   return { ok: true as const };
 }
 
@@ -524,7 +538,6 @@ export async function deleteZone(id: string) {
   } else {
     await prisma.deliveryZone.delete({ where: { id } });
   }
-  revalidatePath("/admin/zones");
-  revalidatePath("/checkout");
+  refreshZones();
   return { ok: true as const };
 }

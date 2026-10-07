@@ -2,30 +2,7 @@
 
 import { ClerkProvider } from "@clerk/nextjs";
 import { useEffect, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useCartStore } from "@/stores/cart-store";
-
-let browserQueryClient: QueryClient | undefined;
-
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000,
-        refetchOnWindowFocus: false,
-      },
-    },
-  });
-}
-
-function getQueryClient() {
-  if (typeof window === "undefined") {
-    return makeQueryClient();
-  }
-
-  browserQueryClient ??= makeQueryClient();
-  return browserQueryClient;
-}
 
 export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -35,9 +12,7 @@ export function Providers({ children }: { children: ReactNode }) {
     void useCartStore.persist.rehydrate();
   }, []);
 
-  const app = <QueryClientProvider client={getQueryClient()}>{children}</QueryClientProvider>;
-
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return app;
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return children;
 
   return (
     <ClerkProvider
@@ -51,7 +26,7 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }}
     >
-      {app}
+      {children}
     </ClerkProvider>
   );
 }

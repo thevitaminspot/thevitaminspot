@@ -1,3 +1,5 @@
+import { cacheLife, cacheTag } from "next/cache";
+import { cache } from "react";
 import {
   categories,
   deliveryZones,
@@ -6,6 +8,7 @@ import {
   relatedProducts,
   testimonials,
 } from "@/lib/catalog";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { tryPrisma } from "@/lib/db";
 
 function mapProduct(row: {
@@ -46,7 +49,7 @@ function mapProduct(row: {
   };
 }
 
-export async function listProducts() {
+async function fetchActiveProducts() {
   const prisma = await tryPrisma();
   if (!prisma) return products;
 
@@ -61,6 +64,22 @@ export async function listProducts() {
   return rows.map(mapProduct);
 }
 
+export const listProducts = cache(async function listProducts() {
+  "use cache";
+  cacheTag(CACHE_TAGS.products);
+  cacheLife("hours");
+  return fetchActiveProducts();
+});
+
+export async function getFeaturedFooterPacks() {
+  "use cache";
+  cacheTag(CACHE_TAGS.products);
+  cacheLife("hours");
+  return (await listProducts())
+    .filter((product) => product.featured)
+    .map((product) => ({ href: `/shop/${product.slug}`, label: product.name }));
+}
+
 export async function listManagedProducts() {
   const prisma = await tryPrisma();
   if (!prisma) return null;
@@ -71,7 +90,7 @@ export async function listManagedProducts() {
   return rows.map(mapProduct);
 }
 
-export async function listInfusions() {
+async function fetchActiveInfusions() {
   const prisma = await tryPrisma();
   if (!prisma) return infusions.filter((item) => item.isActive !== false);
 
@@ -99,6 +118,13 @@ export async function listInfusions() {
   }));
 }
 
+export const listInfusions = cache(async function listInfusions() {
+  "use cache";
+  cacheTag(CACHE_TAGS.infusions);
+  cacheLife("hours");
+  return fetchActiveInfusions();
+});
+
 export async function listManagedInfusions() {
   const prisma = await tryPrisma();
   if (!prisma) return null;
@@ -124,7 +150,10 @@ export async function listManagedInfusions() {
   }));
 }
 
-export async function listTestimonials() {
+export const listTestimonials = cache(async function listTestimonials() {
+  "use cache";
+  cacheTag(CACHE_TAGS.testimonials);
+  cacheLife("days");
   const prisma = await tryPrisma();
   if (!prisma) return testimonials;
 
@@ -134,9 +163,12 @@ export async function listTestimonials() {
   });
 
   return rows.length === 0 ? testimonials : rows;
-}
+});
 
-export async function listZones() {
+export const listZones = cache(async function listZones() {
+  "use cache";
+  cacheTag(CACHE_TAGS.zones);
+  cacheLife("hours");
   const prisma = await tryPrisma();
   if (!prisma) return deliveryZones;
 
@@ -146,9 +178,12 @@ export async function listZones() {
   });
 
   return rows.length === 0 ? deliveryZones : rows;
-}
+});
 
-export async function listCategories() {
+export const listCategories = cache(async function listCategories() {
+  "use cache";
+  cacheTag(CACHE_TAGS.categories);
+  cacheLife("hours");
   const prisma = await tryPrisma();
   if (!prisma) return categories;
 
@@ -164,7 +199,7 @@ export async function listCategories() {
         slug: row.slug,
         description: row.description ?? "",
       }));
-}
+});
 
 export async function findProduct(slug: string) {
   const all = await listProducts();
