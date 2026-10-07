@@ -12,12 +12,13 @@ import {
 import { formatNaira } from "@/lib/money";
 import { site } from "@/lib/site";
 
-function logEmail(label: string, result: SendMailResult) {
+function logEmail(label: string, result: SendMailResult, to?: string) {
   if (result.ok) {
-    console.info(`[email:${label}] sent`);
-    return;
+    console.info(`[email:${label}] sent`, to ?? "");
+    return result;
   }
-  console.error(`[email:${label}]`, result.error);
+  console.error(`[email:${label}]`, result.error, to ?? "");
+  return result;
 }
 
 export async function notifyBookingReceived(input: {
@@ -29,7 +30,9 @@ export async function notifyBookingReceived(input: {
   deposit?: number;
   sessionPrice?: number;
 }) {
-  logEmail("booking-received", await sendBookingReceived(input));
+  const result = await sendBookingReceived(input);
+  logEmail("booking-received", result, input.to);
+  if (!result.ok) throw new Error(result.error);
 }
 
 export async function notifyBookingConfirmed(input: {
@@ -42,7 +45,9 @@ export async function notifyBookingConfirmed(input: {
   depositDue?: number;
   sessionPrice?: number;
 }) {
-  logEmail("booking-confirmed", await sendBookingConfirmed(input));
+  const result = await sendBookingConfirmed(input);
+  logEmail("booking-confirmed", result, input.to);
+  if (!result.ok) throw new Error(result.error);
 }
 
 export async function notifyBookingCancelled(input: {
@@ -52,7 +57,9 @@ export async function notifyBookingCancelled(input: {
   startsAt: Date;
   manageUrl: string;
 }) {
-  logEmail("booking-cancelled", await sendBookingCancelled(input));
+  const result = await sendBookingCancelled(input);
+  logEmail("booking-cancelled", result, input.to);
+  if (!result.ok) throw new Error(result.error);
 }
 
 export async function notifyBookingDepositPaid(input: {
@@ -64,7 +71,9 @@ export async function notifyBookingDepositPaid(input: {
   depositAmount: number;
   sessionPrice?: number;
 }) {
-  logEmail("booking-deposit-paid", await sendBookingDepositPaid(input));
+  const result = await sendBookingDepositPaid(input);
+  logEmail("booking-deposit-paid", result, input.to);
+  if (!result.ok) throw new Error(result.error);
 }
 
 export async function notifyAdminNewBooking(input: {
@@ -73,12 +82,11 @@ export async function notifyAdminNewBooking(input: {
   startsAt: Date;
   deposit: number;
 }) {
-  logEmail(
-    "booking-admin-new",
-    await sendMail({
-      to: process.env.ADMIN_EMAIL ?? site.email,
-      subject: `New booking: ${input.serviceName}`,
-      html: `<p>${escapeHtml(input.name)} booked <strong>${escapeHtml(input.serviceName)}</strong> for ${escapeHtml(input.startsAt.toLocaleString("en-NG"))}.</p><p>${input.deposit > 0 ? `Deposit: ${escapeHtml(formatNaira(input.deposit))}.` : "No deposit required."}</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
-    }),
-  );
+  const result = await sendMail({
+    to: process.env.ADMIN_EMAIL ?? site.email,
+    subject: `New booking: ${input.serviceName}`,
+    html: `<p>${escapeHtml(input.name)} booked <strong>${escapeHtml(input.serviceName)}</strong> for ${escapeHtml(input.startsAt.toLocaleString("en-NG"))}.</p><p>${input.deposit > 0 ? `Deposit: ${escapeHtml(formatNaira(input.deposit))}.` : "No deposit required."}</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
+  });
+  logEmail("booking-admin-new", result, process.env.ADMIN_EMAIL ?? site.email);
+  if (!result.ok) throw new Error(result.error);
 }

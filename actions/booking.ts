@@ -19,6 +19,38 @@ import { rateLimit } from "@/lib/rate-limit";
 import { site, whatsappHref } from "@/lib/site";
 import { createToken } from "@/lib/tokens";
 
+export async function sendBookingNotifications(token: string) {
+  const prisma = await tryPrisma();
+  if (!prisma) return { error: "Bookings need the database." as const };
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { accessToken: token },
+    include: { service: true },
+  });
+  if (!appointment) return { error: "Booking not found." as const };
+
+  const manageUrl = `${site.url}/appointments/${token}`;
+
+  await notifyBookingReceived({
+    to: appointment.email,
+    name: appointment.name,
+    serviceName: appointment.service.name,
+    startsAt: appointment.startsAt,
+    manageUrl,
+    deposit: appointment.service.deposit,
+    sessionPrice: appointment.service.price,
+  });
+
+  await notifyAdminNewBooking({
+    name: appointment.name,
+    serviceName: appointment.service.name,
+    startsAt: appointment.startsAt,
+    deposit: appointment.service.deposit,
+  });
+
+  return { ok: true as const };
+}
+
 export async function fetchSlots(date: string, slug: string) {
   const drip = await findInfusion(slug);
   if (!drip) return [];
@@ -100,22 +132,6 @@ export async function createBooking(input: {
   });
 
   const manageUrl = `${site.url}/appointments/${token}`;
-  await notifyBookingReceived({
-    to: details.data.email,
-    name: details.data.name,
-    serviceName: drip.name,
-    startsAt,
-    manageUrl,
-    deposit: drip.deposit,
-    sessionPrice: drip.price,
-  }).catch(() => undefined);
-
-  await notifyAdminNewBooking({
-    name: details.data.name,
-    serviceName: drip.name,
-    startsAt,
-    deposit: drip.deposit,
-  }).catch(() => undefined);
 
   if (input.payDeposit) {
     if (!hasPaystack()) {
