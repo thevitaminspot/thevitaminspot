@@ -100,7 +100,7 @@ export async function createBooking(input: {
   });
 
   const manageUrl = `${site.url}/appointments/${token}`;
-  notifyBookingReceived({
+  await notifyBookingReceived({
     to: details.data.email,
     name: details.data.name,
     serviceName: drip.name,
@@ -108,13 +108,14 @@ export async function createBooking(input: {
     manageUrl,
     deposit: drip.deposit,
     sessionPrice: drip.price,
-  });
-  notifyAdminNewBooking({
+  }).catch(() => undefined);
+
+  await notifyAdminNewBooking({
     name: details.data.name,
     serviceName: drip.name,
     startsAt,
     deposit: drip.deposit,
-  });
+  }).catch(() => undefined);
 
   if (input.payDeposit) {
     if (!hasPaystack()) {
@@ -251,13 +252,13 @@ export async function updateAppointment(
       where: { id: appointment.id },
       data: { status: "CANCELLED" },
     });
-    notifyBookingCancelled({
+    await notifyBookingCancelled({
       to: appointment.email,
       name: appointment.name,
       serviceName: appointment.service.name,
       startsAt: appointment.startsAt,
       manageUrl: `${site.url}/appointments/${token}`,
-    });
+    }).catch(() => undefined);
     return { ok: true };
   }
 
@@ -288,7 +289,7 @@ export async function updateAppointment(
       ? appointment.service.deposit
       : undefined;
 
-  notifyBookingConfirmed({
+  await notifyBookingConfirmed({
     to: appointment.email,
     name: appointment.name,
     serviceName: appointment.service.name,
@@ -297,7 +298,7 @@ export async function updateAppointment(
     depositPaid,
     depositDue,
     sessionPrice: appointment.service.price,
-  });
+  }).catch(() => undefined);
 
   return { ok: true };
 }

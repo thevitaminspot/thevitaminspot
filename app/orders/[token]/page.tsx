@@ -1,3 +1,4 @@
+import { OrderPaymentActions } from "@/components/shop/order-payment-actions";
 import { tryPrisma } from "@/lib/db";
 import { formatNaira } from "@/lib/money";
 import { confirmPaystackReturn } from "@/lib/payments";
@@ -16,7 +17,7 @@ export default async function OrderPage({
   const order = prisma
     ? await prisma.order.findUnique({
         where: { accessToken: token },
-        include: { items: true, deliveryZone: true },
+        include: { items: true, deliveryZone: true, payment: true },
       })
     : null;
 
@@ -46,6 +47,11 @@ export default async function OrderPage({
         ))}
       </ul>
       <p className="mt-6 text-sage">Total {formatNaira(order.total)}</p>
+      <OrderPaymentActions
+        token={token}
+        orderStatus={order.status}
+        paymentStatus={order.payment?.status}
+      />
     </main>
   );
 }

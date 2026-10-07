@@ -1,6 +1,5 @@
 import "server-only";
 
-import { after } from "next/server";
 import {
   escapeHtml,
   sendBookingCancelled,
@@ -15,26 +14,13 @@ import { site } from "@/lib/site";
 
 function logEmail(label: string, result: SendMailResult) {
   if (result.ok) {
-    console.info(`[email:${label}] sent to customer`);
+    console.info(`[email:${label}] sent`);
     return;
   }
   console.error(`[email:${label}]`, result.error);
 }
 
-function runAfter(label: string, task: () => Promise<SendMailResult>) {
-  after(async () => {
-    try {
-      logEmail(label, await task());
-    } catch (error) {
-      console.error(
-        `[email:${label}]`,
-        error instanceof Error ? error.message : "Unexpected email error",
-      );
-    }
-  });
-}
-
-export function notifyBookingReceived(input: {
+export async function notifyBookingReceived(input: {
   to: string;
   name: string;
   serviceName: string;
@@ -43,10 +29,10 @@ export function notifyBookingReceived(input: {
   deposit?: number;
   sessionPrice?: number;
 }) {
-  runAfter("booking-received", () => sendBookingReceived(input));
+  logEmail("booking-received", await sendBookingReceived(input));
 }
 
-export function notifyBookingConfirmed(input: {
+export async function notifyBookingConfirmed(input: {
   to: string;
   name: string;
   serviceName: string;
@@ -56,20 +42,20 @@ export function notifyBookingConfirmed(input: {
   depositDue?: number;
   sessionPrice?: number;
 }) {
-  runAfter("booking-confirmed", () => sendBookingConfirmed(input));
+  logEmail("booking-confirmed", await sendBookingConfirmed(input));
 }
 
-export function notifyBookingCancelled(input: {
+export async function notifyBookingCancelled(input: {
   to: string;
   name: string;
   serviceName: string;
   startsAt: Date;
   manageUrl: string;
 }) {
-  runAfter("booking-cancelled", () => sendBookingCancelled(input));
+  logEmail("booking-cancelled", await sendBookingCancelled(input));
 }
 
-export function notifyBookingDepositPaid(input: {
+export async function notifyBookingDepositPaid(input: {
   to: string;
   name: string;
   serviceName: string;
@@ -78,39 +64,21 @@ export function notifyBookingDepositPaid(input: {
   depositAmount: number;
   sessionPrice?: number;
 }) {
-  runAfter("booking-deposit-paid", () => sendBookingDepositPaid(input));
+  logEmail("booking-deposit-paid", await sendBookingDepositPaid(input));
 }
 
-export function notifyAdminNewBooking(input: {
+export async function notifyAdminNewBooking(input: {
   name: string;
   serviceName: string;
   startsAt: Date;
   deposit: number;
 }) {
-  runAfter("booking-admin-new", () =>
-    sendMail({
+  logEmail(
+    "booking-admin-new",
+    await sendMail({
       to: process.env.ADMIN_EMAIL ?? site.email,
       subject: `New booking: ${input.serviceName}`,
       html: `<p>${escapeHtml(input.name)} booked <strong>${escapeHtml(input.serviceName)}</strong> for ${escapeHtml(input.startsAt.toLocaleString("en-NG"))}.</p><p>${input.deposit > 0 ? `Deposit: ${escapeHtml(formatNaira(input.deposit))}.` : "No deposit required."}</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
     }),
   );
-}
-
-export async function notifyBookingDepositPaidNow(input: {
-  to: string;
-  name: string;
-  serviceName: string;
-  startsAt: Date;
-  manageUrl: string;
-  depositAmount: number;
-  sessionPrice?: number;
-}) {
-  try {
-    logEmail("booking-deposit-paid", await sendBookingDepositPaid(input));
-  } catch (error) {
-    console.error(
-      "[email:booking-deposit-paid]",
-      error instanceof Error ? error.message : "Unexpected email error",
-    );
-  }
 }

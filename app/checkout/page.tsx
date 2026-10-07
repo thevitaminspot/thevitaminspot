@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { CheckoutForm } from "@/components/shop/checkout-form";
 import { listZones } from "@/lib/data";
 
@@ -28,7 +29,13 @@ export default async function CheckoutPage() {
         </div>
 
         <div className="mt-8 border-t border-deep/10 pt-8">
-          <CheckoutForm zones={zones} />
+          <Suspense
+            fallback={
+              <div className="py-20 text-center text-sm text-deep/50">Loading checkout…</div>
+            }
+          >
+            <CheckoutForm zones={zones} />
+          </Suspense>
         </div>
       </div>
     </main>

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { createCheckout } from "@/actions/checkout";
+import { completeCheckoutReturn, createCheckout } from "@/actions/checkout";
 import { formatNaira } from "@/lib/money";
 import { site } from "@/lib/site";
 import type { CatalogZone } from "@/lib/catalog";
@@ -22,7 +22,9 @@ import { useCartStore } from "@/stores/cart-store";
 
 export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const formId = useId();
+  const returnHandled = useRef(false);
   const [mounted, setMounted] = useState(false);
   const items = useCartStore((state) => state.items);
   const clear = useCartStore((state) => state.clear);
@@ -36,6 +38,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [returnPending, setReturnPending] = useState(false);
 
   const handleAutofill = useCallback((data: { name: string; email: string }) => {
     setCustomerName((prev) => prev || data.name);
@@ -52,21 +55,50 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    const orderToken = searchParams.get("order");
+    const reference = searchParams.get("reference") ?? searchParams.get("trxref");
+    if (!orderToken || !reference || returnHandled.current) return;
+
+    returnHandled.current = true;
+    setReturnPending(true);
+
+    void (async () => {
+      const result = await completeCheckoutReturn(orderToken, reference);
+      setReturnPending(false);
+
+      if ("error" in result && result.error) {
+        setError(result.error);
+        router.replace("/checkout");
+        return;
+      }
+
+      if (result.status === "PAID") {
+        clear();
+        router.replace(`/orders/${orderToken}`);
+        return;
+      }
+
+      setError("Payment was cancelled. Your bag is still here — try again when ready.");
+      router.replace("/checkout");
+    })();
+  }, [searchParams, router, clear]);
+
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const selectedZone = zones.find((z) => z.slug === selectedZoneSlug) ?? zones[0];
   const deliveryFee = fulfillment === "DELIVERY" ? (selectedZone?.fee ?? 0) : 0;
   const grandTotal = subtotal + deliveryFee;
 
-  if (!mounted) {
+  if (!mounted || returnPending) {
     return (
       <div className="my-12 flex items-center justify-center py-20 text-sm text-deep/50">
-        Loading your bag
+        {returnPending ? "Confirming your payment…" : "Loading your bag…"}
       </div>
     );
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !pending) {
     return (
       <div className="my-10 rounded-3xl border border-deep/10 bg-white p-10 text-center shadow-xs md:p-14">
         <h2 className="font-display text-3xl text-deep md:text-4xl">Your bag is empty</h2>
@@ -122,13 +154,12 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
           return;
         }
 
-        clear();
-
         if (result.checkoutUrl) {
           window.location.href = result.checkoutUrl;
           return;
         }
 
+        clear();
         router.push(`/orders/${result.token}`);
       }}
     >
