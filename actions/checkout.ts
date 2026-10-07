@@ -5,7 +5,6 @@ import { deliveryZones } from "@/lib/catalog";
 import { attachCustomer, getSessionProfile } from "@/lib/auth";
 import { checkoutSchema, hasPaystack } from "@/lib/env";
 import { tryPrisma } from "@/lib/db";
-import { escapeHtml, sendMail } from "@/lib/email";
 import { confirmPaystackReturn } from "@/lib/payments";
 import { initializePaystack } from "@/lib/paystack";
 import { rateLimit } from "@/lib/rate-limit";
@@ -110,46 +109,52 @@ export async function createCheckout(
   });
 
   const checkoutReturnUrl = `${site.url}/checkout?order=${accessToken}`;
-  // Customer gets a confirmation after Paystack succeeds; admin alert sends now.
-  const adminMail = await sendMail({
-    to: process.env.ADMIN_EMAIL || site.email,
-    subject: `New order ${orderNumber}`,
-    html: `<p>${escapeHtml(parsed.data.name)} placed ${escapeHtml(orderNumber)}.</p><p><a href="${escapeHtml(`${site.url}/admin/orders/${order.id}`)}">Open it in admin</a></p>`,
-  });
-  if (!adminMail.ok) {
-    console.error("[checkout:email] admin new-order notification failed", adminMail.error);
-  }
 
   if (!hasPaystack()) {
     return { token: accessToken };
   }
 
   const reference = `ord_${order.id}`;
-  const payment = await initializePaystack({
-    email: parsed.data.email,
-    amount: order.total,
-    reference,
-    callbackUrl: checkoutReturnUrl,
-    metadata: { purpose: "ORDER", orderId: order.id },
-  });
 
-  await prisma.payment.create({
-    data: {
-      purpose: "ORDER",
+  try {
+    const payment = await initializePaystack({
+      email: parsed.data.email,
       amount: order.total,
-      paystackReference: reference,
-      paystackAccessCode: payment.access_code,
-      orderId: order.id,
-    },
-  });
+      reference,
+      callbackUrl: checkoutReturnUrl,
+      metadata: { purpose: "ORDER", orderId: order.id },
+    });
 
-  return { token: accessToken, checkoutUrl: payment.authorization_url };
+    await prisma.payment.create({
+      data: {
+        purpose: "ORDER",
+        amount: order.total,
+        paystackReference: reference,
+        paystackAccessCode: payment.access_code,
+        orderId: order.id,
+      },
+    });
+
+    return { token: accessToken, checkoutUrl: payment.authorization_url };
+  } catch (error) {
+    await prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
+    return {
+      error: error instanceof Error ? error.message : "Paystack could not start the payment.",
+    };
+  }
 }
 
 export async function completeCheckoutReturn(token: string, reference: string) {
   if (!token || !reference) return { error: "Missing payment details." as const };
 
-  await confirmPaystackReturn(reference);
+  const verified = await confirmPaystackReturn(reference);
+  if (verified.outcome === "error") {
+    return { error: verified.message };
+  }
+
+  if (verified.outcome === "failed") {
+    return { ok: true as const, status: "FAILED" as const };
+  }
 
   const prisma = await tryPrisma();
   if (!prisma) return { error: "Checkout needs the database." as const };
@@ -163,10 +168,8 @@ export async function completeCheckoutReturn(token: string, reference: string) {
   if (order.payment?.status === "PAID" || order.status === "PAID") {
     return { ok: true as const, status: "PAID" as const, token };
   }
-  if (order.payment?.status === "FAILED") {
-    return { ok: true as const, status: "FAILED" as const, token };
-  }
-  return { ok: true as const, status: "PENDING" as const, token };
+
+  return { error: "Payment could not be confirmed." as const };
 }
 
 export async function resumeOrderPayment(token: string) {

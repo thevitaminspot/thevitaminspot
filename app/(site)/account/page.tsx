@@ -65,7 +65,7 @@ export default async function AccountPage() {
   const [orders, appointments] = prisma
     ? await Promise.all([
         prisma.order.findMany({
-          where: { email: profile.email },
+          where: { email: profile.email, payment: { status: "PAID" } },
           orderBy: { createdAt: "desc" },
           take: 12,
         }),

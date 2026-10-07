@@ -79,7 +79,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         return;
       }
 
-      setError("Payment was cancelled. Your bag is still here — try again when ready.");
+      setError("Payment did not go through. Your bag is still here — try again when ready.");
       router.replace("/checkout");
     })();
   }, [searchParams, router, clear]);

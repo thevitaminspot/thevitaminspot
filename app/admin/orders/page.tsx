@@ -13,6 +13,7 @@ export default async function AdminOrdersPage() {
   if (!prisma) return <DatabaseSetup />;
 
   const rows = await prisma.order.findMany({
+    where: { payment: { status: "PAID" } },
     orderBy: { createdAt: "desc" },
     take: 80,
     include: { payment: true, items: true },
