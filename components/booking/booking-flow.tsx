@@ -11,6 +11,7 @@ import { nairaLabel } from "@/lib/money";
 import type { CatalogInfusion } from "@/lib/catalog";
 import {
   formControl,
+  formDateControl,
   formError,
   formLabel,
   formSubmit,
@@ -292,7 +293,7 @@ export function BookingFlow({
   const canPayDeposit = Boolean(drip && drip.deposit > 0);
 
   return (
-    <div ref={formTopRef} className="mx-auto w-full max-w-md scroll-mt-24">
+    <div ref={formTopRef} className="mx-auto w-full min-w-0 max-w-md scroll-mt-24">
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -319,7 +320,7 @@ export function BookingFlow({
           <h2 className="mt-1 text-lg font-semibold text-deep">{stepTitles[step]}</h2>
         </header>
 
-        <div className="px-5 py-6 sm:px-6">
+        <div className="min-w-0 px-5 py-6 sm:px-6">
           {step === 0 ? (
             drips.length === 0 ? (
               <p className="text-sm text-deep/60">No sessions available right now.</p>
@@ -345,14 +346,14 @@ export function BookingFlow({
           {step === 1 && drip ? (
             <>
               <SelectionContext drip={drip} onChangeService={() => setStep(0)} />
-              <label className={formLabel}>
+              <label className={`${formLabel} block min-w-0`}>
                 Date
                 <input
                   type="date"
                   value={date}
                   min={minDate || undefined}
                   onChange={(event) => void loadSlots(event.target.value)}
-                  className={formControl}
+                  className={formDateControl}
                 />
               </label>
               <div className="mt-5">

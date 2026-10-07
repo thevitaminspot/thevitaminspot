@@ -378,7 +378,7 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
   await prisma.appointment.update({ where: { id }, data: { status } });
 
   if (status === "CONFIRMED" && existing.status !== "CONFIRMED") {
-    notifyBookingConfirmed({
+    await notifyBookingConfirmed({
       to: existing.email,
       name: existing.name,
       serviceName: existing.service.name,
@@ -387,15 +387,15 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
       depositPaid,
       depositDue,
       sessionPrice: existing.service.price,
-    });
+    }).catch(() => undefined);
   } else if (status === "CANCELLED" && existing.status !== "CANCELLED") {
-    notifyBookingCancelled({
+    await notifyBookingCancelled({
       to: existing.email,
       name: existing.name,
       serviceName: existing.service.name,
       startsAt: existing.startsAt,
       manageUrl,
-    });
+    }).catch(() => undefined);
   }
   revalidatePath("/admin/appointments");
   revalidatePath("/admin");

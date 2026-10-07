@@ -8,6 +8,9 @@ export const formLabel = "block text-xs font-medium text-deep/70";
 
 export const formControl = `mt-1.5 rounded-xl bg-cream/30 px-4 py-3 ${controlBase} focus:bg-white`;
 
+/** Date/time inputs — keep within mobile viewports (iOS date picker is wide). */
+export const formDateControl = `${formControl} box-border max-w-full min-w-0 appearance-none`;
+
 export const formSelect = formControl;
 
 export const formTextarea = `${formControl} min-h-36 resize-y`;
