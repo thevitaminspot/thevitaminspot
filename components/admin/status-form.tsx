@@ -2,8 +2,9 @@
 
 import { ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { updateAppointmentStatus, updateOrderStatus } from "@/actions/admin";
+import { AppointmentCancelConfirm } from "@/components/admin/appointment-cancel-confirm";
 import { adminFormSelect } from "@/components/ui/form-styles";
 
 export function OrderStatusForm({
@@ -48,39 +49,74 @@ const appointmentStatusStyle: Record<string, string> = {
 export function AppointmentStatusForm({
   id,
   status,
+  guestName,
+  serviceName,
+  when,
 }: {
   id: string;
   status: string;
+  guestName?: string;
+  serviceName?: string;
+  when?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [currentStatus, setCurrentStatus] = useState(status);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
+  useEffect(() => {
+    setCurrentStatus(status);
+  }, [status]);
 
   return (
-    <div className="relative inline-flex">
-      <select
-        name="status"
-        defaultValue={status}
-        disabled={pending}
-        aria-label="Booking status"
-        className={`min-w-[9.25rem] appearance-none rounded-lg border py-2 pl-3 pr-9 text-sm font-medium transition focus:border-deep/40 focus:outline-none disabled:cursor-wait disabled:opacity-60 ${appointmentStatusStyle[status] ?? "border-deep/15 bg-white text-deep"}`}
-        onChange={(event) => {
-          const value = event.target.value;
-          start(async () => {
-            await updateAppointmentStatus(id, value as never);
-            router.refresh();
-          });
-        }}
-      >
-        {["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"].map((item) => (
-          <option key={item} value={item}>
-            {appointmentStatusLabel[item] ?? item}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-deep/45"
-        aria-hidden
-      />
-    </div>
+    <>
+      <div className="relative inline-flex">
+        <select
+          name="status"
+          value={currentStatus}
+          disabled={pending || status === "CANCELLED"}
+          aria-label="Booking status"
+          className={`min-w-[9.25rem] appearance-none rounded-lg border py-2 pl-3 pr-9 text-sm font-medium transition focus:border-deep/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${appointmentStatusStyle[currentStatus] ?? "border-deep/15 bg-white text-deep"}`}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value === "CANCELLED" && currentStatus !== "CANCELLED") {
+              event.target.value = currentStatus;
+              setConfirmCancel(true);
+              return;
+            }
+            setConfirmCancel(false);
+            setCurrentStatus(value);
+            start(async () => {
+              await updateAppointmentStatus(id, value as never);
+              router.refresh();
+            });
+          }}
+        >
+          {["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"].map((item) => (
+            <option key={item} value={item}>
+              {appointmentStatusLabel[item] ?? item}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-deep/45"
+          aria-hidden
+        />
+      </div>
+
+      {guestName && serviceName && when ? (
+        <AppointmentCancelConfirm
+          open={confirmCancel}
+          id={id}
+          guestName={guestName}
+          serviceName={serviceName}
+          when={when}
+          onClose={() => {
+            setConfirmCancel(false);
+            setCurrentStatus(status);
+          }}
+        />
+      ) : null}
+    </>
   );
 }

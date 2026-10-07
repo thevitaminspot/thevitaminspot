@@ -1,5 +1,16 @@
 import { BlockDateForm } from "@/components/admin/block-date-form";
 import { DatabaseSetup } from "@/components/admin/setup";
+import {
+  AdminEmptyState,
+  AdminPageHeader,
+  AdminPanel,
+  AdminSection,
+  AdminTableCell,
+  AdminTableHead,
+  AdminTableHeaderCell,
+  AdminTableRow,
+  AdminTableWrap,
+} from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { getRules } from "@/lib/availability";
 import { tryPrisma } from "@/lib/db";
@@ -11,27 +22,70 @@ export default async function AdminAvailabilityPage() {
   const prisma = await tryPrisma();
   if (!prisma) return <DatabaseSetup />;
   const rules = await getRules();
-  const blocked = await prisma.blockedDate.findMany();
+  const blocked = await prisma.blockedDate.findMany({ orderBy: { date: "asc" } });
 
   return (
     <div>
-      <h1 className="font-display text-4xl">Hours</h1>
-      <ul className="mt-6 divide-y divide-deep/10 overflow-hidden rounded-lg border border-deep/10 bg-white text-sm">
-        {rules.map((rule) => (
-          <li key={`${rule.weekday}-${rule.startMin}`} className="px-4 py-3">
-            {days[rule.weekday]} · {Math.floor(rule.startMin / 60)}:00–
-            {Math.floor(rule.endMin / 60)}:00 · {rule.slotMin} min + {rule.bufferMin} min buffer
-          </li>
-        ))}
-      </ul>
-      <BlockDateForm />
-      <h2 className="mt-10 font-display text-3xl">Blocked dates</h2>
-      <ul className="mt-3 text-sm text-deep/70">
-        {blocked.map((row) => (
-          <li key={row.id}>{row.date.toDateString()}</li>
-        ))}
-        {blocked.length === 0 ? <li>None.</li> : null}
-      </ul>
+      <AdminPageHeader
+        eyebrow="Clinic"
+        title="Hours"
+        description="Weekly chair availability and dates blocked from online booking."
+      />
+
+      <AdminSection title="Weekly schedule">
+        <AdminTableWrap>
+          <table className="w-full text-left text-sm">
+            <AdminTableHead>
+              <tr>
+                <AdminTableHeaderCell>Day</AdminTableHeaderCell>
+                <AdminTableHeaderCell>Hours</AdminTableHeaderCell>
+                <AdminTableHeaderCell>Slots</AdminTableHeaderCell>
+              </tr>
+            </AdminTableHead>
+            <tbody>
+              {rules.map((rule) => (
+                <AdminTableRow key={`${rule.weekday}-${rule.startMin}`}>
+                  <AdminTableCell className="font-medium">{days[rule.weekday]}</AdminTableCell>
+                  <AdminTableCell>
+                    {Math.floor(rule.startMin / 60)}:00–{Math.floor(rule.endMin / 60)}:00
+                  </AdminTableCell>
+                  <AdminTableCell className="text-deep/60">
+                    {rule.slotMin} min · {rule.bufferMin} min buffer
+                  </AdminTableCell>
+                </AdminTableRow>
+              ))}
+            </tbody>
+          </table>
+        </AdminTableWrap>
+      </AdminSection>
+
+      <div className="mt-10">
+        <BlockDateForm />
+      </div>
+
+      <AdminSection title="Blocked dates" className="mt-10">
+        <AdminPanel>
+          {blocked.length === 0 ? (
+            <AdminEmptyState>No blocked dates.</AdminEmptyState>
+          ) : (
+            <ul className="divide-y divide-deep/6">
+              {blocked.map((row) => (
+                <li key={row.id} className="px-5 py-3.5 text-sm text-deep/75">
+                  {row.date.toLocaleDateString("en-NG", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                  {row.reason ? (
+                    <span className="text-deep/45"> · {row.reason}</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </AdminPanel>
+      </AdminSection>
     </div>
   );
 }

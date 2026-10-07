@@ -250,11 +250,20 @@ export async function sendBookingCancelled(input: {
   serviceName: string;
   startsAt: Date;
   manageUrl: string;
+  reason?: string;
+  depositPaid?: number;
 }) {
   const when = formatBookingWhen(input.startsAt);
+  const reasonLine = input.reason
+    ? `<p><strong>Reason recorded:</strong> ${escapeHtml(input.reason)}</p>`
+    : "";
+  const depositLine =
+    input.depositPaid && input.depositPaid > 0
+      ? `<p>We received a deposit of ${escapeHtml(formatNaira(input.depositPaid))}. Refunds are reviewed case by case — reply to this email or WhatsApp us if you need help.</p>`
+      : "";
   return sendMail({
     to: input.to,
     subject: `Booking cancelled - ${input.serviceName}`,
-    html: `<p>Dear ${escapeHtml(input.name)},</p><p>Your <strong>${escapeHtml(input.serviceName)}</strong> session on ${escapeHtml(when)} has been cancelled.</p><p>If this was a mistake, reply to this email or book again on the site.</p><p><a href="${escapeHtml(input.manageUrl)}">View the booking</a></p>`,
+    html: `<p>Dear ${escapeHtml(input.name)},</p><p>Your <strong>${escapeHtml(input.serviceName)}</strong> session on ${escapeHtml(when)} has been cancelled as requested.</p>${reasonLine}${depositLine}<p>Your time slot is now open for other guests. If this was a mistake, reply to this email or <a href="${escapeHtml(`${site.url}/book`)}">book again</a>.</p><p><a href="${escapeHtml(input.manageUrl)}">View the booking</a></p>`,
   });
 }

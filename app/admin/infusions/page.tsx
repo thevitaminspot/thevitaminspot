@@ -1,5 +1,6 @@
 import { InfusionCatalog } from "@/components/admin/infusion-catalog";
 import { DatabaseSetup, SeedCatalogueButton } from "@/components/admin/setup";
+import { AdminPageHeader } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { listManagedInfusions } from "@/lib/data";
 import { listLibraryImages } from "@/lib/library-images";
@@ -13,9 +14,14 @@ export default async function AdminInfusionsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-4xl">Infusions</h1>
-      <p className="mt-2 text-sm text-deep/60">Price and deposit are in naira. Duration is in minutes.</p>
-      {rows.length === 0 ? <SeedCatalogueButton label="Load starter sessions" /> : null}
+      <AdminPageHeader
+        eyebrow="Clinic"
+        title="Infusions"
+        description="Price and deposit are in naira. Duration is in minutes."
+        action={
+          rows.length === 0 ? <SeedCatalogueButton label="Load starter sessions" /> : undefined
+        }
+      />
       <InfusionCatalog infusions={rows} library={library} />
     </div>
   );

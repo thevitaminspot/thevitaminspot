@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
   ExternalLink,
   Mail,
   MapPin,
@@ -12,9 +11,15 @@ import {
   User,
 } from "lucide-react";
 import { OrderActions } from "@/components/admin/order-actions";
+import {
+  AdminBackLink,
+  AdminDetailCard,
+  AdminStatusBadge,
+} from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 import { formatNaira } from "@/lib/money";
+import { formatTimeAgo } from "@/lib/time-ago";
 
 export const metadata = { title: "Order Details · Admin" };
 
@@ -56,60 +61,32 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
   const waUrl = `https://wa.me/${waPhone}?text=${waMessage}`;
 
   return (
-    <div className="space-y-6">
-      {/* Back button */}
-      <div>
-        <Link
-          href="/admin/orders"
-          className="inline-flex items-center gap-2 text-xs font-medium text-deep/60 hover:text-deep"
-        >
-          <ArrowLeft className="size-3.5" />
-          <span>Back to All Orders</span>
-        </Link>
-      </div>
+    <div className="space-y-8">
+      <AdminBackLink href="/admin/orders" label="All orders" />
 
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-deep/10 pb-6">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-deep/8 pb-7">
         <div>
-          <div className="flex items-center gap-3">
+          <p className="text-[11px] tracking-[0.18em] text-sage uppercase">Shop</p>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
             <h1 className="font-display text-3xl text-deep md:text-4xl">{order.orderNumber}</h1>
-            <span
-              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase ${
-                order.status === "DELIVERED"
-                  ? "bg-green-100 text-green-800"
-                  : order.status === "OUT_FOR_DELIVERY"
-                    ? "bg-blue-100 text-blue-800"
-                    : order.status === "PACKED"
-                      ? "bg-purple-100 text-purple-800"
-                      : order.status === "PAID"
-                        ? "bg-sage/30 text-deep"
-                        : order.status === "CANCELLED"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-amber-100 text-amber-800"
-              }`}
-            >
-              {order.status.replace(/_/g, " ")}
-            </span>
+            <AdminStatusBadge status={order.status} />
           </div>
-          <p className="mt-1.5 text-xs text-deep/60">
-            Placed on {order.createdAt.toLocaleString("en-NG")} · {order.fulfillment}
+          <p className="mt-2 text-sm text-deep/55">
+            Placed {formatTimeAgo(order.createdAt)} ·{" "}
+            {order.createdAt.toLocaleString("en-NG")} · {order.fulfillment}
           </p>
         </div>
 
         <div className="text-right">
-          <p className="text-xs text-deep/50 uppercase tracking-wider">Total Value</p>
+          <p className="text-[10px] tracking-[0.16em] text-deep/45 uppercase">Total</p>
           <p className="font-display text-3xl text-deep md:text-4xl">{formatNaira(order.total)}</p>
         </div>
-      </div>
+      </header>
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         {/* Left Column: Order Items */}
         <div className="space-y-6">
-          <section className="rounded-2xl border border-deep/10 bg-white p-6 shadow-xs">
-            <div className="flex items-center gap-2">
-              <Package className="size-4 text-sage" />
-              <h2 className="font-display text-lg text-deep">Items in Order</h2>
-            </div>
+          <AdminDetailCard title="Items in order" icon={<Package className="size-4" />}>
 
             <ul className="mt-4 divide-y divide-deep/10">
               {order.items.map((item) => (
@@ -141,10 +118,9 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                 <dd>{formatNaira(order.total)}</dd>
               </div>
             </dl>
-          </section>
+          </AdminDetailCard>
 
-          {/* Customer Order Tracking Link */}
-          <section className="rounded-2xl border border-deep/10 bg-tint/30 p-5">
+          <section className="rounded-2xl border border-deep/10 bg-cream/30 p-5">
             <p className="text-xs font-medium text-deep/70">Customer Public Tracking Link</p>
             <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-deep/10 bg-white p-3">
               <span className="truncate text-xs text-deep/70">
@@ -165,23 +141,18 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
         {/* Right Column: Fulfillment, Contact, & Status Controls */}
         <div className="space-y-6">
           {/* Status Pipeline & Controls */}
-          <section className="rounded-2xl border border-deep/10 bg-white p-6 shadow-xs">
-            <h2 className="text-[11px] font-semibold tracking-[0.14em] text-sage uppercase">
-              Fulfillment Pipeline
-            </h2>
-            <div className="mt-4">
-              <OrderActions
-                id={order.id}
-                status={order.status}
-                paymentStatus={order.payment?.status}
-              />
-            </div>
+          <AdminDetailCard title="Fulfillment">
+            <OrderActions
+              id={order.id}
+              status={order.status}
+              paymentStatus={order.payment?.status}
+            />
 
             <div className="mt-5 rounded-xl border border-deep/10 bg-cream/40 p-4 text-xs text-deep/70">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="size-4 text-sage" />
                 <span className="font-medium text-deep">
-                  Paystack Status: {order.payment?.status ?? "Unpaid"}
+                  Paystack · {order.payment?.status ?? "Unpaid"}
                 </span>
               </div>
               {order.payment?.paystackReference ? (
@@ -190,14 +161,9 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                 </p>
               ) : null}
             </div>
-          </section>
+          </AdminDetailCard>
 
-          {/* Customer Contact Card */}
-          <section className="rounded-2xl border border-deep/10 bg-white p-6 shadow-xs">
-            <div className="flex items-center gap-2">
-              <User className="size-4 text-sage" />
-              <h2 className="font-display text-lg text-deep">Customer Details</h2>
-            </div>
+          <AdminDetailCard title="Customer" icon={<User className="size-4" />}>
 
             <div className="mt-4 space-y-2 text-xs leading-relaxed text-deep/80">
               <p className="text-sm font-semibold text-deep">{order.name}</p>
@@ -211,7 +177,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center justify-center gap-1 rounded-xl bg-emerald-600 p-2.5 text-center text-[10px] font-medium text-white transition hover:bg-emerald-700"
+                className="flex flex-col items-center justify-center gap-1 rounded-xl bg-deep p-2.5 text-center text-[10px] font-medium text-cream transition hover:bg-[#14382a]"
               >
                 <MessageCircle className="size-4" />
                 <span>WhatsApp</span>
@@ -265,7 +231,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                 </div>
               ) : null}
             </div>
-          </section>
+          </AdminDetailCard>
         </div>
       </div>
     </div>
