@@ -45,6 +45,9 @@ for (const line of lines) {
   if (key.includes("PAYSTACK") && value.includes("_test_")) {
     warnings.push(`${key} uses Paystack TEST keys — swap to live keys before going live.`);
   }
+  if (key === "RESEND_API_KEY" && (!value || value.includes("replace_me"))) {
+    warnings.push("RESEND_API_KEY is missing or placeholder — emails will not send on production.");
+  }
 
   const needsQuotes = /[\s#"'=]/.test(value);
   out.push(needsQuotes ? `${key}="${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"` : `${key}=${value}`);
