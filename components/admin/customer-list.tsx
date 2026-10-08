@@ -10,9 +10,9 @@ import {
   AdminTableHead,
   AdminTableHeaderCell,
   AdminTableRow,
-  AdminTableWrap,
 } from "@/components/admin/ui";
-import { AdminShowMoreFooter, useCollapsibleList } from "@/components/admin/show-more";
+import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { adminFormSearch } from "@/components/ui/form-styles";
 import { formatNaira } from "@/lib/money";
 
@@ -38,17 +38,7 @@ export function AdminCustomerList({ rows }: { rows: CustomerRow[] }) {
     );
   }, [rows, query]);
 
-  const list = useCollapsibleList(filtered, { resetKey: query });
-
-  const footer = list.collapsible ? (
-    <AdminShowMoreFooter
-      expanded={list.expanded}
-      total={list.total}
-      hiddenCount={list.hiddenCount}
-      label="customers"
-      onToggle={() => list.setExpanded((value) => !value)}
-    />
-  ) : null;
+  const pagination = usePaginatedList(filtered, query);
 
   return (
     <div>
@@ -79,7 +69,7 @@ export function AdminCustomerList({ rows }: { rows: CustomerRow[] }) {
             {query.trim() ? "No customers match your search." : "No customers yet."}
           </AdminEmptyState>
         ) : (
-          <AdminTableWrap footer={footer}>
+          <PaginatedTableWrap pagination={pagination.tablePaginationProps("customers")}>
             <AdminTable>
               <AdminTableHead>
                 <tr>
@@ -90,7 +80,7 @@ export function AdminCustomerList({ rows }: { rows: CustomerRow[] }) {
                 </tr>
               </AdminTableHead>
               <tbody>
-                {list.visible.map((row) => (
+                {pagination.visible.map((row) => (
                   <AdminTableRow key={row.email}>
                     <AdminTableCell className="font-medium text-deep">{row.name}</AdminTableCell>
                     <AdminTableCell>
@@ -103,7 +93,7 @@ export function AdminCustomerList({ rows }: { rows: CustomerRow[] }) {
                 ))}
               </tbody>
             </AdminTable>
-          </AdminTableWrap>
+          </PaginatedTableWrap>
         )}
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { Show, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 
 export function AccountButton({
   className = "",
@@ -16,7 +17,10 @@ export function AccountButton({
     };
   };
 }) {
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+  const mounted = useClientMounted();
+  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
+  if (!clerkEnabled || !mounted) {
     return (
       <Link href="/login" className={className} onClick={onNavigate}>
         Account

@@ -13,10 +13,12 @@ import {
   AdminTableHead,
   AdminTableHeaderCell,
   AdminTableRow,
-  AdminTableWrap,
 } from "@/components/admin/ui";
+import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { adminButtonPrimary, adminButtonSecondary, interactiveControl } from "@/components/ui/form-styles";
 import { bookingQueue, isOverdueBooking, type BookingQueue } from "@/lib/admin-bookings";
+import { formatLagos } from "@/lib/datetime";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { formatNaira } from "@/lib/money";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
@@ -35,7 +37,7 @@ export type BookingRow = {
 };
 
 function when(iso: string) {
-  return new Date(iso).toLocaleString("en-NG", {
+  return formatLagos(iso, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -134,13 +136,15 @@ export function AdminBookings({ rows }: { rows: BookingRow[] }) {
     });
   }, [rows, queue, query]);
 
+  const pagination = usePaginatedList(visible, `${queue}:${query}`);
+
   return (
     <div>
       <AdminListSearch
         value={query}
         onChange={setQuery}
         placeholder="Search guest, email, or session"
-        countLabel={`${visible.length} of ${rows.length}`}
+        countLabel={`${pagination.total} matching · ${rows.length} total`}
         className="mb-4"
       />
       <AdminFilterTabs
@@ -160,7 +164,7 @@ export function AdminBookings({ rows }: { rows: BookingRow[] }) {
           {rows.length === 0 ? "Bookings will show up here." : "No bookings in this view."}
         </AdminEmptyState>
       ) : (
-        <AdminTableWrap>
+        <PaginatedTableWrap pagination={pagination.tablePaginationProps("bookings")}>
           <AdminTable>
             <AdminTableHead>
               <tr>
@@ -172,7 +176,7 @@ export function AdminBookings({ rows }: { rows: BookingRow[] }) {
               </tr>
             </AdminTableHead>
             <tbody>
-              {visible.map((row) => {
+              {pagination.visible.map((row) => {
                 const overdue = isOverdueBooking(row.status, row.startsAt);
                 return (
                   <AdminTableRow key={row.id}>
@@ -212,7 +216,7 @@ export function AdminBookings({ rows }: { rows: BookingRow[] }) {
               })}
             </tbody>
           </AdminTable>
-        </AdminTableWrap>
+        </PaginatedTableWrap>
       )}
     </div>
   );

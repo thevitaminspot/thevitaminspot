@@ -9,6 +9,8 @@ import {
   sendMail,
   type SendMailResult,
 } from "@/lib/email";
+import { adminRecipients } from "@/lib/admin-access";
+import { formatLagosLong } from "@/lib/datetime";
 import { formatNaira } from "@/lib/money";
 import { site } from "@/lib/site";
 
@@ -74,7 +76,7 @@ export async function notifyAdminBookingCancelled(input: {
   depositPaid?: number;
   cancelledBy: "guest" | "admin";
 }) {
-  const when = input.startsAt.toLocaleString("en-NG");
+  const when = formatLagosLong(input.startsAt);
   const depositLine =
     input.depositPaid && input.depositPaid > 0
       ? `<p><strong>Deposit paid:</strong> ${escapeHtml(formatNaira(input.depositPaid))}. Review refund requests manually if needed.</p>`
@@ -83,11 +85,11 @@ export async function notifyAdminBookingCancelled(input: {
     ? `<p><strong>Guest note:</strong> ${escapeHtml(input.details)}</p>`
     : "";
   const result = await sendMail({
-    to: process.env.ADMIN_EMAIL ?? site.email,
+    to: adminRecipients(),
     subject: `Booking cancelled: ${input.serviceName}`,
     html: `<p><strong>${escapeHtml(input.name)}</strong> (${escapeHtml(input.email)}) cancelled <strong>${escapeHtml(input.serviceName)}</strong> on ${escapeHtml(when)}.</p><p><strong>Reason:</strong> ${escapeHtml(input.reason)}</p><p><strong>Cancelled by:</strong> ${input.cancelledBy === "guest" ? "Guest (online)" : "Admin"}</p>${detailsLine}${depositLine}<p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
   });
-  logEmail("booking-admin-cancelled", result, process.env.ADMIN_EMAIL ?? site.email);
+  logEmail("booking-admin-cancelled", result, adminRecipients().join(", "));
   if (!result.ok) throw new Error(result.error);
 }
 
@@ -112,10 +114,10 @@ export async function notifyAdminNewBooking(input: {
   deposit: number;
 }) {
   const result = await sendMail({
-    to: process.env.ADMIN_EMAIL ?? site.email,
+    to: adminRecipients(),
     subject: `New booking: ${input.serviceName}`,
-    html: `<p>${escapeHtml(input.name)} booked <strong>${escapeHtml(input.serviceName)}</strong> for ${escapeHtml(input.startsAt.toLocaleString("en-NG"))}.</p><p>${input.deposit > 0 ? `Deposit: ${escapeHtml(formatNaira(input.deposit))}.` : "No deposit required."}</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
+    html: `<p>${escapeHtml(input.name)} booked <strong>${escapeHtml(input.serviceName)}</strong> for ${escapeHtml(formatLagosLong(input.startsAt))}.</p><p>${input.deposit > 0 ? `Deposit: ${escapeHtml(formatNaira(input.deposit))}.` : "No deposit required."}</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
   });
-  logEmail("booking-admin-new", result, process.env.ADMIN_EMAIL ?? site.email);
+  logEmail("booking-admin-new", result, adminRecipients().join(", "));
   if (!result.ok) throw new Error(result.error);
 }

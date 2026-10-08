@@ -5,18 +5,22 @@ import { deliveryZones } from "@/lib/catalog";
 import { attachCustomer, getSessionProfile } from "@/lib/auth";
 import { checkoutSchema, hasPaystack } from "@/lib/env";
 import { tryPrisma } from "@/lib/db";
-import { confirmPaystackReturn } from "@/lib/payments";
+import {
+  confirmPaystackReturn,
+  nextPaystackReference,
+  verifyAndSettleExistingReference,
+} from "@/lib/payments";
 import { initializePaystack } from "@/lib/paystack";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { site } from "@/lib/site";
 import { createOrderNumber, createToken } from "@/lib/tokens";
 
 export async function createCheckout(
-  items: { productId: string; quantity: number }[],
+  items: { productId: string; quantity: number; unitPrice?: number }[],
   input: unknown,
 ) {
   const requestHeaders = await headers();
-  const ip = requestHeaders.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(requestHeaders);
   if (!rateLimit(`checkout:${ip}`).ok) {
     return { error: "Please wait a moment before checking out again." };
   }
@@ -35,6 +39,8 @@ export async function createCheckout(
     where: { id: { in: ids }, isActive: true },
   });
   const lines = [];
+  const priceUpdates: Record<string, number> = {};
+
   for (const item of items) {
     const product = products.find((entry) => entry.id === item.productId);
     if (!product) {
@@ -46,7 +52,21 @@ export async function createCheckout(
     if (product.stock < item.quantity) {
       return { error: `${product.name} only has ${product.stock} left.` };
     }
+    if (
+      typeof item.unitPrice === "number" &&
+      Number.isFinite(item.unitPrice) &&
+      item.unitPrice !== product.price
+    ) {
+      priceUpdates[product.id] = product.price;
+    }
     lines.push({ product, quantity: item.quantity });
+  }
+
+  if (Object.keys(priceUpdates).length > 0) {
+    return {
+      error: "Some prices changed. Please review your bag.",
+      prices: priceUpdates,
+    };
   }
 
   const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
@@ -57,10 +77,11 @@ export async function createCheckout(
     if (!parsed.data.zoneSlug) return { error: "Choose a delivery zone." };
     if (!parsed.data.addressLine1) return { error: "Add a delivery address." };
     const existing = await prisma.deliveryZone.findUnique({ where: { slug: parsed.data.zoneSlug } });
+    const zoneCount = await prisma.deliveryZone.count();
     const catalogZone = deliveryZones.find((entry) => entry.slug === parsed.data.zoneSlug);
     const zone =
       existing ??
-      (catalogZone
+      (zoneCount === 0 && catalogZone
         ? await prisma.deliveryZone.create({
             data: {
               name: catalogZone.name,
@@ -114,7 +135,7 @@ export async function createCheckout(
     return { token: accessToken };
   }
 
-  const reference = `ord_${order.id}`;
+  const reference = nextPaystackReference("ord", order.id);
 
   try {
     const payment = await initializePaystack({
@@ -147,13 +168,17 @@ export async function createCheckout(
 export async function completeCheckoutReturn(token: string, reference: string) {
   if (!token || !reference) return { error: "Missing payment details." as const };
 
-  const verified = await confirmPaystackReturn(reference);
+  const verified = await confirmPaystackReturn(reference, { orderToken: token });
   if (verified.outcome === "error") {
     return { error: verified.message };
   }
 
   if (verified.outcome === "failed") {
     return { ok: true as const, status: "FAILED" as const };
+  }
+
+  if (verified.outcome === "pending" || verified.outcome === "skipped") {
+    return { ok: true as const, status: "PENDING" as const, token };
   }
 
   const prisma = await tryPrisma();
@@ -169,7 +194,7 @@ export async function completeCheckoutReturn(token: string, reference: string) {
     return { ok: true as const, status: "PAID" as const, token };
   }
 
-  return { error: "Payment could not be confirmed." as const };
+  return { ok: true as const, status: "PENDING" as const, token };
 }
 
 export async function resumeOrderPayment(token: string) {
@@ -182,11 +207,21 @@ export async function resumeOrderPayment(token: string) {
     include: { payment: true },
   });
   if (!order) return { error: "Order not found." as const };
+  if (order.status === "CANCELLED") {
+    return { error: "This order was cancelled." as const };
+  }
   if (order.status === "PAID" || order.payment?.status === "PAID") {
     return { error: "This order is already paid." as const };
   }
 
-  const reference = order.payment?.paystackReference ?? `ord_${order.id}`;
+  if (order.payment?.paystackReference) {
+    const existing = await verifyAndSettleExistingReference(order.payment.paystackReference);
+    if (existing.settled) {
+      return { error: "This order is already paid." as const };
+    }
+  }
+
+  const reference = nextPaystackReference("ord", order.id);
   const checkoutReturnUrl = `${site.url}/checkout?order=${token}`;
 
   try {
@@ -202,6 +237,7 @@ export async function resumeOrderPayment(token: string) {
       await prisma.payment.update({
         where: { id: order.payment.id },
         data: {
+          paystackReference: reference,
           paystackAccessCode: payment.access_code,
           status: "PENDING",
         },

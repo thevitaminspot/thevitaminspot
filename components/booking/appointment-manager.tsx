@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cancelAppointment, fetchSlots, updateAppointment } from "@/actions/booking";
+import { formatLagosLong } from "@/lib/datetime";
+import { useClientDateInputMin } from "@/lib/hooks/use-client-date-input-min";
 import { BOOKING_CANCEL_REASONS } from "@/lib/booking-cancel";
 import { formatNaira } from "@/lib/money";
 import {
@@ -16,14 +18,7 @@ import {
 } from "@/components/ui/form-styles";
 
 function formatWhen(date: Date) {
-  return date.toLocaleString("en-NG", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatLagosLong(date);
 }
 
 export function AppointmentManager({
@@ -45,6 +40,7 @@ export function AppointmentManager({
 }) {
   const router = useRouter();
   const [date, setDate] = useState("");
+  const minDate = useClientDateInputMin();
   const [rescheduleMessage, setRescheduleMessage] = useState("");
   const [reschedulePending, setReschedulePending] = useState(false);
   const [cancelStep, setCancelStep] = useState<"idle" | "review" | "form">("idle");
@@ -73,7 +69,7 @@ export function AppointmentManager({
         setRescheduleMessage(result.error);
         return;
       }
-      setRescheduleMessage(`Moved to ${first.label}. We emailed you an updated confirmation.`);
+      setRescheduleMessage(`Moved to ${first.label}. We emailed you an updated booking email.`);
       router.refresh();
     } finally {
       setReschedulePending(false);
@@ -137,6 +133,7 @@ export function AppointmentManager({
             <input
               type="date"
               value={date}
+              min={minDate || undefined}
               onChange={(event) => setDate(event.target.value)}
               className={formDateControl}
             />

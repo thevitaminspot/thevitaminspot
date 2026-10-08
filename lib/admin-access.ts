@@ -1,10 +1,17 @@
 type SessionClaims = Record<string, unknown> | null | undefined;
 
+import { site } from "@/lib/site";
+
 export function adminEmails() {
   return (process.env.ADMIN_EMAIL ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
+}
+
+export function adminRecipients() {
+  const emails = adminEmails();
+  return emails.length > 0 ? emails : [site.email];
 }
 
 export function isAdminSession(sessionClaims: SessionClaims) {

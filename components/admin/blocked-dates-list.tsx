@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { AdminListSearch, filterByQuery } from "@/components/admin/list-search";
-import { AdminEmptyState, AdminPanel } from "@/components/admin/ui";
-import { AdminShowMoreFooter, useCollapsibleList } from "@/components/admin/show-more";
+import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
+import { AdminEmptyState } from "@/components/admin/ui";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 
 export type BlockedDateRow = {
   id: string;
@@ -11,13 +12,16 @@ export type BlockedDateRow = {
   reason: string | null;
 };
 
+const blockedDateFormat: Intl.DateTimeFormatOptions = {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+};
+
 function blockedDateSearchText(row: BlockedDateRow) {
-  const formatted = new Date(row.date).toLocaleDateString("en-NG", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const formatted = new Date(row.date).toLocaleDateString("en-NG", blockedDateFormat);
   return `${formatted} ${row.reason ?? ""}`;
 }
 
@@ -27,17 +31,7 @@ export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
     () => filterByQuery(rows, query, blockedDateSearchText),
     [rows, query],
   );
-  const list = useCollapsibleList(filtered, { resetKey: query });
-
-  const footer = list.collapsible ? (
-    <AdminShowMoreFooter
-      expanded={list.expanded}
-      total={list.total}
-      hiddenCount={list.hiddenCount}
-      label="blocked dates"
-      onToggle={() => list.setExpanded((value) => !value)}
-    />
-  ) : null;
+  const pagination = usePaginatedList(filtered, query);
 
   return (
     <div>
@@ -45,7 +39,7 @@ export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
         value={query}
         onChange={setQuery}
         placeholder="Search by date or reason…"
-        countLabel={`${filtered.length} of ${rows.length} blocked dates`}
+        countLabel={`${pagination.total} matching · ${rows.length} total`}
         className="mb-4"
       />
 
@@ -54,22 +48,19 @@ export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
           {query.trim() ? "No blocked dates match your search." : "No blocked dates."}
         </AdminEmptyState>
       ) : (
-        <AdminPanel>
+        <PaginatedTableWrap
+          pagination={pagination.tablePaginationProps("blocked dates")}
+          scroll={false}
+        >
           <ul className="divide-y divide-deep/6">
-            {list.visible.map((row) => (
+            {pagination.visible.map((row) => (
               <li key={row.id} className="px-5 py-3.5 text-sm text-deep/75">
-                {new Date(row.date).toLocaleDateString("en-NG", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
+                {new Date(row.date).toLocaleDateString("en-NG", blockedDateFormat)}
                 {row.reason ? <span className="text-deep/45"> · {row.reason}</span> : null}
               </li>
             ))}
           </ul>
-          {footer}
-        </AdminPanel>
+        </PaginatedTableWrap>
       )}
     </div>
   );

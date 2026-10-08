@@ -1,7 +1,9 @@
+import { lagosDateKey } from "@/lib/datetime";
 import { tryPrisma } from "@/lib/db";
 
 export const DEFAULT_SLOT_MIN = 45;
 export const DEFAULT_BUFFER_MIN = 15;
+export const MIN_BOOKING_LEAD_MS = 60 * 60 * 1000;
 
 type Rule = {
   weekday: number;
@@ -35,7 +37,11 @@ export async function getRules(): Promise<Rule[]> {
   return rows.length === 0 ? defaultRules : rows;
 }
 
-export async function listSlots(dateIso: string, durationMin: number) {
+export async function listSlots(
+  dateIso: string,
+  durationMin: number,
+  options?: { excludeAppointmentId?: string },
+) {
   const parts = dateIso.split("-").map(Number);
   if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part))) return [];
   const [year, monthNumber, day] = parts;
@@ -68,11 +74,15 @@ export async function listSlots(dateIso: string, durationMin: number) {
             gte: new Date(`${dateIso}T00:00:00+01:00`),
             lt: new Date(`${dateIso}T23:59:59+01:00`),
           },
+          ...(options?.excludeAppointmentId
+            ? { id: { not: options.excludeAppointmentId } }
+            : {}),
         },
       })
     : [];
 
   const slots: { start: string; end: string; label: string }[] = [];
+  const earliest = Date.now() + MIN_BOOKING_LEAD_MS;
 
   for (const rule of rules) {
     const step = rule.slotMin + rule.bufferMin;
@@ -82,6 +92,8 @@ export async function listSlots(dateIso: string, durationMin: number) {
       cursor += step
     ) {
       const start = lagosDate(year, month, day, cursor);
+      if (start.getTime() <= earliest) continue;
+
       const end = new Date(start.getTime() + durationMin * 60_000);
       const overlaps = taken.some(
         (appointment) =>
@@ -102,4 +114,15 @@ export async function listSlots(dateIso: string, durationMin: number) {
   }
 
   return slots;
+}
+
+export async function isBookableStart(
+  start: Date,
+  durationMin: number,
+  excludeAppointmentId?: string,
+) {
+  if (Number.isNaN(start.getTime())) return false;
+  const dateIso = lagosDateKey(start);
+  const slots = await listSlots(dateIso, durationMin, { excludeAppointmentId });
+  return slots.some((slot) => slot.start === start.toISOString());
 }

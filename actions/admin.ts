@@ -4,14 +4,14 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { canTransitionOrder } from "@/lib/admin-orders";
 import { getAdminProfile } from "@/lib/auth";
-import { categories, type CatalogInfusion } from "@/lib/catalog";
+import { categories } from "@/lib/catalog";
 import { tryPrisma } from "@/lib/db";
 import {
   notifyAdminBookingCancelled,
   notifyBookingCancelled,
   notifyBookingConfirmed,
 } from "@/lib/booking-notify";
-import { escapeHtml, sendMail, sendOrderUpdate } from "@/lib/email";
+import { sendOrderUpdate } from "@/lib/email";
 import { uploadImage } from "@/lib/images";
 import { nairaToKobo } from "@/lib/money";
 import { seedCatalog } from "@/lib/seed-catalog";
@@ -110,7 +110,7 @@ export async function updateProduct(input: {
   if ("error" in prisma) return prisma;
   const name = input.name.trim();
   if (name.length < 2) return { error: "Name is too short." };
-  if (!Number.isFinite(input.priceNaira) || input.priceNaira < 0) {
+  if (!Number.isFinite(input.priceNaira) || input.priceNaira <= 0) {
     return { error: "Enter a price in naira." };
   }
   if (!Number.isInteger(input.stock) || input.stock < 0) {
@@ -378,7 +378,10 @@ export async function deleteInfusion(id: string) {
 export async function updateOrderStatus(id: string, status: OrderStatus) {
   const prisma = await database();
   if ("error" in prisma) return prisma;
-  const current = await prisma.order.findUnique({ where: { id } });
+  const current = await prisma.order.findUnique({
+    where: { id },
+    include: { items: true },
+  });
   if (!current) return { error: "Order not found." };
   if (
     !canTransitionOrder(
@@ -389,7 +392,24 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   ) {
     return { error: "That status change is not allowed." };
   }
-  const order = await prisma.order.update({ where: { id }, data: { status } });
+
+  const restoreStock =
+    status === "CANCELLED" &&
+    (current.status === "PAID" || current.status === "PACKED") &&
+    !current.notes?.includes("stock ran short");
+
+  const order = restoreStock
+    ? await prisma.$transaction(async (tx) => {
+        for (const item of current.items) {
+          if (!item.productId) continue;
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
+          });
+        }
+        return tx.order.update({ where: { id }, data: { status } });
+      })
+    : await prisma.order.update({ where: { id }, data: { status } });
   await sendOrderUpdate({
     to: order.email,
     name: order.name,
@@ -479,7 +499,6 @@ export async function listAdminAppointments() {
   const rows = await prisma.appointment.findMany({
     include: { service: true, payment: true },
     orderBy: { startsAt: "asc" },
-    take: 80,
   });
   return rows.map((row) => ({
     id: row.id,

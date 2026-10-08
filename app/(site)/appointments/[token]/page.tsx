@@ -4,6 +4,7 @@ import { findInfusion } from "@/lib/data";
 import { tryPrisma } from "@/lib/db";
 import { findLocalAppointment } from "@/lib/local-store";
 import { confirmPaystackReturn } from "@/lib/payments";
+import { formatLagosLong } from "@/lib/datetime";
 import { whatsappHref } from "@/lib/site";
 
 export const metadata = { title: "Your appointment", robots: { index: false, follow: false } };
@@ -16,7 +17,10 @@ export default async function AppointmentPage({
   const { token } = await params;
   const query = await searchParams;
   const reference = typeof query.reference === "string" ? query.reference : query.trxref;
-  await confirmPaystackReturn(typeof reference === "string" ? reference : undefined);
+  await confirmPaystackReturn(
+    typeof reference === "string" ? reference : undefined,
+    { appointmentToken: token },
+  );
   const prisma = await tryPrisma();
   const row = prisma
     ? await prisma.appointment.findUnique({
@@ -83,7 +87,7 @@ export default async function AppointmentPage({
       </p>
       <h1 className="font-display mt-3 text-5xl">{appointment.serviceName}</h1>
       <p className="mt-5 leading-8 text-deep/70">
-        {appointment.startsAt.toLocaleString("en-NG")}
+        {formatLagosLong(appointment.startsAt)}
         <br />
         {appointment.name} · {appointment.email}
       </p>
@@ -95,7 +99,7 @@ export default async function AppointmentPage({
       {appointment.status !== "CANCELLED" ? (
         <a
           href={whatsappHref(
-            `My Vitamin Spot booking is ${appointment.serviceName} on ${appointment.startsAt.toLocaleString("en-NG")}.`,
+            `My Vitamin Spot booking is ${appointment.serviceName} on ${formatLagosLong(appointment.startsAt)}.`,
           )}
           className="mt-6 inline-flex rounded-lg border border-deep/15 px-5 py-3 text-[11px] tracking-[0.18em] text-deep uppercase"
         >

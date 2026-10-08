@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+
+function subscribeReducedMotion(onStoreChange: () => void) {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", onStoreChange);
+  return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 export function Reveal({
   children,
@@ -12,21 +22,26 @@ export function Reveal({
   delay?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const reducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotion, () => false);
+  const [revealed, setRevealed] = useState(false);
+  const visible = reducedMotion || revealed;
+
+  const showVisible = useSyncExternalStore(
+    () => () => {},
+    () => visible,
+    () => false,
+  );
 
   useEffect(() => {
+    if (reducedMotion) return;
+
     const node = ref.current;
     if (!node) return;
-
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setVisible(true);
-      return;
-    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setVisible(true);
+          setRevealed(true);
           observer.disconnect();
         }
       },
@@ -35,14 +50,18 @@ export function Reveal({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [reducedMotion]);
 
   const style: CSSProperties | undefined = delay
     ? ({ "--reveal-delay": `${delay}ms` } as CSSProperties)
     : undefined;
 
   return (
-    <div ref={ref} className={`reveal ${visible ? "is-visible" : ""} ${className}`} style={style}>
+    <div
+      ref={ref}
+      className={`reveal ${showVisible ? "is-visible" : ""} ${className}`}
+      style={style}
+    >
       {children}
     </div>
   );

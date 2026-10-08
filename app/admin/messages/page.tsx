@@ -14,7 +14,6 @@ export default async function AdminMessagesPage() {
 
   const rows = await prisma.contactMessage.findMany({
     orderBy: { createdAt: "desc" },
-    take: 50,
   });
 
   return (

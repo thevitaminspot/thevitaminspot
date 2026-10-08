@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { deleteProduct, toggleProductActive, updateProductStock } from "@/actions/admin";
 import { AdminActionMenu } from "@/components/admin/action-menu";
 import { AddProductForm, ProductEditor } from "@/components/admin/editors";
-import { AdminShowMoreFooter, useCollapsibleList } from "@/components/admin/show-more";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { AdminEmptyState, AdminFeedback, AdminFormPanel, AdminPageHeader } from "@/components/admin/ui";
 import { useScrollIntoView } from "@/components/admin/use-scroll-into-view";
 import { adminButtonPrimary, adminButtonTab, adminFormSearch } from "@/components/ui/form-styles";
@@ -54,7 +55,7 @@ export function ProductCatalog({
     });
   }, [products, query, tab]);
 
-  const list = useCollapsibleList(filtered, { resetKey: `${tab}:${query}` });
+  const pagination = usePaginatedList(filtered, `${tab}:${query}`);
 
   const editing = products.find((product) => product.id === editingId);
   const addFormRef = useScrollIntoView<HTMLDivElement>(adding ? "add" : null);
@@ -235,8 +236,10 @@ export function ProductCatalog({
             No products match the selected criteria.
           </div>
         ) : (
-          <ul className="divide-y divide-deep/10">
-            {list.visible.map((product) => {
+          <>
+            <TablePagination {...pagination.tablePaginationProps("products")} edge="top" />
+            <ul className="divide-y divide-deep/10">
+            {pagination.visible.map((product) => {
               const photo = product.images[0];
               const isHidden = product.isActive === false;
               const isLowStock = product.stock <= 5;
@@ -375,17 +378,10 @@ export function ProductCatalog({
                 </li>
               );
             })}
-          </ul>
+            </ul>
+            <TablePagination {...pagination.tablePaginationProps("products")} edge="bottom" />
+          </>
         )}
-        {list.collapsible ? (
-          <AdminShowMoreFooter
-            expanded={list.expanded}
-            total={list.total}
-            hiddenCount={list.hiddenCount}
-            label="products"
-            onToggle={() => list.setExpanded((value) => !value)}
-          />
-        ) : null}
       </div>
     </div>
   );
