@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, ShoppingBag, X } from "lucide-react";
 import { AccountButton } from "@/components/layout/account-button";
@@ -132,16 +132,16 @@ function MobileNav({
 
 export function Header() {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const count = useCartStore((state) =>
     state.items.reduce((sum, item) => sum + item.quantity, 0),
   );
   const openCart = useCartStore((state) => state.open);
   const { isNavOpen, openNav, closeNav } = useUiStore();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     closeNav();

@@ -9,6 +9,8 @@ import { createBooking, fetchSlots } from "@/actions/booking";
 import { parseBookingDetails } from "@/lib/env";
 import { nairaLabel } from "@/lib/money";
 import type { CatalogInfusion } from "@/lib/catalog";
+import { useClientDateInputMin } from "@/lib/hooks/use-client-date-input-min";
+import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import {
   formControl,
   formDateControl,
@@ -161,7 +163,7 @@ export function BookingFlow({
   const [slug, setSlug] = useState(initialSlug ?? "");
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
   const [date, setDate] = useState("");
-  const [minDate, setMinDate] = useState("");
+  const minDate = useClientDateInputMin();
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slot, setSlot] = useState<Slot | null>(null);
@@ -180,23 +182,6 @@ export function BookingFlow({
   function scrollToFormTop() {
     formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-
-  useEffect(() => {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    setMinDate(`${today.getFullYear()}-${month}-${day}`);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn || !user) return;
-    setDetails((current) => ({
-      name: current.name || user.fullName || user.firstName || "",
-      email: current.email || user.primaryEmailAddress?.emailAddress || "",
-      phone: current.phone,
-      notes: current.notes,
-    }));
-  }, [isLoaded, isSignedIn, user]);
 
   useEffect(() => {
     if (skipStepScrollRef.current) {
@@ -240,6 +225,17 @@ export function BookingFlow({
     if (step === 1 && !slot) {
       setError("Select a time to continue.");
       return;
+    }
+    if (step === 1) {
+      setDetails((current) => {
+        if (!isLoaded || !isSignedIn || !user) return current;
+        return {
+          name: current.name || user.fullName || user.firstName || "",
+          email: current.email || user.primaryEmailAddress?.emailAddress || "",
+          phone: current.phone,
+          notes: current.notes,
+        };
+      });
     }
     if (step === 2) {
       const parsed = parseBookingDetails(details);
@@ -540,7 +536,9 @@ function GuestBookingNote() {
 }
 
 function ClerkBookingNote() {
+  const mounted = useClientMounted();
   const { isLoaded, isSignedIn } = useUser();
+  if (!mounted) return <GuestBookingCopy />;
   if (!isLoaded || isSignedIn) return null;
   return <GuestBookingCopy />;
 }

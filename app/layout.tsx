@@ -90,6 +90,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         suppressHydrationWarning
         className={`${display.variable} ${sans.variable} bg-cream font-sans text-ink antialiased`}
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var k="data-cursor-ref",n=document;if(!n.documentElement)return;n.querySelectorAll("["+k+"]").forEach(function(el){el.removeAttribute(k);});}catch(e){}})();`,
+          }}
+        />
         {process.env.NODE_ENV === "development" ? <StripCursorRefs /> : null}
         <script
           type="application/ld+json"

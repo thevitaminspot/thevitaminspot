@@ -4,12 +4,12 @@ import { headers } from "next/headers";
 import { contactSchema, newsletterSchema } from "@/lib/env";
 import { tryPrisma } from "@/lib/db";
 import { escapeHtml, sendMail } from "@/lib/email";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { site } from "@/lib/site";
 
 export async function submitContact(input: unknown) {
   const requestHeaders = await headers();
-  const ip = requestHeaders.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(requestHeaders);
   if (!rateLimit(`contact:${ip}`, 5).ok) {
     return { error: "Please wait before sending another note." };
   }
@@ -40,7 +40,7 @@ export async function submitContact(input: unknown) {
 
 export async function subscribeNotes(email: string) {
   const requestHeaders = await headers();
-  const ip = requestHeaders.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(requestHeaders);
   if (!rateLimit(`notes:${ip}`, 5).ok) {
     return { error: "Please wait before sending another note." };
   }

@@ -5,7 +5,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteZone, updateZone } from "@/actions/admin";
 import { AdminActionMenu } from "@/components/admin/action-menu";
-import { AdminShowMoreFooter, useCollapsibleList } from "@/components/admin/show-more";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { Modal } from "@/components/ui/modal";
 import { adminFormField, adminFormLabel, adminFormSearch } from "@/components/ui/form-styles";
 import { formatNaira } from "@/lib/money";
@@ -48,7 +49,7 @@ export function DeliveryZoneList({
     );
   }, [zones, query]);
 
-  const list = useCollapsibleList(filtered, { resetKey: query });
+  const pagination = usePaginatedList(filtered, query);
 
   function toggleActive(zone: Zone) {
     start(async () => {
@@ -98,8 +99,10 @@ export function DeliveryZoneList({
           No locations match &ldquo;{query}&rdquo;.
         </p>
       ) : (
-        <ul className="divide-y divide-deep/6">
-          {list.visible.map((zone) => (
+        <>
+          <TablePagination {...pagination.tablePaginationProps("zones")} edge="top" />
+          <ul className="divide-y divide-deep/6">
+          {pagination.visible.map((zone) => (
             <li
               key={zone.id}
               className="flex items-center gap-4 px-5 py-4 transition hover:bg-cream/20"
@@ -145,17 +148,10 @@ export function DeliveryZoneList({
               />
             </li>
           ))}
-        </ul>
+          </ul>
+          <TablePagination {...pagination.tablePaginationProps("zones")} edge="bottom" />
+        </>
       )}
-      {list.collapsible ? (
-        <AdminShowMoreFooter
-          expanded={list.expanded}
-          total={list.total}
-          hiddenCount={list.hiddenCount}
-          label="locations"
-          onToggle={() => list.setExpanded((value) => !value)}
-        />
-      ) : null}
 
       <ZoneEditModal
         zone={editing}

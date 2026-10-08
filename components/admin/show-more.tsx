@@ -1,25 +1,37 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { PAGE_SIZE } from "@/lib/pagination";
 
-export const ADMIN_LIST_PREVIEW = 10;
+/** @deprecated Use PAGE_SIZE from `@/lib/pagination` */
+export const ADMIN_LIST_PREVIEW = PAGE_SIZE;
 
 type CollapsibleOptions = {
   initialCount?: number;
-  /** When true, always show every item and hide the toggle. */
   uncapped?: boolean;
-  /** Change to collapse again after filters or tabs change. */
   resetKey?: string;
 };
 
+/** @deprecated Use `usePaginatedList` from `@/hooks/use-paginated-list` */
 export function useCollapsibleList<T>(items: T[], options: CollapsibleOptions = {}) {
-  const initialCount = options.initialCount ?? ADMIN_LIST_PREVIEW;
+  const initialCount = options.initialCount ?? PAGE_SIZE;
   const uncapped = options.uncapped ?? false;
-  const [expanded, setExpanded] = useState(false);
+  const [expandedState, setExpandedState] = useState<{
+    resetKey: string | undefined;
+    expanded: boolean;
+  }>({ resetKey: options.resetKey, expanded: false });
 
-  useEffect(() => {
-    setExpanded(false);
-  }, [options.resetKey]);
+  const expanded =
+    expandedState.resetKey === options.resetKey ? expandedState.expanded : false;
+
+  const setExpanded = (value: boolean | ((prev: boolean) => boolean)) => {
+    setExpandedState((current) => {
+      const prev =
+        current.resetKey === options.resetKey ? current.expanded : false;
+      const next = typeof value === "function" ? value(prev) : value;
+      return { resetKey: options.resetKey, expanded: next };
+    });
+  };
 
   const collapsible = !uncapped && items.length > initialCount;
   const visible =
@@ -35,6 +47,7 @@ export function useCollapsibleList<T>(items: T[], options: CollapsibleOptions = 
   };
 }
 
+/** @deprecated Use `TablePagination` from `@/components/ui/table-pagination` */
 export function AdminShowMoreFooter({
   expanded,
   total,
@@ -65,9 +78,10 @@ export function AdminShowMoreFooter({
   );
 }
 
+/** @deprecated Use `usePaginatedList` + `TablePagination` */
 export function AdminShowMore<T>({
   items,
-  initialCount = ADMIN_LIST_PREVIEW,
+  initialCount = PAGE_SIZE,
   uncapped = false,
   label,
   children,

@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { toggleInfusionActive } from "@/actions/admin";
 import { AddInfusionForm, InfusionEditor } from "@/components/admin/editors";
 import { InfusionDeleteConfirm } from "@/components/admin/infusion-delete-confirm";
-import { AdminShowMoreFooter, useCollapsibleList } from "@/components/admin/show-more";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import {
   AdminEmptyState,
   AdminFeedback,
@@ -59,7 +60,7 @@ export function InfusionCatalog({
     });
   }, [infusions, query, tab]);
 
-  const list = useCollapsibleList(filtered, { resetKey: `${tab}:${query}` });
+  const pagination = usePaginatedList(filtered, `${tab}:${query}`);
   const editing = infusions.find((item) => item.id === editingId);
   const addFormRef = useScrollIntoView<HTMLDivElement>(adding ? "add" : null);
   const editFormRef = useScrollIntoView<HTMLDivElement>(editingId);
@@ -203,8 +204,9 @@ export function InfusionCatalog({
               </div>
             ) : (
               <>
+                <TablePagination {...pagination.tablePaginationProps("sessions")} edge="top" />
                 <ul className="divide-y divide-deep/10">
-                  {list.visible.map((item) => {
+                  {pagination.visible.map((item) => {
                     const hidden = item.isActive === false;
                     const isEditing = editingId === item.id;
                     return (
@@ -270,15 +272,7 @@ export function InfusionCatalog({
                     );
                   })}
                 </ul>
-                {list.collapsible ? (
-                  <AdminShowMoreFooter
-                    expanded={list.expanded}
-                    total={list.total}
-                    hiddenCount={list.hiddenCount}
-                    label="sessions"
-                    onToggle={() => list.setExpanded((value) => !value)}
-                  />
-                ) : null}
+                <TablePagination {...pagination.tablePaginationProps("sessions")} edge="bottom" />
               </>
             )}
           </div>

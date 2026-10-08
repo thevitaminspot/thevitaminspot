@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { AdminListSearch, filterByQuery } from "@/components/admin/list-search";
 import { AdminEmptyState, AdminMessageCard } from "@/components/admin/ui";
-import { AdminShowMoreFooter, useCollapsibleList } from "@/components/admin/show-more";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
+import { formatLagos } from "@/lib/datetime";
 
 export type MessageRow = {
   id: string;
@@ -24,7 +26,7 @@ export function AdminMessageList({ rows }: { rows: MessageRow[] }) {
     () => filterByQuery(rows, query, messageSearchText),
     [rows, query],
   );
-  const list = useCollapsibleList(filtered, { resetKey: query });
+  const pagination = usePaginatedList(filtered, query);
 
   return (
     <div>
@@ -32,7 +34,7 @@ export function AdminMessageList({ rows }: { rows: MessageRow[] }) {
         value={query}
         onChange={setQuery}
         placeholder="Search by name, email, or message…"
-        countLabel={`${filtered.length} of ${rows.length} messages`}
+        countLabel={`${pagination.total} matching · ${rows.length} total`}
         className="mb-4"
       />
 
@@ -41,12 +43,15 @@ export function AdminMessageList({ rows }: { rows: MessageRow[] }) {
           {query.trim() ? "No messages match your search." : "No messages yet."}
         </AdminEmptyState>
       ) : (
-        <>
-          <ul className="space-y-3">
-            {list.visible.map((row) => (
-              <li key={row.id}>
+        <PaginatedTableWrap
+          pagination={pagination.tablePaginationProps("messages")}
+          scroll={false}
+        >
+          <ul className="divide-y divide-deep/6">
+            {pagination.visible.map((row) => (
+              <li key={row.id} className="px-5 py-4">
                 <AdminMessageCard
-                  meta={`${new Date(row.createdAt).toLocaleString("en-NG")} · ${row.name} · ${row.email}${
+                  meta={`${formatLagos(row.createdAt)} · ${row.name} · ${row.email}${
                     row.phone ? ` · ${row.phone}` : ""
                   }`}
                 >
@@ -55,18 +60,7 @@ export function AdminMessageList({ rows }: { rows: MessageRow[] }) {
               </li>
             ))}
           </ul>
-          {list.collapsible ? (
-            <div className="mt-3">
-              <AdminShowMoreFooter
-                expanded={list.expanded}
-                total={list.total}
-                hiddenCount={list.hiddenCount}
-                label="messages"
-                onToggle={() => list.setExpanded((value) => !value)}
-              />
-            </div>
-          ) : null}
-        </>
+        </PaginatedTableWrap>
       )}
     </div>
   );

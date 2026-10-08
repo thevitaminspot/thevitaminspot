@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { ProductCard } from "@/components/shop/product-card";
 import type { CatalogCategory, CatalogProduct } from "@/lib/catalog";
 import { formSearch } from "@/components/ui/form-styles";
@@ -16,6 +17,7 @@ export function ShopCatalog({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("featured");
+  const mounted = useClientMounted();
 
   const filtered = useMemo(() => {
     return products
@@ -90,16 +92,19 @@ export function ShopCatalog({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 rounded-xl border border-deep/10 bg-cream/40 px-3 py-1.5">
             <span className="text-[11px] text-deep/60">Sort:</span>
-            <select
-              value={sort}
-              onChange={(event) => setSort(event.target.value)}
-              suppressHydrationWarning
-              className="bg-transparent text-xs font-medium text-deep focus:outline-none"
-            >
-              <option value="featured">Featured Curations</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-            </select>
+            {mounted ? (
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value)}
+                className="bg-transparent text-xs font-medium text-deep focus:outline-none"
+              >
+                <option value="featured">Featured Curations</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+              </select>
+            ) : (
+              <span className="text-xs font-medium text-deep">Featured Curations</span>
+            )}
           </div>
 
           <span className="hidden text-xs text-deep/50 sm:inline">

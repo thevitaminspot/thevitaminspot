@@ -12,9 +12,10 @@ import {
   AdminTableHead,
   AdminTableHeaderCell,
   AdminTableRow,
-  AdminTableWrap,
 } from "@/components/admin/ui";
+import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { formatLagos } from "@/lib/datetime";
 import {
   fulfillmentLabel,
   isOpenOrder,
@@ -22,6 +23,7 @@ import {
   type AdminFulfillment,
   type OrderQueue,
 } from "@/lib/admin-orders";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { formatNaira } from "@/lib/money";
 
 export type AdminOrderRow = {
@@ -63,13 +65,15 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
     return filterByQuery(inQueue, query, orderSearchText);
   }, [rows, queue, query]);
 
+  const pagination = usePaginatedList(visible, `${queue}:${query}`);
+
   return (
     <div>
       <AdminListSearch
         value={query}
         onChange={setQuery}
         placeholder="Search order number, customer, or email"
-        countLabel={`${visible.length} of ${rows.length}`}
+        countLabel={`${pagination.total} matching · ${rows.length} total`}
         className="mb-4"
       />
       <AdminFilterTabs
@@ -90,7 +94,7 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
             : "No orders in this view."}
         </AdminEmptyState>
       ) : (
-        <AdminTableWrap>
+        <PaginatedTableWrap pagination={pagination.tablePaginationProps("orders")}>
           <AdminTable>
             <AdminTableHead>
               <tr>
@@ -102,7 +106,7 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
               </tr>
             </AdminTableHead>
             <tbody>
-              {visible.map((row) => {
+              {pagination.visible.map((row) => {
                 const createdAt =
                   row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt);
                 const fulfillment = asFulfillment(row.fulfillment);
@@ -130,7 +134,7 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
                     <AdminTableCell className="whitespace-nowrap">
                       <TimeAgo value={createdAt} className="text-deep/75" />
                       <span className="mt-1 block text-[11px] text-deep/40">
-                        {createdAt.toLocaleString("en-NG", {
+                        {formatLagos(createdAt, {
                           day: "numeric",
                           month: "short",
                           hour: "numeric",
@@ -154,7 +158,7 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
               })}
             </tbody>
           </AdminTable>
-        </AdminTableWrap>
+        </PaginatedTableWrap>
       )}
     </div>
   );

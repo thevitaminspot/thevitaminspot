@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -18,6 +18,7 @@ import {
   formSubmitInline,
   formTextarea,
 } from "@/components/ui/form-styles";
+import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { useCartStore } from "@/stores/cart-store";
 
 export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
@@ -25,9 +26,14 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const searchParams = useSearchParams();
   const formId = useId();
   const returnHandled = useRef(false);
-  const [mounted, setMounted] = useState(false);
+  const cartHydrated = useSyncExternalStore(
+    (onStoreChange) => useCartStore.persist.onFinishHydration(onStoreChange),
+    () => useCartStore.persist.hasHydrated(),
+    () => false,
+  );
   const items = useCartStore((state) => state.items);
   const clear = useCartStore((state) => state.clear);
+  const updatePrices = useCartStore((state) => state.updatePrices);
 
   const [fulfillment, setFulfillment] = useState<"DELIVERY" | "PICKUP">("DELIVERY");
   const [selectedZoneSlug, setSelectedZoneSlug] = useState<string>(
@@ -43,16 +49,6 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const handleAutofill = useCallback((data: { name: string; email: string }) => {
     setCustomerName((prev) => prev || data.name);
     setCustomerEmail((prev) => prev || data.email);
-  }, []);
-
-  useEffect(() => {
-    const unsub = useCartStore.persist.onFinishHydration(() => {
-      setMounted(true);
-    });
-    if (useCartStore.persist.hasHydrated()) {
-      setMounted(true);
-    }
-    return () => unsub();
   }, []);
 
   useEffect(() => {
@@ -79,6 +75,11 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         return;
       }
 
+      if (result.status === "PENDING") {
+        router.replace(`/orders/${orderToken}`);
+        return;
+      }
+
       setError("Payment did not go through. Your bag is still here — try again when ready.");
       router.replace("/checkout");
     })();
@@ -90,7 +91,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const deliveryFee = fulfillment === "DELIVERY" ? (selectedZone?.fee ?? 0) : 0;
   const grandTotal = subtotal + deliveryFee;
 
-  if (!mounted || returnPending) {
+  if (!cartHydrated || returnPending) {
     return (
       <div className="my-12 flex items-center justify-center py-20 text-sm text-deep/50">
         {returnPending ? "Confirming your payment…" : "Loading your bag…"}
@@ -134,7 +135,11 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         setPending(true);
 
         const result = await createCheckout(
-          items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+          items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.price,
+          })),
           {
             name: String(form.get("name") ?? "").trim(),
             email: String(form.get("email") ?? "").trim(),
@@ -150,6 +155,9 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         setPending(false);
 
         if (result.error) {
+          if ("prices" in result && result.prices) {
+            updatePrices(result.prices);
+          }
           setError(result.error);
           return;
         }
@@ -440,18 +448,30 @@ function ClerkAccountStatus({
 }: {
   onAutofill?: (data: { name: string; email: string }) => void;
 }) {
+  const mounted = useClientMounted();
   const { isSignedIn, user } = useUser();
   const autofilledRef = useRef(false);
 
   useEffect(() => {
-    if (isSignedIn && user && !autofilledRef.current) {
-      autofilledRef.current = true;
-      onAutofill?.({
-        name: user.fullName ?? user.firstName ?? "",
-        email: user.primaryEmailAddress?.emailAddress ?? "",
-      });
-    }
-  }, [isSignedIn, user, onAutofill]);
+    if (!mounted || !isSignedIn || !user || autofilledRef.current) return;
+    autofilledRef.current = true;
+    onAutofill?.({
+      name: user.fullName ?? user.firstName ?? "",
+      email: user.primaryEmailAddress?.emailAddress ?? "",
+    });
+  }, [mounted, isSignedIn, user, onAutofill]);
+
+  if (!mounted) {
+    return (
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-tint/25 px-3.5 py-2.5 text-xs text-deep/80">
+        <span className="inline-flex items-center gap-1.5 font-medium text-deep">
+          <span className="size-2 rounded-full bg-sage" />
+          Guest Checkout Enabled
+        </span>
+        <span className="text-deep/65">No account required to complete order</span>
+      </div>
+    );
+  }
 
   if (isSignedIn && user) {
     return (

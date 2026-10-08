@@ -1,5 +1,6 @@
 import "server-only";
 import { Resend } from "resend";
+import { formatLagosLong } from "@/lib/datetime";
 import { formatNaira } from "@/lib/money";
 import { site } from "@/lib/site";
 
@@ -64,7 +65,7 @@ export type SendMailResult =
   | { ok: false; error: string };
 
 export async function sendMail(input: {
-  to: string;
+  to: string | string[];
   subject: string;
   html: string;
   replyTo?: string;
@@ -262,14 +263,7 @@ export async function sendOrderUpdate(input: {
 }
 
 function formatBookingWhen(startsAt: Date) {
-  return startsAt.toLocaleString("en-NG", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatLagosLong(startsAt);
 }
 
 export async function sendBookingReceived(input: {

@@ -13,7 +13,10 @@ export default async function OrderPage({
   const { token } = await params;
   const query = await searchParams;
   const reference = typeof query.reference === "string" ? query.reference : query.trxref;
-  await confirmPaystackReturn(typeof reference === "string" ? reference : undefined);
+  await confirmPaystackReturn(
+    typeof reference === "string" ? reference : undefined,
+    { orderToken: token },
+  );
   const prisma = await tryPrisma();
   const order = prisma
     ? await prisma.order.findUnique({

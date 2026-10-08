@@ -8,6 +8,7 @@ type PaystackEvent = {
     status?: string;
     amount?: number;
     currency?: string;
+    metadata?: { orderId?: string; appointmentId?: string; purpose?: string };
   };
 };
 
@@ -36,16 +37,13 @@ export async function POST(request: Request) {
   }
 
   if (event.event === "charge.success" || event.event === "charge.failed") {
-    const result = await handlePaystackWebhookCharge({
+    await handlePaystackWebhookCharge({
       reference: data.reference,
       status: data.status,
       amount: data.amount,
       currency: data.currency ?? "NGN",
+      metadata: data.metadata,
     });
-
-    if (!result.ok && result.error === "amount_mismatch") {
-      return Response.json({ error: "Amount mismatch" }, { status: 422 });
-    }
   }
 
   return Response.json({ received: true });

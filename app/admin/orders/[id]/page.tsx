@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatLagos } from "@/lib/datetime";
 import { notFound } from "next/navigation";
 import {
   ExternalLink,
@@ -80,7 +81,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           </div>
           <p className="mt-2 text-sm text-deep/55">
             Placed <TimeAgo value={order.createdAt} /> ·{" "}
-            {order.createdAt.toLocaleString("en-NG")} · {order.fulfillment}
+            {formatLagos(order.createdAt)} · {order.fulfillment}
           </p>
         </div>
 
