@@ -1,13 +1,15 @@
 import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
+import { siteClerkAppearance } from "@/lib/clerk-appearance";
 import { hasClerk } from "@/lib/env";
+import { pageAuth, pageShell, pageX, pageY } from "@/components/ui/layout-styles";
 
 export const metadata = { title: "Sign in" };
 
 export default function LoginPage() {
   if (!hasClerk()) {
     return (
-      <main className="mx-auto max-w-lg px-5 py-20 text-center">
+      <main className={`${pageAuth} ${pageShell} text-center`}>
         <h1 className="font-display text-4xl text-deep">Sign in</h1>
         <p className="mt-4 leading-relaxed text-deep/70">
           Add <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> and <code>CLERK_SECRET_KEY</code> to
@@ -18,7 +20,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-[70vh] place-items-center px-5 py-16">
+    <main className={`grid min-h-[70vh] place-items-center ${pageX} ${pageY}`}>
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <h1 className="font-display text-3xl text-deep md:text-4xl">Welcome back</h1>
@@ -28,7 +30,11 @@ export default function LoginPage() {
         </div>
 
         <div className="flex justify-center">
-          <SignIn routing="hash" forceRedirectUrl="/account" />
+          <SignIn
+            routing="hash"
+            forceRedirectUrl="/account"
+            appearance={siteClerkAppearance}
+          />
         </div>
 
         <div className="rounded-2xl border border-deep/10 bg-white p-4 text-center text-xs text-deep/70">

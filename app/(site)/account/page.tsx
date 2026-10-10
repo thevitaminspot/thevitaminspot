@@ -7,6 +7,8 @@ import { tryPrisma } from "@/lib/db";
 import { hasClerk } from "@/lib/env";
 import { formatNaira } from "@/lib/money";
 import { PAGE_SIZE, clampPage, parsePageParam, totalPages } from "@/lib/pagination";
+import { formButtonSecondary, formSubmitInline } from "@/components/ui/form-styles";
+import { pageAuth, pageShell, pageWide, surface } from "@/components/ui/layout-styles";
 
 export const metadata = { title: "Account", robots: { index: false, follow: false } };
 export const instant = false;
@@ -23,7 +25,7 @@ export default async function AccountPage({
 }) {
   if (!hasClerk()) {
     return (
-      <main className="mx-auto max-w-lg px-5 py-20 text-center">
+      <main className={`${pageAuth} ${pageShell} text-center`}>
         <h1 className="font-display text-5xl">Account</h1>
         <p className="mt-4 text-deep/70">
           Sign-in uses Clerk. Add the keys, then your orders and bookings will collect here. Guest
@@ -36,7 +38,7 @@ export default async function AccountPage({
   const profile = await getSessionProfile();
   if (!profile) {
     return (
-      <main className="mx-auto max-w-lg px-5 py-20 text-center">
+      <main className={`${pageAuth} ${pageShell} text-center`}>
         <h1 className="font-display text-4xl text-deep">Your account</h1>
         <p className="mt-3 text-sm leading-relaxed text-deep/70">
           Sign in to see your orders and drip bookings.
@@ -44,13 +46,13 @@ export default async function AccountPage({
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/login"
-            className="inline-flex rounded-xl bg-deep px-6 py-3.5 text-xs font-medium tracking-[0.15em] text-cream uppercase transition hover:bg-[#14382a]"
+            className={formSubmitInline}
           >
             Sign in
           </Link>
           <Link
             href="/sign-up"
-            className="inline-flex rounded-xl border border-deep/20 bg-white/60 px-6 py-3.5 text-xs font-medium tracking-[0.15em] text-deep uppercase transition hover:bg-white"
+            className={formButtonSecondary}
           >
             Create account
           </Link>
@@ -117,7 +119,7 @@ export default async function AccountPage({
   const bookingsPages = totalPages(data.appointmentsTotal);
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-16">
+    <main className={`${pageWide} ${pageShell}`}>
       <h1 className="font-display text-5xl">Hello{profile.name ? `, ${profile.name}` : ""}</h1>
       <p className="mt-3 text-sm text-deep/60">{profile.email}</p>
 
@@ -132,7 +134,7 @@ export default async function AccountPage({
           </Link>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-deep/10 bg-white">
+        <div className={`mt-4 overflow-hidden ${surface}`}>
           {data.orders.length === 0 ? (
             <p className="px-5 py-10 text-center text-sm text-deep/50">No orders yet.</p>
           ) : (
@@ -204,7 +206,7 @@ export default async function AccountPage({
           </Link>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-deep/10 bg-white">
+        <div className={`mt-4 overflow-hidden ${surface}`}>
           {data.appointments.length === 0 ? (
             <p className="px-5 py-10 text-center text-sm text-deep/50">No bookings yet.</p>
           ) : (
@@ -225,7 +227,7 @@ export default async function AccountPage({
                       <th className="px-4 py-3 font-medium">Session</th>
                       <th className="px-4 py-3 font-medium">When</th>
                       <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium text-right">Manage</th>
+                      <th className="px-4 py-3 font-medium text-right">Details</th>
                     </tr>
                   </thead>
                   <tbody>

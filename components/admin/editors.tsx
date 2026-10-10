@@ -11,7 +11,12 @@ import {
   updateProduct,
   uploadProductImage,
 } from "@/actions/admin";
-import { categories, type CatalogInfusion, type CatalogProduct } from "@/lib/catalog";
+import {
+  PRODUCT_MAX_IMAGES,
+  categories,
+  type CatalogInfusion,
+  type CatalogProduct,
+} from "@/lib/catalog";
 import {
   adminButtonDanger,
   adminButtonPrimary,
@@ -79,6 +84,10 @@ export function AddProductForm({
 
   function addImage(url: string) {
     if (!url || images.some((image) => image.url === url)) return;
+    if (images.length >= PRODUCT_MAX_IMAGES) {
+      onError?.(`Up to ${PRODUCT_MAX_IMAGES} pictures per product.`);
+      return;
+    }
     setImages((current) => [...current, { url, alt: "" }]);
   }
 
@@ -174,9 +183,16 @@ function PicturePicker({
   onUpload: (work: () => Promise<void>) => void;
   onError: (message: string) => void;
 }) {
+  const atLimit = images.length >= PRODUCT_MAX_IMAGES;
+
   return (
     <div>
-      <p className="text-sm text-deep">Pictures</p>
+      <p className="text-sm text-deep">
+        Pictures{" "}
+        <span className="text-deep/50">
+          ({images.length}/{PRODUCT_MAX_IMAGES})
+        </span>
+      </p>
       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {images.map((image, index) => (
           <div key={`${image.url}-${index}`} className="space-y-2">
@@ -213,13 +229,16 @@ function PicturePicker({
         <select
           aria-label="Add a picture from the library"
           defaultValue=""
-          className={field}
+          disabled={atLimit}
+          className={`${field} disabled:cursor-not-allowed disabled:opacity-50`}
           onChange={(event) => {
             onAdd(event.target.value);
             event.target.value = "";
           }}
         >
-          <option value="">Add a saved picture</option>
+          <option value="">
+            {atLimit ? "Maximum pictures added" : "Add a saved picture"}
+          </option>
           {library.map((url) => (
             <option key={url} value={url}>
               {url.replace("/images/", "")}
@@ -227,17 +246,24 @@ function PicturePicker({
           ))}
         </select>
         <label
-          className={`rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${interactiveControl}`}
+          className={`rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
+            atLimit ? "cursor-not-allowed opacity-50" : interactiveControl
+          }`}
         >
           Upload picture
           <input
             type="file"
             accept="image/*"
+            disabled={atLimit}
             className="sr-only"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (!file) return;
+              if (atLimit) {
+                onError(`Up to ${PRODUCT_MAX_IMAGES} pictures per product.`);
+                return;
+              }
               const body = new FormData();
               body.set("file", file);
               onUpload(async () => {
@@ -249,6 +275,9 @@ function PicturePicker({
           />
         </label>
       </div>
+      {atLimit ? (
+        <p className="mt-2 text-xs text-deep/55">Remove a picture to add another.</p>
+      ) : null}
     </div>
   );
 }
@@ -271,6 +300,10 @@ export function ProductEditor({
 
   function addImage(url: string) {
     if (!url || images.some((image) => image.url === url)) return;
+    if (images.length >= PRODUCT_MAX_IMAGES) {
+      onError?.(`Up to ${PRODUCT_MAX_IMAGES} pictures per product.`);
+      return;
+    }
     setImages((current) => [...current, { url, alt: product.name }]);
   }
 

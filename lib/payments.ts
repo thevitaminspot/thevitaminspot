@@ -1,9 +1,14 @@
 import "server-only";
-import { adminRecipients } from "@/lib/admin-access";
 import { notifyBookingDepositPaid } from "@/lib/booking-notify";
 import { formatLagosLong } from "@/lib/datetime";
 import { tryPrisma } from "@/lib/db";
-import { escapeHtml, sendMail, sendOrderUpdate } from "@/lib/email";
+import {
+  emailDetailsCard,
+  emailParagraph,
+  escapeHtml,
+  sendAdminMail,
+  sendOrderUpdate,
+} from "@/lib/email";
 import { hasPaystack } from "@/lib/env";
 import { formatNaira } from "@/lib/money";
 import { verifyPaystackTransaction } from "@/lib/paystack";
@@ -39,12 +44,16 @@ type PaymentWithRelations = Prisma.PaymentGetPayload<{
   };
 }>;
 
-async function notifyAdminPaymentAlert(subject: string, html: string) {
-  const result = await sendMail({
-    to: adminRecipients(),
-    subject,
-    html,
-  });
+async function notifyAdminPaymentAlert(
+  subject: string,
+  input: {
+    headline: string;
+    body: string;
+    cta?: { label: string; href: string };
+    tone?: "default" | "alert";
+  },
+) {
+  const result = await sendAdminMail({ subject, ...input });
   if (!result.ok) {
     console.error("[paystack:email] admin alert failed", result.error);
   }
@@ -164,18 +173,34 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
   });
 
   if (paid && orderCancelled && payment.order) {
-    await notifyAdminPaymentAlert(
-      `Payment on cancelled order ${payment.order.orderNumber}`,
-      `<p>A customer paid ${escapeHtml(formatNaira(payment.amount))} for cancelled order ${escapeHtml(payment.order.orderNumber)}. Issue a Paystack refund.</p><p><a href="${escapeHtml(`${site.url}/admin/orders/${payment.order.id}`)}">Open in admin</a></p>`,
-    );
+    await notifyAdminPaymentAlert(`Payment on cancelled order ${payment.order.orderNumber}`, {
+      headline: "Refund may be needed",
+      tone: "alert",
+      body: `${emailParagraph(`A customer paid <strong>${escapeHtml(formatNaira(payment.amount))}</strong> for cancelled order <strong>${escapeHtml(payment.order.orderNumber)}</strong>. Issue a Paystack refund.`)}${emailDetailsCard([
+        { label: "Order", value: escapeHtml(payment.order.orderNumber) },
+        { label: "Amount", value: escapeHtml(formatNaira(payment.amount)) },
+      ])}`,
+      cta: {
+        label: "Open in admin",
+        href: `${site.url}/admin/orders/${payment.order.id}`,
+      },
+    });
     return true;
   }
 
   if (paid && appointmentCancelled && payment.appointment) {
-    await notifyAdminPaymentAlert(
-      `Deposit on cancelled booking: ${payment.appointment.service.name}`,
-      `<p>${escapeHtml(payment.appointment.name)} paid ${escapeHtml(formatNaira(payment.amount))} after cancelling ${escapeHtml(payment.appointment.service.name)} on ${escapeHtml(formatLagosLong(payment.appointment.startsAt))}. Refund or rebook manually.</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
-    );
+    await notifyAdminPaymentAlert(`Deposit on cancelled booking: ${payment.appointment.service.name}`, {
+      headline: "Deposit after cancellation",
+      tone: "alert",
+      body: `${emailParagraph(`${escapeHtml(payment.appointment.name)} paid <strong>${escapeHtml(formatNaira(payment.amount))}</strong> after cancelling their session. Refund or rebook manually.`)}${emailDetailsCard([
+        { label: "Session", value: escapeHtml(payment.appointment.service.name) },
+        {
+          label: "Was for",
+          value: escapeHtml(formatLagosLong(payment.appointment.startsAt)),
+        },
+      ])}`,
+      cta: { label: "Open bookings", href: `${site.url}/admin/appointments` },
+    });
     return true;
   }
 
@@ -193,10 +218,17 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
       console.error("[paystack:email] customer order confirmation failed", customerMail.error);
     }
 
-    const adminMail = await sendMail({
-      to: adminRecipients(),
+    const adminMail = await sendAdminMail({
       subject: `New order ${payment.order.orderNumber}`,
-      html: `<p>${escapeHtml(payment.order.name)} paid ${escapeHtml(payment.order.orderNumber)}.</p><p><a href="${escapeHtml(`${site.url}/admin/orders/${payment.order.id}`)}">Open in admin</a></p>`,
+      headline: "New paid order",
+      body: `${emailParagraph(`<strong>${escapeHtml(payment.order.name)}</strong> completed checkout.`)}${emailDetailsCard([
+        { label: "Order", value: escapeHtml(payment.order.orderNumber) },
+        { label: "Total", value: escapeHtml(formatNaira(payment.order.total)) },
+      ])}`,
+      cta: {
+        label: "Open order",
+        href: `${site.url}/admin/orders/${payment.order.id}`,
+      },
     });
     if (!adminMail.ok) {
       console.error("[paystack:email] admin paid notification failed", adminMail.error);
@@ -204,10 +236,15 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
 
     const order = await prisma.order.findUnique({ where: { id: payment.orderId! } });
     if (order?.notes?.includes("stock ran short")) {
-      await sendMail({
-        to: adminRecipients(),
+      await sendAdminMail({
         subject: `Stock issue on ${order.orderNumber}`,
-        html: `<p>Order ${escapeHtml(order.orderNumber)} was paid, but stock was short during settlement.</p><p><a href="${escapeHtml(`${site.url}/admin/orders/${order.id}`)}">Open in admin</a></p>`,
+        headline: "Stock short at settlement",
+        tone: "alert",
+        body: emailParagraph(
+          `Order <strong>${escapeHtml(order.orderNumber)}</strong> was paid, but inventory ran short during settlement. Check stock and contact the guest.`,
+          { last: true },
+        ),
+        cta: { label: "Open order", href: `${site.url}/admin/orders/${order.id}` },
       }).catch(() => undefined);
     }
   }
@@ -228,10 +265,15 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
       console.error("[paystack:email] booking deposit confirmation failed", error);
     }
 
-    const adminMail = await sendMail({
-      to: adminRecipients(),
+    const adminMail = await sendAdminMail({
       subject: `Deposit paid: ${appointment.service.name}`,
-      html: `<p>${escapeHtml(appointment.name)} paid a deposit of ${escapeHtml(formatNaira(payment.amount))} for ${escapeHtml(appointment.service.name)} on ${escapeHtml(formatLagosLong(appointment.startsAt))}.</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
+      headline: "Booking deposit received",
+      body: `${emailParagraph(`<strong>${escapeHtml(appointment.name)}</strong> paid a deposit.`)}${emailDetailsCard([
+        { label: "Session", value: escapeHtml(appointment.service.name) },
+        { label: "When", value: escapeHtml(formatLagosLong(appointment.startsAt)) },
+        { label: "Deposit", value: escapeHtml(formatNaira(payment.amount)) },
+      ])}`,
+      cta: { label: "Open bookings", href: `${site.url}/admin/appointments` },
     });
     if (!adminMail.ok) {
       console.error("[paystack:email] admin deposit notification failed", adminMail.error);
@@ -301,10 +343,18 @@ export async function handlePaystackWebhookCharge(data: PaystackWebhookCharge) {
   if (!payment) {
     console.info("[paystack:webhook] unknown reference", data.reference);
     if (data.metadata?.orderId || data.metadata?.appointmentId) {
-      await notifyAdminPaymentAlert(
-        "Paystack payment could not be matched",
-        `<p>Reference ${escapeHtml(data.reference)} (${escapeHtml(data.status)}) could not be matched. Metadata: ${escapeHtml(JSON.stringify(data.metadata ?? {}))}</p>`,
-      );
+      await notifyAdminPaymentAlert("Paystack payment could not be matched", {
+        headline: "Unmatched Paystack charge",
+        tone: "alert",
+        body: `${emailParagraph("A successful-looking charge could not be linked to an order or booking.")}${emailDetailsCard([
+          { label: "Reference", value: escapeHtml(data.reference) },
+          { label: "Status", value: escapeHtml(data.status) },
+          {
+            label: "Metadata",
+            value: escapeHtml(JSON.stringify(data.metadata ?? {})),
+          },
+        ])}`,
+      });
     }
     return { ok: true as const, ignored: true as const };
   }
@@ -331,10 +381,21 @@ export async function handlePaystackWebhookCharge(data: PaystackWebhookCharge) {
       data.amount,
       data.currency,
     );
-    await notifyAdminPaymentAlert(
-      `Paystack amount mismatch: ${data.reference}`,
-      `<p>Expected ${escapeHtml(formatNaira(payment.amount))} ${escapeHtml(expectedCurrency)} but received ${escapeHtml(String(data.amount))} ${escapeHtml(receivedCurrency)} for reference ${escapeHtml(data.reference)}.</p>`,
-    );
+    await notifyAdminPaymentAlert(`Paystack amount mismatch: ${data.reference}`, {
+      headline: "Paystack amount mismatch",
+      tone: "alert",
+      body: emailDetailsCard([
+        { label: "Reference", value: escapeHtml(data.reference) },
+        {
+          label: "Expected",
+          value: `${escapeHtml(formatNaira(payment.amount))} ${escapeHtml(expectedCurrency)}`,
+        },
+        {
+          label: "Received",
+          value: `${escapeHtml(String(data.amount))} ${escapeHtml(receivedCurrency)}`,
+        },
+      ]),
+    });
     return { ok: true as const, flagged: true as const };
   }
 
@@ -346,7 +407,27 @@ export async function confirmPaystackReturn(
   reference: string | undefined,
   owner?: PaystackReturnOwner,
 ): Promise<PaystackVerifyResult> {
-  if (!reference || !hasPaystack()) return { outcome: "skipped" };
+  if (!hasPaystack()) return { outcome: "skipped" };
+
+  if (!reference && owner) {
+    const prisma = await tryPrisma();
+    if (!prisma) return { outcome: "skipped" };
+    const pending = "orderToken" in owner
+      ? await prisma.payment.findFirst({
+          where: { order: { accessToken: owner.orderToken }, status: "PENDING" },
+        })
+      : await prisma.payment.findFirst({
+          where: {
+            appointment: { accessToken: owner.appointmentToken },
+            status: "PENDING",
+          },
+        });
+    if (!pending?.paystackReference) return { outcome: "skipped" };
+    const settled = await verifyAndSettleExistingReference(pending.paystackReference);
+    return settled.settled ? { outcome: "paid" } : { outcome: "pending" };
+  }
+
+  if (!reference) return { outcome: "skipped" };
 
   try {
     const transaction = await verifyPaystackTransaction(reference);
@@ -382,10 +463,21 @@ export async function confirmPaystackReturn(
         expected: { amount: payment.amount, currency: expectedCurrency },
         received: { amount: transaction.amount, currency: receivedCurrency },
       });
-      await notifyAdminPaymentAlert(
-        `Paystack return mismatch: ${reference}`,
-        `<p>Customer paid ${escapeHtml(String(transaction.amount))} ${escapeHtml(receivedCurrency)} but we expected ${escapeHtml(formatNaira(payment.amount))} ${escapeHtml(expectedCurrency)}.</p>`,
-      );
+      await notifyAdminPaymentAlert(`Paystack return mismatch: ${reference}`, {
+        headline: "Return amount mismatch",
+        tone: "alert",
+        body: emailDetailsCard([
+          { label: "Reference", value: escapeHtml(reference) },
+          {
+            label: "Paid",
+            value: `${escapeHtml(String(transaction.amount))} ${escapeHtml(receivedCurrency)}`,
+          },
+          {
+            label: "Expected",
+            value: `${escapeHtml(formatNaira(payment.amount))} ${escapeHtml(expectedCurrency)}`,
+          },
+        ]),
+      });
       return {
         outcome: "error",
         message: "Payment amount could not be verified. Contact us if you were charged.",

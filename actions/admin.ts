@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { canTransitionOrder } from "@/lib/admin-orders";
 import { getAdminProfile } from "@/lib/auth";
-import { categories } from "@/lib/catalog";
+import { PRODUCT_MAX_IMAGES, categories } from "@/lib/catalog";
 import { tryPrisma } from "@/lib/db";
 import {
   notifyAdminBookingCancelled,
@@ -118,6 +118,9 @@ export async function updateProduct(input: {
   }
   const images = input.images.filter((image) => image.url.trim());
   if (images.length === 0) return { error: "Add at least one picture." };
+  if (images.length > PRODUCT_MAX_IMAGES) {
+    return { error: `Up to ${PRODUCT_MAX_IMAGES} pictures per product.` };
+  }
   const category = knownCategory(input.categorySlug);
   if (!category) return { error: "Pick a category." };
 
@@ -200,6 +203,9 @@ export async function createProduct(input: {
   if (!category) return { error: "Pick a category." };
   const images = input.images.filter((image) => image.url.trim());
   if (images.length === 0) return { error: "Add at least one picture." };
+  if (images.length > PRODUCT_MAX_IMAGES) {
+    return { error: `Up to ${PRODUCT_MAX_IMAGES} pictures per product.` };
+  }
 
   const categoryRow =
     (await prisma.productCategory.findUnique({ where: { slug: category.slug } })) ??

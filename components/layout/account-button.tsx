@@ -2,6 +2,7 @@
 
 import { Show, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { siteClerkAppearance } from "@/lib/clerk-appearance";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 
 export function AccountButton({
@@ -41,13 +42,16 @@ export function AccountButton({
             Account
           </Link>
           <UserButton
-            appearance={
-              userButtonAppearance ?? {
-                elements: {
-                  userButtonAvatarBox: "size-7 ring-1 ring-deep/20",
-                },
-              }
-            }
+            appearance={{
+              ...siteClerkAppearance,
+              elements: {
+                ...siteClerkAppearance.elements,
+                ...userButtonAppearance?.elements,
+                userButtonAvatarBox:
+                  userButtonAppearance?.elements?.userButtonAvatarBox ??
+                  "size-7 ring-1 ring-deep/20",
+              },
+            }}
           />
         </div>
       </Show>

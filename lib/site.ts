@@ -52,6 +52,13 @@ export const site = {
     { label: "Shop & IV", value: "Walk-in welcome" },
     { label: "Visits", value: "Message ahead on WhatsApp" },
   ],
+  developer: {
+    name: "Adesanoye",
+    url: (process.env.NEXT_PUBLIC_DEVELOPER_URL ?? "https://studio.adesanoye.online").replace(
+      /\/$/,
+      "",
+    ),
+  },
 };
 
 export function whatsappHref(text?: string, number: string = site.whatsapp) {

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { blockGap, pageShell, pageWide } from "@/components/ui/layout-styles";
 import { site, whatsappHref } from "@/lib/site";
 
 export const metadata = {
@@ -9,8 +10,8 @@ export const metadata = {
 
 export default function AboutPage() {
   return (
-    <main className="botanical px-5 py-16 md:px-8 md:py-24">
-      <div className="mx-auto grid max-w-6xl items-start gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+    <main className={`botanical ${pageShell}`}>
+      <div className={`grid items-start lg:grid-cols-[1.05fr_0.95fr] ${pageWide} ${blockGap}`}>
         <div>
           <h1 className="font-display text-5xl leading-[0.95] text-deep md:text-7xl">
             Yas’s shop in Abuja.

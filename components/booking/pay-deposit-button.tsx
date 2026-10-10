@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { resumeAppointmentDeposit } from "@/actions/booking";
 import { nairaLabel } from "@/lib/money";
+import { formSubmitInline } from "@/components/ui/form-styles";
+import { PaystackHandoff } from "@/components/ui/paystack-handoff";
 
 export function PayDepositButton({
   token,
@@ -18,30 +20,33 @@ export function PayDepositButton({
 
   return (
     <div className="mt-6">
+      <PaystackHandoff open={pending} title="Opening Paystack" />
       <button
         type="button"
         disabled={pending}
         onClick={async () => {
+          if (pending) return;
           setPending(true);
           setError("");
           try {
             const result = await resumeAppointmentDeposit(token);
             if ("error" in result && result.error) {
               setError(result.error);
+              setPending(false);
               return;
             }
             if ("checkoutUrl" in result && result.checkoutUrl) {
-              window.location.href = result.checkoutUrl;
+              window.location.assign(result.checkoutUrl);
               return;
             }
             setError("Could not open Paystack. Please try again.");
+            setPending(false);
           } catch {
             setError("Something went wrong. Please try again.");
-          } finally {
             setPending(false);
           }
         }}
-        className="inline-flex w-full items-center justify-center rounded-xl bg-deep px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a] disabled:opacity-50 sm:w-auto"
+        className={`${formSubmitInline} w-full sm:w-auto`}
       >
         {pending ? "Opening Paystack…" : `Pay deposit (${nairaLabel(deposit)})`}
       </button>

@@ -13,6 +13,7 @@ import {
   AdminTableHeaderCell,
   AdminTableRow,
 } from "@/components/admin/ui";
+import { OrderNextButton } from "@/components/admin/order-next-button";
 import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatLagos } from "@/lib/datetime";
@@ -103,6 +104,7 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
                 <AdminTableHeaderCell>Customer</AdminTableHeaderCell>
                 <AdminTableHeaderCell>Fulfillment</AdminTableHeaderCell>
                 <AdminTableHeaderCell>Total</AdminTableHeaderCell>
+                <AdminTableHeaderCell>Next</AdminTableHeaderCell>
               </tr>
             </AdminTableHead>
             <tbody>
@@ -153,6 +155,13 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
                       />
                     </AdminTableCell>
                     <AdminTableCell className="font-medium">{formatNaira(row.total)}</AdminTableCell>
+                    <AdminTableCell>
+                      <OrderNextButton
+                        id={row.id}
+                        status={row.status}
+                        fulfillment={row.fulfillment}
+                      />
+                    </AdminTableCell>
                   </AdminTableRow>
                 );
               })}

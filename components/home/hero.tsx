@@ -11,7 +11,7 @@ export function Hero({
 
   return (
     <section className="hero-stage text-cream">
-      <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 py-12 md:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-12 md:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
         <div>
           <h1 className="animate-hero-in font-display text-[4.6rem] leading-[0.8] sm:text-[6.5rem]">
             The packs.
@@ -29,7 +29,7 @@ export function Hero({
             </Button>
             <Link
               href="/infusions"
-              className="inline-flex items-center justify-center rounded-lg border border-cream/30 px-6 py-3.5 text-sm tracking-[0.1em] text-cream uppercase transition hover:bg-cream hover:text-deep"
+              className="inline-flex items-center justify-center rounded-xl border border-cream/30 px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-cream hover:text-deep"
             >
               Book an IV
             </Link>
@@ -72,7 +72,7 @@ export function Hero({
 
       {packs.length > 0 ? (
         <div className="animate-hero-in hero-delay-5 border-t border-cream/10">
-          <ul className="mx-auto grid max-w-[1200px] sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mx-auto grid max-w-6xl sm:grid-cols-2 lg:grid-cols-3">
             {packs.slice(0, 3).map((pack) => (
               <li key={pack.href} className="border-cream/10 sm:border-l first:sm:border-l-0">
                 <Link href={pack.href} className="flex items-center gap-4 px-5 py-4 transition hover:bg-white/5 md:px-8">

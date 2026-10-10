@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { BookingFlow } from "@/components/booking/booking-flow";
+import { InfusionBooking } from "@/components/infusions/infusion-booking";
+import { pageNarrow, pageShell } from "@/components/ui/layout-styles";
 import { listInfusions } from "@/lib/data";
 
 export const metadata = {
@@ -9,45 +10,29 @@ export const metadata = {
   alternates: { canonical: "/infusions" },
 };
 
-async function InfusionPicker({
-  searchParams,
-  drips,
-}: {
-  searchParams: PageProps<"/infusions">["searchParams"];
-  drips: Awaited<ReturnType<typeof listInfusions>>;
-}) {
-  const params = await searchParams;
-  const initialSlug = typeof params.drip === "string" ? params.drip : undefined;
-
-  return <BookingFlow drips={drips} initialSlug={initialSlug} />;
-}
-
-export default async function InfusionsPage({
-  searchParams,
-}: PageProps<"/infusions">) {
+export default async function InfusionsPage() {
   const drips = await listInfusions();
 
   return (
-    <main className="px-5 py-12 md:py-16">
-      <div className="mx-auto max-w-md text-center">
+    <main className={pageShell}>
+      <div className={`${pageNarrow} text-center`}>
         <h1 className="font-display text-4xl text-deep md:text-5xl">Book an IV drip</h1>
-        <p className="mt-3 text-sm text-deep/65">
-          The Vitamin Spot · Abuja · About 60 minutes per session
+        <p className="mt-3 text-sm text-deep/65">The Vitamin Spot · Abuja</p>
+        <p className="mt-2 text-sm leading-relaxed text-deep/55">
+          Choose a drip, pick a time, and confirm. Most sessions take about an hour.
         </p>
       </div>
-      <div className="mx-auto mt-8 max-w-md">
+      <div className={`${pageNarrow} mt-8`}>
         <Suspense
           fallback={
-            <div className="rounded-2xl border border-deep/10 bg-white/60 px-4 py-10 text-center text-sm text-deep/50">
-              Loading drips…
-            </div>
+            <p className="py-12 text-center text-sm text-deep/50">Loading…</p>
           }
         >
-          <InfusionPicker searchParams={searchParams} drips={drips} />
+          <InfusionBooking drips={drips} />
         </Suspense>
       </div>
-      <p className="mx-auto mt-8 max-w-md text-center text-xs leading-relaxed text-deep/45">
-        Tell us if you’re pregnant, on medication, or have allergies. This is wellness care, not
+      <p className={`${pageNarrow} mt-8 text-center text-xs leading-relaxed text-deep/45`}>
+        Tell us if you’re pregnant, on medication, or have allergies. Wellness care only — not
         emergency treatment.
       </p>
     </main>

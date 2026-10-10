@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { ProductCard } from "@/components/shop/product-card";
 import type { CatalogCategory, CatalogProduct } from "@/lib/catalog";
-import { formSearch } from "@/components/ui/form-styles";
+import { formSearch, formSubmitInline } from "@/components/ui/form-styles";
+import { surface } from "@/components/ui/layout-styles";
 import { Reveal } from "@/components/ui/reveal";
 
 export function ShopCatalog({
@@ -70,7 +71,7 @@ export function ShopCatalog({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-deep/10 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className={`mt-5 flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between ${surface}`}>
         <div className="relative flex-1">
           <input
             value={query}
@@ -126,7 +127,7 @@ export function ShopCatalog({
               setQuery("");
               setCategory("all");
             }}
-            className="mt-5 rounded-xl bg-deep px-5 py-2.5 text-xs font-medium tracking-wider text-cream uppercase transition hover:bg-deep/90"
+            className={`mt-5 ${formSubmitInline}`}
           >
             Reset Filters
           </button>

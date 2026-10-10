@@ -6,6 +6,7 @@ import { useState } from "react";
 import { formatNaira } from "@/lib/money";
 import type { CatalogProduct } from "@/lib/catalog";
 import { useCartStore } from "@/stores/cart-store";
+import { surface } from "@/components/ui/layout-styles";
 
 export function ProductCard({ product }: { product: CatalogProduct }) {
   const add = useCartStore((state) => state.add);
@@ -31,7 +32,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
   }
 
   return (
-    <article className="group panel flex h-full flex-col overflow-hidden rounded-2xl border border-deep/10 bg-white transition-colors duration-300 hover:border-deep/20">
+    <article className={`group ${surface} flex h-full flex-col overflow-hidden transition-colors duration-300 hover:border-deep/20`}>
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-tint/30">
         <Link href={`/shop/${product.slug}`} className="block size-full">
           {photo ? (

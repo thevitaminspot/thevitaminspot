@@ -17,13 +17,13 @@ import {
 } from "@/lib/booking-notify";
 import { formatLagosLong } from "@/lib/datetime";
 import { hasPaystack } from "@/lib/env";
-import { escapeHtml, sendMail } from "@/lib/email";
-import { adminRecipients } from "@/lib/admin-access";
+import { emailDetailsCard, emailParagraph, escapeHtml, sendAdminMail } from "@/lib/email";
 import {
   nextPaystackReference,
   verifyAndSettleExistingReference,
 } from "@/lib/payments";
 import { initializePaystack } from "@/lib/paystack";
+import { appointmentPaystackReturnUrl } from "@/lib/paystack-return";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { site, whatsappHref } from "@/lib/site";
 import { createToken } from "@/lib/tokens";
@@ -166,7 +166,7 @@ export async function createBooking(input: {
     return { error: "That hour has just been taken. Please choose another." };
   }
 
-  const manageUrl = `${site.url}/appointments/${token}`;
+  const manageUrl = appointmentPaystackReturnUrl(token);
   const whenLabel = formatLagosLong(startsAt);
 
   if (input.payDeposit) {
@@ -286,7 +286,7 @@ export async function resumeAppointmentDeposit(token: string) {
   }
 
   const reference = nextPaystackReference("apt", appointment.id);
-  const manageUrl = `${site.url}/appointments/${token}`;
+  const manageUrl = appointmentPaystackReturnUrl(token);
 
   try {
     const payment = await initializePaystack({
@@ -504,10 +504,14 @@ export async function updateAppointment(token: string, start: string) {
     }).catch(() => undefined);
   }
 
-  await sendMail({
-    to: adminRecipients(),
+  await sendAdminMail({
     subject: `Booking rescheduled: ${updated.service.name}`,
-    html: `<p>${escapeHtml(updated.name)} moved <strong>${escapeHtml(updated.service.name)}</strong> to ${escapeHtml(formatLagosLong(startsAt))}.</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
+    headline: "Booking rescheduled",
+    body: `${emailParagraph(`<strong>${escapeHtml(updated.name)}</strong> moved their session.`)}${emailDetailsCard([
+      { label: "Session", value: escapeHtml(updated.service.name) },
+      { label: "New time", value: escapeHtml(formatLagosLong(startsAt)) },
+    ])}`,
+    cta: { label: "Open bookings", href: `${site.url}/admin/appointments` },
   }).catch(() => undefined);
 
   return { ok: true };

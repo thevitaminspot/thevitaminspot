@@ -2,6 +2,7 @@
 
 import { ClerkProvider } from "@clerk/nextjs";
 import { useEffect, type ReactNode } from "react";
+import { siteClerkAppearance } from "@/lib/clerk-appearance";
 import { useCartStore } from "@/stores/cart-store";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -19,12 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
       signInUrl="/login"
       signUpUrl="/sign-up"
       afterSignOutUrl="/"
-      appearance={{
-        variables: {
-          colorPrimary: "#0b2c21",
-          borderRadius: "0.875rem",
-        },
-      }}
+      appearance={siteClerkAppearance}
     >
       {children}
     </ClerkProvider>

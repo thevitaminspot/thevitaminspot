@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatNaira } from "@/lib/money";
+import { formSubmit } from "@/components/ui/form-styles";
 import { useCartStore } from "@/stores/cart-store";
 
 export function CartDrawer() {
@@ -27,7 +28,7 @@ export function CartDrawer() {
       {/* Drawer */}
       <aside className="animate-drawer-in relative z-10 flex h-full w-full max-w-md flex-col bg-cream shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-deep/10 px-6 py-5">
+        <div className="flex items-center justify-between border-b border-deep/10 px-5 py-5">
           <div className="flex items-center gap-2.5">
             <h2 className="font-display text-2xl text-deep">Your bag</h2>
             <span className="rounded-full bg-deep/10 px-2.5 py-0.5 text-xs font-semibold text-deep">
@@ -45,7 +46,7 @@ export function CartDrawer() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-5 py-6">
           {items.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <p className="font-display text-2xl text-deep">Your bag is empty</p>
@@ -55,15 +56,15 @@ export function CartDrawer() {
               <Link
                 href="/shop"
                 onClick={close}
-                className="mt-6 rounded-xl bg-deep px-5 py-3 text-xs font-medium tracking-wider text-cream uppercase transition hover:bg-[#14382a]"
+                className={`mt-6 ${formSubmit} w-auto px-5`}
               >
                 See the packs
               </Link>
             </div>
           ) : (
-            <div className="space-y-4 divide-y divide-deep/10">
+            <div className="divide-y divide-deep/10">
               {items.map((item) => (
-                <div key={item.productId} className="flex gap-4 pt-4 first:pt-0">
+                <div key={item.productId} className="flex gap-4 pb-6 pt-4 first:pt-0">
                   <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-deep/10 bg-white">
                     {item.image ? (
                       <Image
@@ -102,7 +103,7 @@ export function CartDrawer() {
                     </p>
 
                     <div className="mt-3 flex items-center justify-between">
-                      <div className="flex items-center rounded-lg border border-deep/15 bg-white">
+                      <div className="flex items-center rounded-xl border border-deep/15 bg-white">
                         <button
                           type="button"
                           onClick={() => setQuantity(item.productId, item.quantity - 1)}
@@ -136,7 +137,7 @@ export function CartDrawer() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-deep/10 bg-white p-6">
+        <div className="border-t border-deep/10 bg-white p-5">
           {items.length > 0 ? (
             <>
               <div className="space-y-2 text-xs">
@@ -161,7 +162,7 @@ export function CartDrawer() {
                   close();
                   router.push("/checkout");
                 }}
-                className="mt-5 flex w-full items-center justify-center rounded-xl bg-deep py-3.5 text-xs font-medium tracking-[0.15em] text-cream uppercase transition hover:bg-[#14382a] cursor-pointer"
+                className={`mt-5 ${formSubmit}`}
               >
                 Checkout
               </button>
