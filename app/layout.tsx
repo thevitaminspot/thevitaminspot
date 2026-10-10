@@ -33,10 +33,15 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  applicationName: site.name,
+  icons: {
+    icon: [{ url: brand.mark.src, type: "image/png" }],
+    apple: [{ url: brand.mark.src, type: "image/png" }],
+  },
   openGraph: {
     title: site.name,
     description: site.description,
-    images: [{ url: brand.logo.src }],
+    images: [{ url: brand.logo.src, alt: brand.logo.alt }],
     locale: "en_NG",
     type: "website",
     siteName: site.name,
@@ -44,18 +49,52 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
+const organizationId = `${site.url}/#organization`;
+const websiteId = `${site.url}/#website`;
+const businessId = `${site.url}/#business`;
+const logoUrl = `${site.url}${brand.mark.src}`;
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "Organization",
+      "@id": organizationId,
+      name: site.name,
+      legalName: site.legalName,
+      url: site.url,
+      logo: {
+        "@type": "ImageObject",
+        "@id": `${site.url}/#logo`,
+        url: logoUrl,
+        contentUrl: logoUrl,
+        width: brand.mark.width,
+        height: brand.mark.height,
+        caption: site.name,
+      },
+      image: logoUrl,
+      sameAs: [site.instagram],
+    },
+    {
+      "@type": "WebSite",
+      "@id": websiteId,
+      url: site.url,
+      name: site.name,
+      alternateName: ["The Vitamin Spot", site.legalName],
+      inLanguage: site.locale,
+      publisher: { "@id": organizationId },
+    },
+    {
       "@type": "HealthAndBeautyBusiness",
-      "@id": `${site.url}/#business`,
+      "@id": businessId,
       name: site.name,
       description: site.description,
       telephone: site.phone,
       email: site.email,
       url: site.url,
       image: `${site.url}${brand.logo.src}`,
+      logo: { "@id": `${site.url}/#logo` },
+      parentOrganization: { "@id": organizationId },
       sameAs: [site.instagram],
       hasMap: site.address.mapUrl,
       areaServed: site.address.city,
@@ -72,7 +111,7 @@ const jsonLd = {
       "@type": "Service",
       name: `${drip.name} IV drip`,
       description: drip.description,
-      provider: { "@id": `${site.url}/#business` },
+      provider: { "@id": businessId },
       areaServed: site.address.city,
       url: `${site.url}/infusions?drip=${drip.slug}`,
     })),

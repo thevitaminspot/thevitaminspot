@@ -7,12 +7,12 @@ export const brand = {
     width: 97,
     height: 128,
   },
-  /** Full logo with wordmark — Open Graph and structured data */
+  /** Full logo — Open Graph and structured data */
   logo: {
-    src: "/brand/logo.jpg",
+    src: "/brand/logo.png",
     alt: "The Vitamin Spot",
-    width: 495,
-    height: 648,
+    width: 97,
+    height: 128,
   },
   colors: {
     primary: "#8BA575",
