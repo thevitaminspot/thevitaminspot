@@ -14,27 +14,36 @@ function first(value?: string | string[]) {
   return typeof value === "string" ? value : Array.isArray(value) ? value[0] : undefined;
 }
 
-export default async function CheckoutPage({
+async function PaystackReturnRedirect({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
   const orderToken = first(query.order);
-  if (orderToken) {
-    const params = new URLSearchParams();
-    const reference = first(query.reference);
-    const trxref = first(query.trxref);
-    if (reference) params.set("reference", reference);
-    if (trxref) params.set("trxref", trxref);
-    const qs = params.toString();
-    redirect(`/orders/${orderToken}${qs ? `?${qs}` : ""}`);
-  }
+  if (!orderToken) return null;
 
+  const params = new URLSearchParams();
+  const reference = first(query.reference);
+  const trxref = first(query.trxref);
+  if (reference) params.set("reference", reference);
+  if (trxref) params.set("trxref", trxref);
+  const qs = params.toString();
+  redirect(`/orders/${orderToken}${qs ? `?${qs}` : ""}`);
+}
+
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const zones = await listZones();
 
   return (
     <main className={pageShell}>
+      <Suspense fallback={null}>
+        <PaystackReturnRedirect searchParams={searchParams} />
+      </Suspense>
       <div className={pageWide}>
         <nav className="flex items-center gap-2 text-xs text-deep/50">
           <Link href="/shop" className="transition hover:text-deep">
