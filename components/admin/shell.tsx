@@ -44,7 +44,7 @@ export function AdminShell({
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 md:px-10 md:py-10">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 md:px-8 md:py-10">
           {children}
         </main>
       </div>

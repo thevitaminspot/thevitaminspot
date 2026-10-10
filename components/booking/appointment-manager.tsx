@@ -16,6 +16,7 @@ import {
   formSubmitInline,
   formTextarea,
 } from "@/components/ui/form-styles";
+import { surfaceCard, surfaceMuted } from "@/components/ui/layout-styles";
 
 function formatWhen(date: Date) {
   return formatLagosLong(date);
@@ -99,7 +100,7 @@ export function AppointmentManager({
 
   if (status === "CANCELLED") {
     return (
-      <section className="mt-10 rounded-xl border border-deep/10 bg-cream/30 p-5 sm:p-6">
+      <section className={`mt-8 ${surfaceMuted} p-5 sm:p-6`}>
         <p className="text-[11px] tracking-[0.18em] text-deep/50 uppercase">Cancelled</p>
         <p className="mt-2 text-sm leading-7 text-deep/70">
           This session was cancelled. Your slot has been released. Book again anytime if your plans
@@ -120,8 +121,8 @@ export function AppointmentManager({
   }
 
   return (
-    <div className="mt-10 space-y-6">
-      <section className="rounded-xl border border-deep/10 bg-white p-5 sm:p-6">
+    <div className="mt-8 space-y-6">
+      <section className={surfaceCard}>
         <p className="text-[11px] tracking-[0.18em] text-sage uppercase">Reschedule</p>
         <p className="mt-2 text-sm leading-7 text-deep/65">
           Pick a new date and we&apos;ll move you to the first open chair that day. You&apos;ll get
@@ -152,7 +153,7 @@ export function AppointmentManager({
         ) : null}
       </section>
 
-      <section className="rounded-xl border border-deep/10 bg-white p-5 sm:p-6">
+      <section className={surfaceCard}>
         <p className="text-[11px] tracking-[0.18em] text-deep/45 uppercase">Cancel booking</p>
 
         {cancelStep === "idle" ? (

@@ -79,7 +79,7 @@ function BookingActions({ row }: { row: BookingRow }) {
           onClick={() => setStatus("CONFIRMED")}
           className={adminButtonPrimary}
         >
-          Confirm
+          {pending ? "Saving…" : "Confirm booking"}
         </button>
       ) : (
         <button
@@ -88,7 +88,7 @@ function BookingActions({ row }: { row: BookingRow }) {
           onClick={() => setStatus("COMPLETED")}
           className={overdue ? adminButtonPrimary : adminButtonSecondary}
         >
-          Complete
+          {pending ? "Saving…" : overdue ? "Mark done (overdue)" : "Mark session done"}
         </button>
       )}
       <button

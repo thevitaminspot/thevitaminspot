@@ -1,0 +1,50 @@
+/** Shared Clerk UI — matches site cream / deep palette. */
+export const siteClerkAppearance = {
+  variables: {
+    colorPrimary: "#0b2c21",
+    colorText: "#08150f",
+    colorTextSecondary: "rgba(8, 21, 15, 0.62)",
+    colorBackground: "#f4efe4",
+    colorInputBackground: "#faf7f0",
+    colorNeutral: "#0b2c21",
+    borderRadius: "0.75rem",
+  },
+  elements: {
+    card: "rounded-2xl border border-deep/10 bg-cream shadow-none",
+    headerTitle: "font-display text-2xl text-deep",
+    headerSubtitle: "text-deep/65",
+    socialButtonsBlockButton:
+      "rounded-xl border border-deep/15 bg-white text-deep hover:bg-tint/40",
+    dividerLine: "bg-deep/10",
+    dividerText: "text-deep/45",
+    formFieldLabel: "text-xs font-medium text-deep/70",
+    formFieldInput:
+      "rounded-xl border-deep/15 bg-cream/50 text-deep focus:border-deep/30",
+    formButtonPrimary:
+      "rounded-xl bg-deep text-cream hover:bg-[#14382a] text-[11px] font-medium tracking-[0.14em] uppercase shadow-none",
+    formButtonReset: "text-deep hover:text-sage",
+    footerActionLink: "text-deep hover:text-sage",
+    footerActionText: "text-deep/60",
+    identityPreviewText: "text-deep",
+    identityPreviewEditButton: "text-deep hover:text-sage",
+    alertText: "text-deep/80",
+    otpCodeFieldInput: "rounded-xl border-deep/15 bg-cream/50",
+    userButtonPopoverCard:
+      "rounded-2xl border border-deep/10 bg-cream shadow-lg shadow-deep/10",
+    userButtonPopoverActionButton: "rounded-lg hover:bg-tint/50",
+    userButtonPopoverActionButtonText: "text-sm text-deep",
+    userButtonPopoverActionButton__manageAccount: "hidden",
+    userButtonPopoverFooter: "hidden",
+    userPreviewMainIdentifier: "font-medium text-deep",
+    userPreviewSecondaryIdentifier: "text-deep/55",
+    modalContent: "bg-cream",
+    modalCloseButton: "text-deep hover:bg-tint/40",
+    navbar: "border-deep/10 bg-cream",
+    navbarButton: "text-deep hover:bg-tint/40",
+    profileSectionTitle: "font-display text-deep",
+    profileSectionContent: "text-deep/75",
+    badge: "bg-tint/60 text-deep border-0",
+    menuList: "border-deep/10 bg-cream",
+    menuItem: "text-deep hover:bg-tint/40",
+  },
+};

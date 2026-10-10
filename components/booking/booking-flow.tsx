@@ -16,9 +16,11 @@ import {
   formDateControl,
   formError,
   formLabel,
+  formButtonSecondary,
   formSubmit,
   formTextarea,
 } from "@/components/ui/form-styles";
+import { PaystackHandoff } from "@/components/ui/paystack-handoff";
 
 type Slot = { start: string; end: string; label: string };
 
@@ -55,97 +57,120 @@ function SelectionContext({
   onChangeService?: () => void;
 }) {
   return (
-    <div className="mb-6 rounded-lg border border-deep/10 bg-cream/40 px-4 py-3 text-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-medium text-deep">{drip.name}</p>
-          <p className="mt-0.5 text-deep/55">
-            {drip.durationMin} min · {nairaLabel(drip.price)}
-            {slot ? ` · ${slot.label}` : ""}
-          </p>
-        </div>
-        {onChangeService ? (
+    <p className="mb-5 text-sm text-deep/70">
+      <span className="font-medium text-deep">{drip.name}</span>
+      <span className="text-deep/50"> · </span>
+      {drip.durationMin} min · {nairaLabel(drip.price)}
+      {slot ? (
+        <>
+          <span className="text-deep/50"> · </span>
+          {slot.label}
+        </>
+      ) : null}
+      {onChangeService ? (
+        <>
+          <span className="text-deep/50"> · </span>
           <button
             type="button"
             onClick={onChangeService}
-            className="shrink-0 text-xs font-medium text-deep underline-offset-2 hover:underline"
+            className="font-medium text-deep underline-offset-2 hover:underline"
           >
-            Change
+            Change drip
           </button>
-        ) : null}
-      </div>
+        </>
+      ) : null}
+    </p>
+  );
+}
+
+function ServiceDetails({ item }: { item: CatalogInfusion }) {
+  return (
+    <div className="border-t border-deep/10 px-4 pb-5 pt-3 text-sm leading-relaxed text-deep/70 sm:px-5">
+      <p className="text-deep/85">{item.tagline}</p>
+      <p className="mt-2">{item.description}</p>
+      {item.benefits.length > 0 ? (
+        <ul className="mt-3 list-inside list-disc space-y-1">
+          {item.benefits.map((benefit) => (
+            <li key={benefit}>{benefit}</li>
+          ))}
+        </ul>
+      ) : null}
+      {item.ingredients.length > 0 ? (
+        <p className="mt-3 text-xs text-deep/50">Contains: {item.ingredients.join(", ")}</p>
+      ) : null}
     </div>
   );
 }
 
-function ServiceRow({
-  item,
-  selected,
-  expanded,
-  onSelect,
-  onToggleDetails,
+function ServiceList({
+  drips,
+  slug,
+  onChoose,
 }: {
-  item: CatalogInfusion;
-  selected: boolean;
-  expanded: boolean;
-  onSelect: () => void;
-  onToggleDetails: () => void;
+  drips: CatalogInfusion[];
+  slug: string;
+  onChoose: (nextSlug: string) => void;
 }) {
-  return (
-    <div
-      className={`rounded-lg border transition ${
-        selected ? "border-deep bg-deep/[0.03]" : "border-deep/10 hover:border-deep/25"
-      }`}
-    >
-      <button
-        type="button"
-        id={item.slug}
-        onClick={onSelect}
-        className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
-      >
-        <span
-          className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${
-            selected ? "border-deep" : "border-deep/25"
-          }`}
-          aria-hidden
-        >
-          {selected ? <span className="size-2 rounded-full bg-deep" /> : null}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-medium text-deep">{item.name}</span>
-          <span className="mt-0.5 block text-xs text-deep/55">
-            {item.durationMin} min · deposit {nairaLabel(item.deposit)}
-          </span>
-        </span>
-        <span className="shrink-0 text-sm font-medium text-deep">{nairaLabel(item.price)}</span>
-      </button>
+  const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
 
-      <div className="border-t border-deep/10 px-4 py-2">
-        <button
-          type="button"
-          onClick={onToggleDetails}
-          className="flex w-full items-center justify-between py-1 text-xs font-medium text-deep/60 hover:text-deep"
-          aria-expanded={expanded}
-        >
-          {expanded ? "Hide details" : "View details"}
-          <ChevronDown className={`size-4 transition ${expanded ? "rotate-180" : ""}`} />
-        </button>
-        {expanded ? (
-          <div className="pb-3 pt-1 text-sm leading-relaxed text-deep/70">
-            <p>{item.description}</p>
-            {item.benefits.length > 0 ? (
-              <ul className="mt-2 list-inside list-disc space-y-0.5 text-deep/65">
-                {item.benefits.map((benefit) => (
-                  <li key={benefit}>{benefit}</li>
-                ))}
-              </ul>
-            ) : null}
-            {item.ingredients.length > 0 ? (
-              <p className="mt-2 text-xs text-deep/50">Contains: {item.ingredients.join(", ")}</p>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+  function toggleDetails(itemSlug: string) {
+    setExpandedSlug((current) => (current === itemSlug ? null : itemSlug));
+  }
+
+  return (
+    <div>
+      <ul className="divide-y divide-deep/12 border-y border-deep/12" role="listbox" aria-label="Services">
+        {drips.map((item) => {
+          const active = item.slug === slug;
+          const expanded = expandedSlug === item.slug;
+          return (
+            <li key={item.id} className={active ? "bg-tint/40" : undefined}>
+              <div className="flex items-stretch">
+                <button
+                  type="button"
+                  id={item.slug}
+                  role="option"
+                  aria-selected={active}
+                  onClick={() => {
+                    onChoose(item.slug);
+                    setExpandedSlug(item.slug);
+                  }}
+                  className={`min-w-0 flex-1 py-4 pl-4 text-left transition sm:pl-5 ${
+                    active ? "" : "hover:bg-deep/[0.04]"
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-5 pr-4 sm:pr-5">
+                    <span className="min-w-0">
+                      <span className={`font-display text-xl ${active ? "text-deep" : "text-deep/85"}`}>
+                        {item.name}
+                      </span>
+                      <span className="mt-1 block text-xs text-deep/50">
+                        {item.durationMin} min · deposit {nairaLabel(item.deposit)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right text-sm font-medium tabular-nums text-deep/85">
+                      {nairaLabel(item.price)}
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleDetails(item.slug)}
+                  className="flex w-11 shrink-0 items-center justify-center border-l border-deep/10 text-deep/50 transition hover:bg-deep/[0.04] hover:text-deep sm:w-12"
+                  aria-expanded={expanded}
+                  aria-label={expanded ? `Hide ${item.name} details` : `Show ${item.name} details`}
+                >
+                  <ChevronDown className={`size-5 transition ${expanded ? "rotate-180" : ""}`} />
+                </button>
+              </div>
+              {expanded ? <ServiceDetails item={item} /> : null}
+            </li>
+          );
+        })}
+      </ul>
+      {!slug ? (
+        <p className="mt-4 px-4 text-sm text-deep/50 sm:px-5">Select a session, then continue.</p>
+      ) : null}
     </div>
   );
 }
@@ -161,7 +186,6 @@ export function BookingFlow({
   const { isLoaded, isSignedIn, user } = useUser();
   const [step, setStep] = useState(0);
   const [slug, setSlug] = useState(initialSlug ?? "");
-  const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
   const [date, setDate] = useState("");
   const minDate = useClientDateInputMin();
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -175,6 +199,7 @@ export function BookingFlow({
   });
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [paying, setPaying] = useState(false);
   const drip = useMemo(() => drips.find((item) => item.slug === slug), [drips, slug]);
   const formTopRef = useRef<HTMLDivElement>(null);
   const skipStepScrollRef = useRef(true);
@@ -256,6 +281,7 @@ export function BookingFlow({
       return;
     }
     setPending(true);
+    setPaying(payDeposit);
     setError("");
     try {
       const result = await createBooking({
@@ -266,76 +292,71 @@ export function BookingFlow({
       });
       if ("error" in result && result.error) {
         setError(result.error);
+        setPending(false);
+        setPaying(false);
         return;
       }
       if ("checkoutUrl" in result && result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
+        window.location.assign(result.checkoutUrl);
         return;
       }
       if (payDeposit) {
         setError("Could not open Paystack. Try again or book without a deposit.");
+        setPending(false);
+        setPaying(false);
         return;
       }
       if ("token" in result && result.token) {
         router.push(`/appointments/${result.token}`);
+        return;
       }
+      setPending(false);
+      setPaying(false);
     } catch {
       setError("Something went wrong while booking. Please try again.");
-    } finally {
       setPending(false);
+      setPaying(false);
     }
   }
 
   const canPayDeposit = Boolean(drip && drip.deposit > 0);
 
   return (
-    <div ref={formTopRef} className="mx-auto w-full min-w-0 max-w-md scroll-mt-24">
+    <div ref={formTopRef} className="mx-auto w-full min-w-0 scroll-mt-24">
+      <PaystackHandoff
+        open={pending}
+        title={paying ? "Taking you to Paystack" : "Saving your booking"}
+        detail="Stay on this page."
+      />
       <form
         onSubmit={(event) => {
           event.preventDefault();
           if (step < stepTitles.length - 1) next();
           else void confirm(false);
         }}
-        className="overflow-hidden rounded-xl border border-deep/10 bg-white"
+        className="min-w-0"
       >
-        <header className="border-b border-deep/10 px-5 py-4 sm:px-6">
+        <header className="mb-6">
           {step > 0 ? (
             <button
               type="button"
               onClick={back}
-              className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-deep/70 hover:text-deep"
+              className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-deep/70 hover:text-deep"
             >
               <ChevronLeft className="size-4" aria-hidden />
               Back
             </button>
           ) : null}
           <ProgressBar step={step} total={stepTitles.length} />
-          <p className="mt-3 text-xs text-deep/50">
-            Step {step + 1} of {stepTitles.length}
-          </p>
-          <h2 className="mt-1 text-lg font-semibold text-deep">{stepTitles[step]}</h2>
+          <h2 className="mt-4 font-display text-2xl text-deep">{stepTitles[step]}</h2>
         </header>
 
-        <div className="min-w-0 px-5 py-6 sm:px-6">
+        <div className="min-w-0">
           {step === 0 ? (
             drips.length === 0 ? (
               <p className="text-sm text-deep/60">No sessions available right now.</p>
             ) : (
-              <ul className="space-y-2" role="listbox" aria-label="Services">
-                {drips.map((item) => (
-                  <li key={item.id}>
-                    <ServiceRow
-                      item={item}
-                      selected={item.slug === slug}
-                      expanded={expandedSlug === item.slug}
-                      onSelect={() => void choose(item.slug)}
-                      onToggleDetails={() =>
-                        setExpandedSlug((current) => (current === item.slug ? null : item.slug))
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
+              <ServiceList drips={drips} slug={slug} onChoose={(next) => void choose(next)} />
             )
           ) : null}
 
@@ -370,10 +391,10 @@ export function BookingFlow({
                           setSlot(item);
                           scrollToFormTop();
                         }}
-                        className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
+                        className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                           slot?.start === item.start
-                            ? "border-deep bg-deep text-cream"
-                            : "border-deep/15 text-deep hover:border-deep/30"
+                            ? "bg-deep text-cream"
+                            : "bg-deep/[0.06] text-deep hover:bg-deep/10"
                         }`}
                       >
                         {item.label}
@@ -496,7 +517,7 @@ export function BookingFlow({
           ) : null}
         </div>
 
-        <footer className="border-t border-deep/10 bg-cream/20 px-5 py-4 sm:px-6">
+        <footer className="mt-8 space-y-2">
           {step < stepTitles.length - 1 ? (
             <button
               type="submit"
@@ -506,21 +527,21 @@ export function BookingFlow({
               Continue
             </button>
           ) : (
-            <div className="space-y-2">
+            <>
               <button type="submit" disabled={pending} className={formSubmit}>
-                {pending ? "Booking…" : "Confirm booking"}
+                {pending ? "Booking…" : "Book without paying now"}
               </button>
               {canPayDeposit ? (
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() => void confirm(true)}
-                  className="flex w-full items-center justify-center rounded-xl border border-deep/15 bg-white py-3.5 text-sm font-medium text-deep transition hover:bg-cream/50 disabled:opacity-50"
+                  className={`w-full ${formButtonSecondary}`}
                 >
                   {pending ? "Opening Paystack…" : `Pay deposit (${nairaLabel(drip!.deposit)})`}
                 </button>
               ) : null}
-            </div>
+            </>
           )}
         </footer>
       </form>

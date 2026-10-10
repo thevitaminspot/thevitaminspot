@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { completeCheckoutReturn, createCheckout } from "@/actions/checkout";
+import { createCheckout } from "@/actions/checkout";
 import { formatNaira } from "@/lib/money";
 import { site } from "@/lib/site";
 import type { CatalogZone } from "@/lib/catalog";
@@ -18,14 +18,14 @@ import {
   formSubmitInline,
   formTextarea,
 } from "@/components/ui/form-styles";
+import { PaystackHandoff } from "@/components/ui/paystack-handoff";
+import { surfaceCard } from "@/components/ui/layout-styles";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { useCartStore } from "@/stores/cart-store";
 
 export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const formId = useId();
-  const returnHandled = useRef(false);
   const cartHydrated = useSyncExternalStore(
     (onStoreChange) => useCartStore.persist.onFinishHydration(onStoreChange),
     () => useCartStore.persist.hasHydrated(),
@@ -44,46 +44,11 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const [returnPending, setReturnPending] = useState(false);
 
   const handleAutofill = useCallback((data: { name: string; email: string }) => {
     setCustomerName((prev) => prev || data.name);
     setCustomerEmail((prev) => prev || data.email);
   }, []);
-
-  useEffect(() => {
-    const orderToken = searchParams.get("order");
-    const reference = searchParams.get("reference") ?? searchParams.get("trxref");
-    if (!orderToken || !reference || returnHandled.current) return;
-
-    returnHandled.current = true;
-    setReturnPending(true);
-
-    void (async () => {
-      const result = await completeCheckoutReturn(orderToken, reference);
-      setReturnPending(false);
-
-      if ("error" in result && result.error) {
-        setError(result.error);
-        router.replace("/checkout");
-        return;
-      }
-
-      if (result.status === "PAID") {
-        clear();
-        router.replace(`/orders/${orderToken}`);
-        return;
-      }
-
-      if (result.status === "PENDING") {
-        router.replace(`/orders/${orderToken}`);
-        return;
-      }
-
-      setError("Payment did not go through. Your bag is still here — try again when ready.");
-      router.replace("/checkout");
-    })();
-  }, [searchParams, router, clear]);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -91,17 +56,17 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const deliveryFee = fulfillment === "DELIVERY" ? (selectedZone?.fee ?? 0) : 0;
   const grandTotal = subtotal + deliveryFee;
 
-  if (!cartHydrated || returnPending) {
+  if (!cartHydrated) {
     return (
       <div className="my-12 flex items-center justify-center py-20 text-sm text-deep/50">
-        {returnPending ? "Confirming your payment…" : "Loading your bag…"}
+        Loading your bag…
       </div>
     );
   }
 
   if (items.length === 0 && !pending) {
     return (
-      <div className="my-10 rounded-3xl border border-deep/10 bg-white p-10 text-center md:p-14">
+      <div className={`my-8 ${surfaceCard} text-center sm:p-10`}>
         <h2 className="font-display text-3xl text-deep md:text-4xl">Your bag is empty</h2>
         <p className="mx-auto mt-2.5 max-w-md text-sm leading-relaxed text-deep/70">
           Add a pack first. Drips are booked on their own page.
@@ -125,11 +90,19 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   }
 
   return (
+    <>
+    <PaystackHandoff
+      open={pending}
+      title="Taking you to Paystack"
+      detail="Don’t close this page. You’ll come back here once payment is done."
+    />
     <form
       id={formId}
-      className="grid gap-10 lg:grid-cols-12 lg:items-start"
+      aria-busy={pending}
+      className="grid gap-8 lg:grid-cols-12 lg:items-start"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (pending) return;
         setError("");
         const form = new FormData(event.currentTarget);
         setPending(true);
@@ -152,18 +125,17 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
           },
         );
 
-        setPending(false);
-
         if (result.error) {
           if ("prices" in result && result.prices) {
             updatePrices(result.prices);
           }
           setError(result.error);
+          setPending(false);
           return;
         }
 
         if (result.checkoutUrl) {
-          window.location.href = result.checkoutUrl;
+          window.location.assign(result.checkoutUrl);
           return;
         }
 
@@ -172,9 +144,9 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
       }}
     >
       {/* Left Column: Form Details */}
-      <div className="space-y-8 lg:col-span-7">
+      <div className="space-y-6 lg:col-span-7">
         {/* Step 1: Customer Info */}
-        <section className="rounded-2xl border border-deep/10 bg-white p-6 sm:p-8">
+        <section className={surfaceCard}>
           <div className="flex items-center gap-2.5">
             <span className="flex size-6 items-center justify-center rounded-full bg-deep text-xs font-semibold text-cream">
               1
@@ -230,7 +202,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         </section>
 
         {/* Step 2: Fulfillment */}
-        <section className="rounded-2xl border border-deep/10 bg-white p-6 sm:p-8">
+        <section className={surfaceCard}>
           <div className="flex items-center gap-2.5">
             <span className="flex size-6 items-center justify-center rounded-full bg-deep text-xs font-semibold text-cream">
               2
@@ -311,7 +283,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
               </div>
             </div>
           ) : (
-            <div className="mt-6 rounded-xl border border-deep/10 bg-cream p-5">
+            <div className="mt-6 rounded-2xl border border-deep/10 bg-cream/40 p-5">
               <div className="text-xs leading-relaxed text-deep/80">
                   <p className="font-semibold text-deep">Pick up at the shop</p>
                   <p className="mt-0.5">{site.address.label}</p>
@@ -324,7 +296,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         </section>
 
         {/* Step 3: Courier Notes */}
-        <section className="rounded-2xl border border-deep/10 bg-white p-6 sm:p-8">
+        <section className={surfaceCard}>
           <div className="flex items-center gap-2.5">
             <span className="flex size-6 items-center justify-center rounded-full bg-deep text-xs font-semibold text-cream">
               3
@@ -346,13 +318,13 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
 
       {/* Right Column: Order Summary & Payment Button */}
       <div className="lg:sticky lg:top-24 lg:col-span-5">
-        <div className="rounded-3xl border border-deep/10 bg-white p-6 sm:p-8">
+        <div className={surfaceCard}>
           <h2 className="font-display text-2xl text-deep">Order Summary</h2>
 
           {/* Itemized lines */}
           <div className="mt-6 divide-y divide-deep/10 overflow-hidden">
             {items.map((item) => (
-              <div key={item.productId} className="flex items-center gap-3 py-3.5 first:pt-0">
+              <div key={item.productId} className="flex items-center gap-3 pb-6 pt-3.5 first:pt-0">
                 <div className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-deep/10 bg-tint/40">
                   {item.image ? (
                     <Image src={item.image} alt={item.name} fill className="object-cover" />
@@ -412,7 +384,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
             disabled={pending || items.length === 0}
             className={`mt-6 flex w-full py-4 ${formSubmitInline}`}
           >
-            {pending ? "Processing order" : `Pay ${formatNaira(grandTotal)} via Paystack`}
+            {pending ? "Opening Paystack…" : `Pay ${formatNaira(grandTotal)}`}
           </button>
 
           <p className="mt-5 border-t border-deep/10 pt-4 text-[11px] leading-5 text-deep/60">
@@ -421,6 +393,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
         </div>
       </div>
     </form>
+    </>
   );
 }
 

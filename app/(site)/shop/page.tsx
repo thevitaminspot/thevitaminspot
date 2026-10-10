@@ -1,4 +1,5 @@
 import { ShopCatalog } from "@/components/shop/shop-catalog";
+import { pageShell, pageWide } from "@/components/ui/layout-styles";
 import { listCategories, listProducts } from "@/lib/data";
 
 export const metadata = {
@@ -15,8 +16,8 @@ export default async function ShopPage() {
   ]);
 
   return (
-    <main className="px-5 py-16 md:px-8">
-      <div className="mx-auto max-w-[1200px]">
+    <main className={pageShell}>
+      <div className={pageWide}>
         <h1 className="animate-hero-in font-display text-5xl md:text-7xl">Shop</h1>
         <ShopCatalog products={products} categories={categories} />
       </div>

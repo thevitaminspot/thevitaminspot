@@ -107,13 +107,13 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
                     <div className="mt-6 flex flex-wrap items-center gap-3">
                       <Link
                         href={`/shop/${product.slug}`}
-                        className="inline-flex items-center justify-center rounded-lg bg-deep px-5 py-3 text-[11px] font-medium tracking-[0.14em] text-cream uppercase transition hover:bg-[#14382a]"
+                        className="inline-flex items-center justify-center rounded-xl bg-deep px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a]"
                       >
                         See this pack
                       </Link>
                       <Link
                         href="/shop"
-                        className="inline-flex items-center justify-center rounded-lg border border-deep/20 bg-transparent px-4 py-3 text-[11px] font-medium tracking-[0.14em] text-deep uppercase transition hover:bg-white"
+                        className="inline-flex items-center justify-center rounded-xl border border-deep/15 bg-transparent px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-deep uppercase transition hover:bg-white"
                       >
                         See the shop
                       </Link>
@@ -168,7 +168,7 @@ export function WalkIn() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/infusions"
-              className="inline-flex items-center justify-center rounded-lg bg-deep px-6 py-3.5 text-xs font-medium tracking-[0.14em] text-cream uppercase transition hover:bg-[#14382a]"
+              className="inline-flex items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a]"
             >
               Book a drip
             </Link>
@@ -176,7 +176,7 @@ export function WalkIn() {
               href={whatsappHref("Hi The Vitamin Spot. I want to come in for a drip.")}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-lg border border-deep/20 px-6 py-3.5 text-xs font-medium tracking-[0.14em] text-deep uppercase transition hover:bg-white"
+              className="inline-flex items-center justify-center rounded-xl border border-deep/15 px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-deep uppercase transition hover:bg-white"
             >
               WhatsApp us
             </a>

@@ -1,58 +1,64 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { resumeOrderPayment } from "@/actions/checkout";
-import { formButtonSecondary, formSubmitInline } from "@/components/ui/form-styles";
+import { formSubmitInline } from "@/components/ui/form-styles";
+import { PaystackHandoff } from "@/components/ui/paystack-handoff";
+import { surfaceMuted } from "@/components/ui/layout-styles";
 
 export function OrderPaymentActions({
   token,
   paymentStatus,
   orderStatus,
+  confirming = false,
 }: {
   token: string;
   paymentStatus?: string | null;
   orderStatus: string;
+  confirming?: boolean;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
   if (orderStatus === "PAID" || paymentStatus === "PAID") return null;
+  if (["PACKED", "OUT_FOR_DELIVERY", "DELIVERED"].includes(orderStatus)) return null;
   if (orderStatus === "CANCELLED") return null;
 
   return (
-    <div className="mt-8 rounded-2xl border border-deep/10 bg-cream/40 p-5">
+    <div className={`${surfaceMuted} mt-8 p-5 sm:p-6`}>
+      <PaystackHandoff open={pending} title="Opening Paystack" />
       <p className="text-sm text-deep/75">
-        {paymentStatus === "FAILED"
-          ? "Payment did not go through."
-          : "This order is waiting for payment."}
+        {confirming
+          ? "If Paystack already charged you, wait a few seconds."
+          : paymentStatus === "FAILED"
+            ? "Payment did not go through. Try again."
+            : "Pay now to complete this order."}
       </p>
       {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-      <div className="mt-4 flex flex-wrap gap-3">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={async () => {
-            setPending(true);
-            setError("");
-            const result = await resumeOrderPayment(token);
+      <button
+        type="button"
+        disabled={pending}
+        onClick={async () => {
+          if (pending) return;
+          setPending(true);
+          setError("");
+          const result = await resumeOrderPayment(token);
+          if ("error" in result && result.error) {
+            setError(result.error);
             setPending(false);
-            if ("error" in result && result.error) {
-              setError(result.error);
-              return;
-            }
-            if ("checkoutUrl" in result && result.checkoutUrl) {
-              window.location.href = result.checkoutUrl;
-            }
-          }}
-          className={formSubmitInline}
-        >
-          {pending ? "Opening Paystack…" : "Pay now"}
-        </button>
-        <Link href="/checkout" className={formButtonSecondary}>
-          Back to checkout
-        </Link>
-      </div>
+            return;
+          }
+          if ("checkoutUrl" in result && result.checkoutUrl) {
+            window.location.assign(result.checkoutUrl);
+            return;
+          }
+          setError("Could not open Paystack.");
+          setPending(false);
+        }}
+        className={`mt-4 ${formSubmitInline}`}
+      >
+        {pending ? "Opening Paystack…" : "Pay now"}
+      </button>
     </div>
   );
 }

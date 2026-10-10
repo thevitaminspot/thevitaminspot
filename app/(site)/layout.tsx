@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Analytics } from "@vercel/analytics/next";
+import { CookieConsentProvider } from "@/components/legal/cookie-consent";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
@@ -10,7 +10,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const packs = await getFeaturedFooterPacks();
 
   return (
-    <>
+    <CookieConsentProvider>
       <Suspense fallback={null}>
         <ScrollToTop />
       </Suspense>
@@ -29,7 +29,6 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <div className="page-enter">{children}</div>
       <Footer packs={packs} />
       <CartDrawerLoader />
-      <Analytics />
-    </>
+    </CookieConsentProvider>
   );
 }

@@ -66,8 +66,8 @@ body {
 
 .panel {
   background: #fff;
-  border: 1px solid color-mix(in srgb, var(--color-deep) 12%, #e6d7b8);
-  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-deep) 10%, transparent);
+  border-radius: 16px;
 }
 
 :root {

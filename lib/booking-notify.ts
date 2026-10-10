@@ -1,12 +1,14 @@
 import "server-only";
 
 import {
+  emailDetailsCard,
+  emailParagraph,
   escapeHtml,
+  sendAdminMail,
   sendBookingCancelled,
   sendBookingConfirmed,
   sendBookingDepositPaid,
   sendBookingReceived,
-  sendMail,
   type SendMailResult,
 } from "@/lib/email";
 import { adminRecipients } from "@/lib/admin-access";
@@ -77,17 +79,31 @@ export async function notifyAdminBookingCancelled(input: {
   cancelledBy: "guest" | "admin";
 }) {
   const when = formatLagosLong(input.startsAt);
-  const depositLine =
-    input.depositPaid && input.depositPaid > 0
-      ? `<p><strong>Deposit paid:</strong> ${escapeHtml(formatNaira(input.depositPaid))}. Review refund requests manually if needed.</p>`
-      : "";
-  const detailsLine = input.details
-    ? `<p><strong>Guest note:</strong> ${escapeHtml(input.details)}</p>`
-    : "";
-  const result = await sendMail({
-    to: adminRecipients(),
+  const rows = [
+    { label: "Guest", value: `${escapeHtml(input.name)} · ${escapeHtml(input.email)}` },
+    { label: "Session", value: escapeHtml(input.serviceName) },
+    { label: "When", value: escapeHtml(when) },
+    { label: "Reason", value: escapeHtml(input.reason) },
+    {
+      label: "By",
+      value: input.cancelledBy === "guest" ? "Guest (online)" : "Admin",
+    },
+  ];
+  if (input.details) {
+    rows.push({ label: "Note", value: escapeHtml(input.details) });
+  }
+  if (input.depositPaid && input.depositPaid > 0) {
+    rows.push({
+      label: "Deposit",
+      value: `${escapeHtml(formatNaira(input.depositPaid))} — review refunds manually`,
+    });
+  }
+
+  const result = await sendAdminMail({
     subject: `Booking cancelled: ${input.serviceName}`,
-    html: `<p><strong>${escapeHtml(input.name)}</strong> (${escapeHtml(input.email)}) cancelled <strong>${escapeHtml(input.serviceName)}</strong> on ${escapeHtml(when)}.</p><p><strong>Reason:</strong> ${escapeHtml(input.reason)}</p><p><strong>Cancelled by:</strong> ${input.cancelledBy === "guest" ? "Guest (online)" : "Admin"}</p>${detailsLine}${depositLine}<p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
+    headline: "Booking cancelled",
+    body: `${emailParagraph("Someone cancelled a session.")}${emailDetailsCard(rows)}`,
+    cta: { label: "Open bookings", href: `${site.url}/admin/appointments` },
   });
   logEmail("booking-admin-cancelled", result, adminRecipients().join(", "));
   if (!result.ok) throw new Error(result.error);
@@ -113,10 +129,19 @@ export async function notifyAdminNewBooking(input: {
   startsAt: Date;
   deposit: number;
 }) {
-  const result = await sendMail({
-    to: adminRecipients(),
+  const result = await sendAdminMail({
     subject: `New booking: ${input.serviceName}`,
-    html: `<p>${escapeHtml(input.name)} booked <strong>${escapeHtml(input.serviceName)}</strong> for ${escapeHtml(formatLagosLong(input.startsAt))}.</p><p>${input.deposit > 0 ? `Deposit: ${escapeHtml(formatNaira(input.deposit))}.` : "No deposit required."}</p><p><a href="${escapeHtml(`${site.url}/admin/appointments`)}">Open bookings</a></p>`,
+    headline: "New booking",
+    body: `${emailParagraph(`<strong>${escapeHtml(input.name)}</strong> booked.`)}${emailDetailsCard([
+      { label: "Session", value: escapeHtml(input.serviceName) },
+      { label: "When", value: escapeHtml(formatLagosLong(input.startsAt)) },
+      {
+        label: "Deposit",
+        value:
+          input.deposit > 0 ? escapeHtml(formatNaira(input.deposit)) : "Not required",
+      },
+    ])}`,
+    cta: { label: "Open bookings", href: `${site.url}/admin/appointments` },
   });
   logEmail("booking-admin-new", result, adminRecipients().join(", "));
   if (!result.ok) throw new Error(result.error);

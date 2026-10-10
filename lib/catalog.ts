@@ -1,5 +1,8 @@
 import { nairaToKobo } from "@/lib/money";
 
+/** Max product photos in admin and on the storefront gallery. */
+export const PRODUCT_MAX_IMAGES = 4;
+
 export type CatalogCategory = {
   id: string;
   name: string;

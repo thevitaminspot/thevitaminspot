@@ -12,7 +12,7 @@ const links = [
 export function Footer({ packs }: { packs: { href: string; label: string }[] }) {
   return (
     <footer className="bg-deep text-cream">
-      <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
+      <div className="mx-auto max-w-6xl px-5 py-12 md:px-8 md:py-16">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
           <div>
             <div className="flex items-center gap-3">
@@ -90,8 +90,21 @@ export function Footer({ packs }: { packs: { href: string; label: string }[] }) 
           </div>
         </div>
 
-        <div className="mt-14 border-t border-cream/15 pt-6">
+        <div className="mt-14 flex flex-col gap-3 border-t border-cream/15 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-cream/45">© 2026 The Vitamin Spot. All rights reserved.</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+            <Link href="/privacy" className="text-cream/55 hover:text-tint">
+              Privacy & cookies
+            </Link>
+            <a
+              href={site.developer.url}
+              className="text-cream/55 hover:text-tint"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Developed by {site.developer.name}
+            </a>
+          </div>
         </div>
       </div>
     </footer>

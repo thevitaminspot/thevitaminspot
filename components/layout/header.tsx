@@ -62,7 +62,7 @@ function MobileNav({
         className="absolute top-0 right-0 flex h-full w-full max-w-xs flex-col bg-cream shadow-2xl"
         aria-label="Mobile"
       >
-        <div className="flex items-center justify-between border-b border-deep/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-deep/10 px-5 py-5">
           <div className="flex items-center gap-2.5">
             <Image
               src={brand.mark.src}
@@ -84,7 +84,7 @@ function MobileNav({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5">
+        <div className="flex-1 overflow-y-auto px-5 py-5">
           <Link
             href="/infusions"
             onClick={onClose}
@@ -150,7 +150,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-deep/10 bg-cream/95 backdrop-blur-md transition-[background-color,box-shadow] duration-300">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-2.5 sm:px-5 md:px-8 md:py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-2.5 md:px-8 md:py-3">
           <Link href="/" className="flex min-w-0 items-center gap-2.5" onClick={closeNav}>
             <Image
               src={brand.mark.src}
@@ -190,7 +190,7 @@ export function Header() {
             <AccountButton className="hidden text-[11px] tracking-[0.2em] text-deep/60 uppercase md:inline" />
             <Link
               href="/infusions"
-              className="hidden rounded-lg border border-deep/15 px-4 py-2 text-[12px] tracking-[0.1em] text-deep uppercase transition hover:bg-deep/5 md:inline-flex"
+              className="hidden rounded-xl border border-deep/15 px-4 py-2 text-[11px] font-medium tracking-[0.16em] text-deep uppercase transition hover:bg-deep/5 md:inline-flex"
             >
               Book
             </Link>

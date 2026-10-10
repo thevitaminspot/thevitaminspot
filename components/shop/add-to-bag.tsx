@@ -2,6 +2,7 @@
 
 import type { CatalogProduct } from "@/lib/catalog";
 import { useCartStore } from "@/stores/cart-store";
+import { formSubmitInline } from "@/components/ui/form-styles";
 
 export function AddToBag({ product }: { product: CatalogProduct }) {
   const add = useCartStore((state) => state.add);
@@ -19,7 +20,7 @@ export function AddToBag({ product }: { product: CatalogProduct }) {
           image: product.images[0].url,
         })
       }
-      className="mt-8 rounded-lg bg-deep px-8 py-4 text-[11px] tracking-[0.22em] text-cream uppercase disabled:opacity-40"
+      className={`mt-8 ${formSubmitInline}`}
     >
       {product.stock < 1 ? "Sold through" : "Add to bag"}
     </button>

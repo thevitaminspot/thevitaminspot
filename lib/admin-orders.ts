@@ -35,16 +35,16 @@ export function nextOrderStep(
 ): { status: AdminOrderStatus; label: string } | null {
   if (status === "PAID") {
     return fulfillment === "PICKUP"
-      ? { status: "PACKED", label: "Mark ready for pickup" }
-      : { status: "PACKED", label: "Mark as packed" };
+      ? { status: "PACKED", label: "Ready for pickup" }
+      : { status: "PACKED", label: "Mark packed" };
   }
   if (status === "PACKED") {
     return fulfillment === "PICKUP"
-      ? { status: "DELIVERED", label: "Mark as picked up" }
-      : { status: "OUT_FOR_DELIVERY", label: "Mark out for delivery" };
+      ? { status: "DELIVERED", label: "Mark picked up" }
+      : { status: "OUT_FOR_DELIVERY", label: "Out for delivery" };
   }
   if (status === "OUT_FOR_DELIVERY") {
-    return { status: "DELIVERED", label: "Mark as delivered" };
+    return { status: "DELIVERED", label: "Mark delivered" };
   }
   return null;
 }

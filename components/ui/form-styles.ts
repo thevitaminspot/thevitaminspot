@@ -28,9 +28,9 @@ export const formErrorBox =
 
 export const formSubmit = `inline-flex w-full items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a] disabled:opacity-60 ${interactiveControl}`;
 
-export const formSubmitInline = `inline-flex items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-xs font-medium tracking-[0.14em] text-cream uppercase transition hover:bg-[#14382a] disabled:opacity-50 ${interactiveControl}`;
+export const formSubmitInline = `inline-flex items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a] disabled:opacity-50 ${interactiveControl}`;
 
-export const formButtonSecondary = `inline-flex items-center justify-center rounded-xl border border-deep/20 bg-cream/40 px-5 py-3 text-xs font-medium tracking-[0.14em] text-deep uppercase transition hover:bg-white disabled:opacity-50 ${interactiveControl}`;
+export const formButtonSecondary = `inline-flex items-center justify-center rounded-xl border border-deep/15 bg-cream/40 px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-deep uppercase transition hover:bg-white disabled:opacity-50 ${interactiveControl}`;
 
 export const formButtonGhost = `inline-flex items-center justify-center rounded-xl border border-deep/20 px-5 py-3 text-sm text-deep transition hover:bg-cream/40 disabled:opacity-40 ${interactiveControl}`;
 

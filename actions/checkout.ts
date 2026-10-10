@@ -11,8 +11,8 @@ import {
   verifyAndSettleExistingReference,
 } from "@/lib/payments";
 import { initializePaystack } from "@/lib/paystack";
+import { orderPaystackReturnUrl } from "@/lib/paystack-return";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
-import { site } from "@/lib/site";
 import { createOrderNumber, createToken } from "@/lib/tokens";
 
 export async function createCheckout(
@@ -129,7 +129,7 @@ export async function createCheckout(
     },
   });
 
-  const checkoutReturnUrl = `${site.url}/checkout?order=${accessToken}`;
+  const checkoutReturnUrl = orderPaystackReturnUrl(accessToken);
 
   if (!hasPaystack()) {
     return { token: accessToken };
@@ -222,7 +222,7 @@ export async function resumeOrderPayment(token: string) {
   }
 
   const reference = nextPaystackReference("ord", order.id);
-  const checkoutReturnUrl = `${site.url}/checkout?order=${token}`;
+  const checkoutReturnUrl = orderPaystackReturnUrl(token);
 
   try {
     const payment = await initializePaystack({
