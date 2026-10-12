@@ -530,7 +530,7 @@ export function BookingFlow({
             >
               Continue
             </button>
-          ) : (
+          ) : drip && slot ? (
             <>
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-deep/10 bg-cream/20 px-4 py-3 text-sm text-deep/75">
                 <input
@@ -549,7 +549,7 @@ export function BookingFlow({
                 {pending ? "Opening Paystack…" : `Pay booking fee (${nairaLabel(drip.deposit)})`}
               </button>
             </>
-          )}
+          ) : null}
         </footer>
       </form>
     </div>
