@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppointmentManager } from "@/components/booking/appointment-manager";
 import { PayDepositButton } from "@/components/booking/pay-deposit-button";
+import { PaystackReturnCleanup } from "@/components/ui/paystack-return-cleanup";
 import { RefreshWhilePending } from "@/components/ui/refresh-while-pending";
 import { findInfusion } from "@/lib/data";
 import { tryPrisma } from "@/lib/db";
@@ -40,7 +41,7 @@ export default async function AppointmentPage({
   const { token } = await params;
   const query = await searchParams;
   const reference = typeof query.reference === "string" ? query.reference : query.trxref;
-  await confirmPaystackReturn(
+  const paystackReturn = await confirmPaystackReturn(
     typeof reference === "string" ? reference : undefined,
     { appointmentToken: token },
   );
@@ -95,10 +96,19 @@ export default async function AppointmentPage({
 
   const needsDeposit =
     Boolean("showPayDeposit" in appointment && appointment.showPayDeposit);
-  const confirmingDeposit = needsDeposit && typeof reference === "string";
+  const confirmingDeposit =
+    needsDeposit && !paidDeposit && paystackReturn.outcome === "pending";
+  const paymentNotCompleted =
+    needsDeposit &&
+    !paidDeposit &&
+    typeof reference === "string" &&
+    paystackReturn.outcome === "failed";
+  const clearPaystackQuery =
+    typeof reference === "string" && paystackReturn.outcome !== "pending";
 
   return (
     <main className={`${pageNarrow} ${pageShell}`}>
+      <PaystackReturnCleanup active={clearPaystackQuery} />
       <RefreshWhilePending active={confirmingDeposit} />
       <p className="text-[11px] tracking-[0.28em] text-sage uppercase">
         {appointment.status === "CANCELLED"
@@ -122,6 +132,11 @@ export default async function AppointmentPage({
       {confirmingDeposit ? (
         <p className={`${surfaceMuted} mt-4 px-4 py-3 text-sm text-deep/70`}>
           Checking Paystack… this page will update on its own.
+        </p>
+      ) : null}
+      {paymentNotCompleted ? (
+        <p className={`${surfaceMuted} mt-4 px-4 py-3 text-sm text-deep/70`}>
+          Payment was not completed. Your slot is not held until you pay the booking fee below.
         </p>
       ) : null}
       <p className="mt-6 leading-8 text-deep">

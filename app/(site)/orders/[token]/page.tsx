@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ClearCartOnPaid } from "@/components/shop/clear-cart-on-paid";
 import { OrderPaymentActions } from "@/components/shop/order-payment-actions";
+import { PaystackReturnCleanup } from "@/components/ui/paystack-return-cleanup";
 import { RefreshWhilePending } from "@/components/ui/refresh-while-pending";
 import { tryPrisma } from "@/lib/db";
 import { formatNaira } from "@/lib/money";
@@ -47,7 +48,7 @@ export default async function OrderPage({
   const { token } = await params;
   const query = await searchParams;
   const reference = typeof query.reference === "string" ? query.reference : query.trxref;
-  await confirmPaystackReturn(
+  const paystackReturn = await confirmPaystackReturn(
     typeof reference === "string" ? reference : undefined,
     { orderToken: token },
   );
@@ -74,12 +75,18 @@ export default async function OrderPage({
   const paid = order.payment?.status === "PAID" || order.status === "PAID" ||
     ["PACKED", "OUT_FOR_DELIVERY", "DELIVERED"].includes(order.status);
   const awaitingPay = !paid && order.status !== "CANCELLED";
-  const confirming =
-    awaitingPay && (typeof reference === "string" || order.payment?.status === "PENDING");
+  const confirming = awaitingPay && paystackReturn.outcome === "pending";
+  const paymentNotCompleted =
+    awaitingPay &&
+    typeof reference === "string" &&
+    paystackReturn.outcome === "failed";
+  const clearPaystackQuery =
+    typeof reference === "string" && paystackReturn.outcome !== "pending";
 
   return (
     <main className={`${pageNarrow} ${pageShell}`}>
       {paid ? <ClearCartOnPaid /> : null}
+      <PaystackReturnCleanup active={clearPaystackQuery} />
       <RefreshWhilePending active={confirming} />
 
       <p className="text-[11px] tracking-[0.28em] text-sage uppercase">{order.orderNumber}</p>
@@ -93,6 +100,11 @@ export default async function OrderPage({
       {confirming ? (
         <p className={`${surfaceMuted} mt-4 px-4 py-3 text-sm text-deep/70`}>
           Checking Paystack… this page will update on its own.
+        </p>
+      ) : null}
+      {paymentNotCompleted ? (
+        <p className={`${surfaceMuted} mt-4 px-4 py-3 text-sm text-deep/70`}>
+          Payment was not completed. You can try again below.
         </p>
       ) : null}
 

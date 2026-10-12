@@ -34,8 +34,8 @@ export type PaystackVerifyResult =
   | { outcome: "skipped" }
   | { outcome: "error"; message: string };
 
-const DEFINITE_FAILURE = new Set(["failed", "reversed"]);
-const IN_FLIGHT = new Set(["abandoned", "ongoing", "pending", "processing", "queued"]);
+const DEFINITE_FAILURE = new Set(["failed", "reversed", "abandoned"]);
+const IN_FLIGHT = new Set(["ongoing", "pending", "processing", "queued"]);
 
 type PaymentWithRelations = Prisma.PaymentGetPayload<{
   include: {
@@ -403,6 +403,60 @@ export async function handlePaystackWebhookCharge(data: PaystackWebhookCharge) {
   return { ok: true as const };
 }
 
+async function settlePaystackReturn(
+  reference: string,
+  payment: PaymentWithRelations,
+  transaction: { status: string; amount: number; currency?: string },
+): Promise<PaystackVerifyResult> {
+  const expectedCurrency = payment.currency || "NGN";
+  const receivedCurrency = transaction.currency || "NGN";
+  const amountMatches = transaction.amount === payment.amount;
+  const currencyMatches = receivedCurrency === expectedCurrency;
+
+  if (transaction.status === "success" && amountMatches && currencyMatches) {
+    await applySettlement(payment, "success");
+    return { outcome: "paid" };
+  }
+
+  if (transaction.status === "success" && (!amountMatches || !currencyMatches)) {
+    console.error("[paystack:return] mismatch", {
+      reference,
+      expected: { amount: payment.amount, currency: expectedCurrency },
+      received: { amount: transaction.amount, currency: receivedCurrency },
+    });
+    await notifyAdminPaymentAlert(`Paystack return mismatch: ${reference}`, {
+      headline: "Return amount mismatch",
+      tone: "alert",
+      body: emailDetailsCard([
+        { label: "Reference", value: escapeHtml(reference) },
+        {
+          label: "Paid",
+          value: `${escapeHtml(String(transaction.amount))} ${escapeHtml(receivedCurrency)}`,
+        },
+        {
+          label: "Expected",
+          value: `${escapeHtml(formatNaira(payment.amount))} ${escapeHtml(expectedCurrency)}`,
+        },
+      ]),
+    });
+    return {
+      outcome: "error",
+      message: "Payment amount could not be verified. Contact us if you were charged.",
+    };
+  }
+
+  if (DEFINITE_FAILURE.has(transaction.status)) {
+    await applySettlement(payment, "failed");
+    return { outcome: "failed" };
+  }
+
+  if (IN_FLIGHT.has(transaction.status)) {
+    return { outcome: "pending" };
+  }
+
+  return { outcome: "pending" };
+}
+
 export async function confirmPaystackReturn(
   reference: string | undefined,
   owner?: PaystackReturnOwner,
@@ -423,8 +477,21 @@ export async function confirmPaystackReturn(
           },
         });
     if (!pending?.paystackReference) return { outcome: "skipped" };
-    const settled = await verifyAndSettleExistingReference(pending.paystackReference);
-    return settled.settled ? { outcome: "paid" } : { outcome: "pending" };
+
+    try {
+      const payment = await loadPaymentByReference(pending.paystackReference);
+      if (!payment || !paymentMatchesOwner(payment, owner)) {
+        return { outcome: "skipped" };
+      }
+      const transaction = await verifyPaystackTransaction(pending.paystackReference);
+      return settlePaystackReturn(pending.paystackReference, payment, transaction);
+    } catch (error) {
+      console.error("[paystack:return]", pending.paystackReference, error);
+      return {
+        outcome: "error",
+        message: error instanceof Error ? error.message : "Paystack could not verify that payment.",
+      };
+    }
   }
 
   if (!reference) return { outcome: "skipped" };
@@ -447,53 +514,7 @@ export async function confirmPaystackReturn(
       return { outcome: "skipped" };
     }
 
-    const expectedCurrency = payment.currency || "NGN";
-    const receivedCurrency = transaction.currency || "NGN";
-    const amountMatches = transaction.amount === payment.amount;
-    const currencyMatches = receivedCurrency === expectedCurrency;
-
-    if (transaction.status === "success" && amountMatches && currencyMatches) {
-      await applySettlement(payment, "success");
-      return { outcome: "paid" };
-    }
-
-    if (transaction.status === "success" && (!amountMatches || !currencyMatches)) {
-      console.error("[paystack:return] mismatch", {
-        reference,
-        expected: { amount: payment.amount, currency: expectedCurrency },
-        received: { amount: transaction.amount, currency: receivedCurrency },
-      });
-      await notifyAdminPaymentAlert(`Paystack return mismatch: ${reference}`, {
-        headline: "Return amount mismatch",
-        tone: "alert",
-        body: emailDetailsCard([
-          { label: "Reference", value: escapeHtml(reference) },
-          {
-            label: "Paid",
-            value: `${escapeHtml(String(transaction.amount))} ${escapeHtml(receivedCurrency)}`,
-          },
-          {
-            label: "Expected",
-            value: `${escapeHtml(formatNaira(payment.amount))} ${escapeHtml(expectedCurrency)}`,
-          },
-        ]),
-      });
-      return {
-        outcome: "error",
-        message: "Payment amount could not be verified. Contact us if you were charged.",
-      };
-    }
-
-    if (DEFINITE_FAILURE.has(transaction.status)) {
-      await applySettlement(payment, "failed");
-      return { outcome: "failed" };
-    }
-
-    if (IN_FLIGHT.has(transaction.status)) {
-      return { outcome: "pending" };
-    }
-
-    return { outcome: "pending" };
+    return settlePaystackReturn(reference, payment, transaction);
   } catch (error) {
     console.error("[paystack:return]", reference, error);
     return {

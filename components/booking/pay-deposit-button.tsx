@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { resumeAppointmentDeposit } from "@/actions/booking";
 import { nairaLabel } from "@/lib/money";
 import { formSubmitInline } from "@/components/ui/form-styles";
@@ -15,6 +15,15 @@ export function PayDepositButton({
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const clearPending = useCallback(() => setPending(false), []);
+
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) clearPending();
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [clearPending]);
 
   if (deposit <= 0) return null;
 
@@ -36,7 +45,7 @@ export function PayDepositButton({
               return;
             }
             if ("checkoutUrl" in result && result.checkoutUrl) {
-              window.location.assign(result.checkoutUrl);
+              window.location.replace(result.checkoutUrl);
               return;
             }
             setError("Could not open Paystack. Please try again.");
