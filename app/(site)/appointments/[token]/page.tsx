@@ -17,8 +17,8 @@ function bookingHeadline(status: string, depositPaid: boolean) {
   if (status === "CANCELLED") return "This booking was cancelled";
   if (status === "COMPLETED") return "Session done";
   if (status === "CONFIRMED") return "You’re booked";
-  if (depositPaid) return "Deposit received";
-  return "Booking received";
+  if (depositPaid) return "Booking fee received";
+  return "Complete your booking";
 }
 
 function bookingNextStep(status: string, depositPaid: boolean, needsDeposit: boolean) {
@@ -28,7 +28,7 @@ function bookingNextStep(status: string, depositPaid: boolean, needsDeposit: boo
     return `Come a few minutes early. We’re at ${site.address.label}.`;
   }
   if (needsDeposit && !depositPaid) {
-    return "Pay the deposit to hold the slot, or wait for us to confirm.";
+    return "Pay the booking fee to hold your slot. Cancellations are not free; the fee is non-refundable.";
   }
   return "We’ll confirm this slot shortly. You’ll get an email.";
 }

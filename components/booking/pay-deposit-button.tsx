@@ -48,7 +48,7 @@ export function PayDepositButton({
         }}
         className={`${formSubmitInline} w-full sm:w-auto`}
       >
-        {pending ? "Opening Paystack…" : `Pay deposit (${nairaLabel(deposit)})`}
+        {pending ? "Opening Paystack…" : `Pay booking fee (${nairaLabel(deposit)})`}
       </button>
       {error ? <p className="mt-2 text-sm text-deep">{error}</p> : null}
     </div>

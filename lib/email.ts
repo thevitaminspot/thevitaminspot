@@ -500,11 +500,11 @@ export async function sendBookingReceived(input: {
   const depositDue =
     input.deposit && input.deposit > 0
       ? emailCallout(
-          `A deposit of ${escapeHtml(formatNaira(input.deposit))}${
+          `Complete your booking fee of ${escapeHtml(formatNaira(input.deposit))}${
             input.sessionPrice && input.sessionPrice > input.deposit
               ? ` (${escapeHtml(formatNaira(input.sessionPrice - input.deposit))} due at your visit)`
               : ""
-          } holds this appointment. ${emailLink(input.manageUrl, "Pay the deposit")}.`,
+          } to hold this slot. Cancellations are not free; the booking fee is non-refundable. ${emailLink(input.manageUrl, "Pay the booking fee")}.`,
           "accent",
         )
       : emailParagraph("We will confirm this time shortly.", { last: true });
@@ -550,10 +550,10 @@ export async function sendBookingDepositPaid(input: {
     html: renderCustomerEmail({
       eyebrow: `Dear ${emailFirstName(input.name)},`,
       headline: "Appointment confirmed",
-      body: `${emailParagraph(`We have received your deposit of ${escapeHtml(formatNaira(input.depositAmount))} for <strong>${escapeHtml(input.serviceName)}</strong>. Your appointment is confirmed.`)}${emailDetailsCard([
+      body: `${emailParagraph(`We have received your booking fee of ${escapeHtml(formatNaira(input.depositAmount))} for <strong>${escapeHtml(input.serviceName)}</strong>. Your appointment is confirmed. Cancellations are not free; the booking fee is non-refundable.`)}${emailDetailsCard([
         { label: "When", value: escapeHtml(when) },
         { label: "Where", value: escapeHtml(location) },
-        { label: "Deposit", value: escapeHtml(formatNaira(input.depositAmount)) },
+        { label: "Booking fee", value: escapeHtml(formatNaira(input.depositAmount)) },
       ])}${balance}${bookingClinicalReminder()}`,
       cta: { label: "View booking", href: input.manageUrl },
     }),
@@ -584,7 +584,7 @@ export async function sendBookingConfirmed(input: {
       )
       : input.depositDue
       ? emailCallout(
-          `A deposit of ${escapeHtml(formatNaira(input.depositDue))} is due. ${emailLink(input.manageUrl, "Pay online")} or settle on arrival.`,
+          `Your booking fee of ${escapeHtml(formatNaira(input.depositDue))} is due to hold this slot. Cancellations are not free; the fee is non-refundable. ${emailLink(input.manageUrl, "Pay online")}.`,
           "accent",
         )
       : "";
@@ -621,7 +621,7 @@ export async function sendBookingCancelled(input: {
   const depositLine =
     input.depositPaid && input.depositPaid > 0
       ? emailCallout(
-          `A deposit of ${escapeHtml(formatNaira(input.depositPaid))} was received. Reply to this email or WhatsApp us regarding a refund.`,
+          `A booking fee of ${escapeHtml(formatNaira(input.depositPaid))} was received and is not refunded when you cancel.`,
           "alert",
         )
       : "";

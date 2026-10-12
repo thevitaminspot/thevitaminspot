@@ -17,6 +17,7 @@ import {
   formTextarea,
 } from "@/components/ui/form-styles";
 import { surfaceCard, surfaceMuted } from "@/components/ui/layout-styles";
+import { BOOKING_CANCEL_FEE_ACK, BOOKING_CANCELLATION_NOT_FREE } from "@/lib/booking-policy";
 
 function formatWhen(date: Date) {
   return formatLagosLong(date);
@@ -185,18 +186,14 @@ export function AppointmentManager({
               <p className="mt-1 text-sm text-deep/70">{when}</p>
               {paidDeposit && deposit ? (
                 <p className="mt-3 text-sm text-deep/65">
-                  Deposit paid: <strong>{formatNaira(deposit)}</strong>. Refunds are reviewed case
-                  by case — contact us after cancelling if you need help.
+                  Booking fee paid: <strong>{formatNaira(deposit)}</strong>.{" "}
+                  {BOOKING_CANCELLATION_NOT_FREE}
                 </p>
               ) : hasDeposit ? (
                 <p className="mt-3 text-sm text-deep/65">
-                  No deposit was paid for this booking. Your slot will simply be released.
+                  Booking fee not yet paid. Your slot will be released. {BOOKING_CANCELLATION_NOT_FREE}
                 </p>
-              ) : (
-                <p className="mt-3 text-sm text-deep/65">
-                  No deposit required. Your slot will be released for other guests.
-                </p>
-              )}
+              ) : null}
             </div>
             <ul className="space-y-2 text-sm text-deep/70">
               <li>• This cannot be undone online — you&apos;ll need to book again for a new time.</li>
@@ -277,10 +274,7 @@ export function AppointmentManager({
               />
               <span>
                 I understand this will cancel my session, release my time slot, and send me a
-                confirmation email.{" "}
-                {paidDeposit
-                  ? "I understand deposit refunds are not automatic."
-                  : null}
+                confirmation email. {BOOKING_CANCEL_FEE_ACK}
               </span>
             </label>
 
