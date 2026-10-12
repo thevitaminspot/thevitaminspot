@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { ChevronDown, ChevronLeft } from "lucide-react";
 import { createBooking, fetchSlots } from "@/actions/booking";
@@ -19,6 +19,7 @@ import {
   formTextarea,
 } from "@/components/ui/form-styles";
 import { PaystackHandoff } from "@/components/ui/paystack-handoff";
+import { PaystackHandoffReset } from "@/components/ui/paystack-handoff-reset";
 import {
   BOOKING_CANCELLATION_NOT_FREE,
   BOOKING_FEE_ACK_LABEL,
@@ -206,6 +207,10 @@ export function BookingFlow({
   const drip = useMemo(() => drips.find((item) => item.slug === slug), [drips, slug]);
   const formTopRef = useRef<HTMLDivElement>(null);
   const skipStepScrollRef = useRef(true);
+  const resetPaystackHandoff = useCallback(() => {
+    setPending(false);
+    setPaying(false);
+  }, []);
 
   function scrollToFormTop() {
     formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -308,7 +313,7 @@ export function BookingFlow({
         return;
       }
       if ("checkoutUrl" in result && result.checkoutUrl) {
-        window.location.assign(result.checkoutUrl);
+        window.location.replace(result.checkoutUrl);
         return;
       }
       setError("Could not open Paystack. Please try again.");
@@ -323,6 +328,7 @@ export function BookingFlow({
 
   return (
     <div ref={formTopRef} className="mx-auto w-full min-w-0 scroll-mt-24">
+      <PaystackHandoffReset onReset={resetPaystackHandoff} />
       <PaystackHandoff
         open={pending}
         title={paying ? "Taking you to Paystack" : "Saving your booking"}
