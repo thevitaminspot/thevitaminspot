@@ -306,8 +306,8 @@ function readInfusion(input: InfusionInput) {
   if (!Number.isFinite(input.priceNaira) || input.priceNaira < 0) {
     return { error: "Enter a price in naira." as const };
   }
-  if (!Number.isFinite(input.depositNaira) || input.depositNaira < 0) {
-    return { error: "Enter a deposit in naira." as const };
+  if (!Number.isFinite(input.depositNaira) || input.depositNaira <= 0) {
+    return { error: "Enter a booking fee in naira (required for online booking)." as const };
   }
   if (!Number.isInteger(input.durationMin) || input.durationMin < 15) {
     return { error: "Duration must be at least 15 minutes." as const };

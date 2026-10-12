@@ -26,6 +26,7 @@ import { initializePaystack } from "@/lib/paystack";
 import { appointmentPaystackReturnUrl } from "@/lib/paystack-return";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { site, whatsappHref } from "@/lib/site";
+import { BOOKING_FEE_REQUIRED_MESSAGE } from "@/lib/booking-policy";
 import { createToken } from "@/lib/tokens";
 
 export async function sendBookingNotifications(token: string) {
@@ -95,13 +96,18 @@ export async function createBooking(input: {
     return { error: "That time is no longer available. Please choose another." };
   }
 
-  if (input.payDeposit) {
-    if (!hasPaystack()) {
-      return { error: "Online payments are not configured yet. Book without a deposit or try again later." };
-    }
-    if (drip.deposit <= 0) {
-      return { error: "This session does not have an online deposit. Use Confirm booking instead." };
-    }
+  if (drip.deposit <= 0) {
+    return {
+      error: "Online booking is not available for this session yet. Please contact us to book.",
+    };
+  }
+
+  if (!input.payDeposit) {
+    return { error: BOOKING_FEE_REQUIRED_MESSAGE };
+  }
+
+  if (!hasPaystack()) {
+    return { error: "Online payments are not configured yet. Please try again later or contact us." };
   }
 
   const prisma = await tryPrisma();
@@ -169,89 +175,59 @@ export async function createBooking(input: {
   const manageUrl = appointmentPaystackReturnUrl(token);
   const whenLabel = formatLagosLong(startsAt);
 
-  if (input.payDeposit) {
-    try {
-      const reference = nextPaystackReference("apt", appointment.id);
-      const payment = await initializePaystack({
-        email: details.data.email,
+  try {
+    const reference = nextPaystackReference("apt", appointment.id);
+    const payment = await initializePaystack({
+      email: details.data.email,
+      amount: drip.deposit,
+      reference,
+      callbackUrl: manageUrl,
+      metadata: { purpose: "APPOINTMENT_DEPOSIT", appointmentId: appointment.id },
+    });
+    await prisma.payment.create({
+      data: {
+        purpose: "APPOINTMENT_DEPOSIT",
         amount: drip.deposit,
-        reference,
-        callbackUrl: manageUrl,
-        metadata: { purpose: "APPOINTMENT_DEPOSIT", appointmentId: appointment.id },
-      });
-      await prisma.payment.create({
-        data: {
-          purpose: "APPOINTMENT_DEPOSIT",
-          amount: drip.deposit,
-          paystackReference: reference,
-          paystackAccessCode: payment.access_code,
-          appointmentId: appointment.id,
-        },
-      });
+        paystackReference: reference,
+        paystackAccessCode: payment.access_code,
+        appointmentId: appointment.id,
+      },
+    });
 
-      await notifyBookingReceived({
-        to: details.data.email,
-        name: details.data.name,
-        serviceName: drip.name,
-        startsAt,
-        manageUrl,
-        deposit: drip.deposit,
-        sessionPrice: drip.price,
-      }).catch((error) => {
-        console.error("[booking:create] customer email failed", error);
-      });
+    await notifyBookingReceived({
+      to: details.data.email,
+      name: details.data.name,
+      serviceName: drip.name,
+      startsAt,
+      manageUrl,
+      deposit: drip.deposit,
+      sessionPrice: drip.price,
+    }).catch((error) => {
+      console.error("[booking:create] customer email failed", error);
+    });
 
-      await notifyAdminNewBooking({
-        name: details.data.name,
-        serviceName: drip.name,
-        startsAt,
-        deposit: drip.deposit,
-      }).catch((error) => {
-        console.error("[booking:create] admin email failed", error);
-      });
+    await notifyAdminNewBooking({
+      name: details.data.name,
+      serviceName: drip.name,
+      startsAt,
+      deposit: drip.deposit,
+    }).catch((error) => {
+      console.error("[booking:create] admin email failed", error);
+    });
 
-      return {
-        token,
-        whatsapp: whatsappHref(
-          `I have booked ${drip.name} at The Vitamin Spot for ${whenLabel}.`,
-        ),
-        checkoutUrl: payment.authorization_url,
-      };
-    } catch (error) {
-      await prisma.appointment.delete({ where: { id: appointment.id } }).catch(() => undefined);
-      const message =
-        error instanceof Error ? error.message : "Could not start the deposit payment.";
-      return { error: message };
-    }
+    return {
+      token,
+      whatsapp: whatsappHref(
+        `I have booked ${drip.name} at The Vitamin Spot for ${whenLabel}.`,
+      ),
+      checkoutUrl: payment.authorization_url,
+    };
+  } catch (error) {
+    await prisma.appointment.delete({ where: { id: appointment.id } }).catch(() => undefined);
+    const message =
+      error instanceof Error ? error.message : "Could not start the booking fee payment.";
+    return { error: message };
   }
-
-  await notifyBookingReceived({
-    to: details.data.email,
-    name: details.data.name,
-    serviceName: drip.name,
-    startsAt,
-    manageUrl,
-    deposit: drip.deposit,
-    sessionPrice: drip.price,
-  }).catch((error) => {
-    console.error("[booking:create] customer email failed", error);
-  });
-
-  await notifyAdminNewBooking({
-    name: details.data.name,
-    serviceName: drip.name,
-    startsAt,
-    deposit: drip.deposit,
-  }).catch((error) => {
-    console.error("[booking:create] admin email failed", error);
-  });
-
-  return {
-    token,
-    whatsapp: whatsappHref(
-      `I have booked ${drip.name} at The Vitamin Spot for ${whenLabel}.`,
-    ),
-  };
 }
 
 export async function resumeAppointmentDeposit(token: string) {

@@ -18,7 +18,8 @@
     "db:studio": "prisma studio",
     "email:test": "node scripts/email-test.mjs",
     "env:prepare-vercel": "node scripts/prepare-vercel-env.mjs",
-    "env:import-vercel": "vercel env import .env.production production --force --yes"
+    "env:import-vercel": "vercel env import .env.production production --force --yes",
+    "handover:docx": "node scripts/generate-handover-docx.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.11",

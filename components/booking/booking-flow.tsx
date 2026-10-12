@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { ChevronDown, ChevronLeft } from "lucide-react";
 import { createBooking, fetchSlots } from "@/actions/booking";
@@ -16,11 +15,15 @@ import {
   formDateControl,
   formError,
   formLabel,
-  formButtonSecondary,
   formSubmit,
   formTextarea,
 } from "@/components/ui/form-styles";
 import { PaystackHandoff } from "@/components/ui/paystack-handoff";
+import {
+  BOOKING_CANCELLATION_NOT_FREE,
+  BOOKING_FEE_ACK_LABEL,
+  BOOKING_FEE_REQUIRED_MESSAGE,
+} from "@/lib/booking-policy";
 
 type Slot = { start: string; end: string; label: string };
 
@@ -145,7 +148,7 @@ function ServiceList({
                         {item.name}
                       </span>
                       <span className="mt-1 block text-xs text-deep/50">
-                        {item.durationMin} min · deposit {nairaLabel(item.deposit)}
+                        {item.durationMin} min · booking fee {nairaLabel(item.deposit)}
                       </span>
                     </span>
                     <span className="shrink-0 text-right text-sm font-medium tabular-nums text-deep/85">
@@ -182,7 +185,6 @@ export function BookingFlow({
   drips: CatalogInfusion[];
   initialSlug?: string;
 }) {
-  const router = useRouter();
   const { isLoaded, isSignedIn, user } = useUser();
   const [step, setStep] = useState(0);
   const [slug, setSlug] = useState(initialSlug ?? "");
@@ -200,6 +202,7 @@ export function BookingFlow({
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const drip = useMemo(() => drips.find((item) => item.slug === slug), [drips, slug]);
   const formTopRef = useRef<HTMLDivElement>(null);
   const skipStepScrollRef = useRef(true);
@@ -272,23 +275,31 @@ export function BookingFlow({
     setStep((current) => Math.min(current + 1, stepTitles.length - 1));
   }
 
-  async function confirm(payDeposit: boolean) {
+  async function confirm() {
     if (!drip || !slot) return;
+    if (!policyAcknowledged) {
+      setError("Please confirm you understand the booking fee and cancellation policy.");
+      return;
+    }
     const parsed = parseBookingDetails(details);
     if (!parsed.ok) {
       setError(parsed.error);
       setStep(2);
       return;
     }
+    if (drip.deposit <= 0) {
+      setError("This session is not available for online booking. Please contact us.");
+      return;
+    }
     setPending(true);
-    setPaying(payDeposit);
+    setPaying(true);
     setError("");
     try {
       const result = await createBooking({
         slug: drip.slug,
         start: slot.start,
         ...parsed.data,
-        payDeposit,
+        payDeposit: true,
       });
       if ("error" in result && result.error) {
         setError(result.error);
@@ -300,16 +311,7 @@ export function BookingFlow({
         window.location.assign(result.checkoutUrl);
         return;
       }
-      if (payDeposit) {
-        setError("Could not open Paystack. Try again or book without a deposit.");
-        setPending(false);
-        setPaying(false);
-        return;
-      }
-      if ("token" in result && result.token) {
-        router.push(`/appointments/${result.token}`);
-        return;
-      }
+      setError("Could not open Paystack. Please try again.");
       setPending(false);
       setPaying(false);
     } catch {
@@ -318,8 +320,6 @@ export function BookingFlow({
       setPaying(false);
     }
   }
-
-  const canPayDeposit = Boolean(drip && drip.deposit > 0);
 
   return (
     <div ref={formTopRef} className="mx-auto w-full min-w-0 scroll-mt-24">
@@ -332,7 +332,7 @@ export function BookingFlow({
         onSubmit={(event) => {
           event.preventDefault();
           if (step < stepTitles.length - 1) next();
-          else void confirm(false);
+          else void confirm();
         }}
         className="min-w-0"
       >
@@ -486,8 +486,12 @@ export function BookingFlow({
                 <dd className="font-medium text-deep">{nairaLabel(drip.price)}</dd>
               </div>
               <div className="flex justify-between gap-4 py-3">
-                <dt className="text-deep/55">Deposit</dt>
+                <dt className="text-deep/55">Booking fee</dt>
                 <dd className="font-medium text-deep">{nairaLabel(drip.deposit)}</dd>
+              </div>
+              <div className="py-3 text-sm leading-relaxed text-deep/65">
+                <p>{BOOKING_FEE_REQUIRED_MESSAGE}</p>
+                <p className="mt-2">{BOOKING_CANCELLATION_NOT_FREE}</p>
               </div>
               <div className="flex justify-between gap-4 py-3">
                 <dt className="text-deep/55">Name</dt>
@@ -528,19 +532,22 @@ export function BookingFlow({
             </button>
           ) : (
             <>
-              <button type="submit" disabled={pending} className={formSubmit}>
-                {pending ? "Booking…" : "Book without paying now"}
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-deep/10 bg-cream/20 px-4 py-3 text-sm text-deep/75">
+                <input
+                  type="checkbox"
+                  checked={policyAcknowledged}
+                  onChange={(event) => setPolicyAcknowledged(event.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>{BOOKING_FEE_ACK_LABEL}</span>
+              </label>
+              <button
+                type="submit"
+                disabled={pending || !policyAcknowledged || drip.deposit <= 0}
+                className={formSubmit}
+              >
+                {pending ? "Opening Paystack…" : `Pay booking fee (${nairaLabel(drip.deposit)})`}
               </button>
-              {canPayDeposit ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => void confirm(true)}
-                  className={`w-full ${formButtonSecondary}`}
-                >
-                  {pending ? "Opening Paystack…" : `Pay deposit (${nairaLabel(drip!.deposit)})`}
-                </button>
-              ) : null}
             </>
           )}
         </footer>

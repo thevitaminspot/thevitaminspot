@@ -2,6 +2,8 @@
 
 Upscale wellness lounge and shop for Abuja. Infusion bookings and a vitamin atelier.
 
+**Owner handover (plain English):** [docs/handover/docx/The-Vitamin-Spot-Owner-Handover.docx](./docs/handover/docx/The-Vitamin-Spot-Owner-Handover.docx)
+
 ## Stack
 
 Next.js App Router, TypeScript, Tailwind CSS, Prisma, Neon Postgres, Clerk, Cloudinary, Paystack, Resend.

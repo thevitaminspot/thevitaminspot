@@ -95,7 +95,7 @@ export async function notifyAdminBookingCancelled(input: {
   if (input.depositPaid && input.depositPaid > 0) {
     rows.push({
       label: "Deposit",
-      value: `${escapeHtml(formatNaira(input.depositPaid))} — review refunds manually`,
+      value: `${escapeHtml(formatNaira(input.depositPaid))} — non-refundable (cancellation)`,
     });
   }
 
