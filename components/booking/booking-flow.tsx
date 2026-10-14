@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { ChevronDown, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { createBooking, fetchSlots } from "@/actions/booking";
 import { parseBookingDetails } from "@/lib/env";
 import { nairaLabel } from "@/lib/money";
@@ -25,14 +25,15 @@ import {
   BOOKING_FEE_ACK_LABEL,
   BOOKING_FEE_REQUIRED_MESSAGE,
 } from "@/lib/booking-policy";
+import { surfaceCard } from "@/components/ui/layout-styles";
 
 type Slot = { start: string; end: string; label: string };
 
 const stepTitles = [
-  "Select a service",
-  "Select date & time",
-  "Enter your details",
-  "Review & confirm",
+  "Choose a drip",
+  "Date & time",
+  "Your details",
+  "Review & pay",
 ];
 
 function ProgressBar({ step, total }: { step: number; total: number }) {
@@ -87,13 +88,12 @@ function SelectionContext({
   );
 }
 
-function ServiceDetails({ item }: { item: CatalogInfusion }) {
+function DripDetails({ item }: { item: CatalogInfusion }) {
   return (
-    <div className="border-t border-deep/10 px-4 pb-5 pt-3 text-sm leading-relaxed text-deep/70 sm:px-5">
-      <p className="text-deep/85">{item.tagline}</p>
-      <p className="mt-2">{item.description}</p>
+    <div className="text-sm leading-relaxed text-deep/70">
+      <p>{item.description}</p>
       {item.benefits.length > 0 ? (
-        <ul className="mt-3 list-inside list-disc space-y-1">
+        <ul className="mt-3 list-inside list-disc space-y-1 text-deep/75">
           {item.benefits.map((benefit) => (
             <li key={benefit}>{benefit}</li>
           ))}
@@ -115,65 +115,64 @@ function ServiceList({
   slug: string;
   onChoose: (nextSlug: string) => void;
 }) {
-  const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
-
-  function toggleDetails(itemSlug: string) {
-    setExpandedSlug((current) => (current === itemSlug ? null : itemSlug));
-  }
-
   return (
-    <div>
-      <ul className="divide-y divide-deep/12 border-y border-deep/12" role="listbox" aria-label="Services">
+    <div className={surfaceCard}>
+      <p className="text-sm leading-relaxed text-deep/60">
+        Select a drip below. Session price and booking fee are shown for each option.
+      </p>
+      <ul className="mt-5 space-y-3" role="listbox" aria-label="IV drips">
         {drips.map((item) => {
           const active = item.slug === slug;
-          const expanded = expandedSlug === item.slug;
           return (
-            <li key={item.id} className={active ? "bg-tint/40" : undefined}>
-              <div className="flex items-stretch">
-                <button
-                  type="button"
-                  id={item.slug}
-                  role="option"
-                  aria-selected={active}
-                  onClick={() => {
-                    onChoose(item.slug);
-                    setExpandedSlug(item.slug);
-                  }}
-                  className={`min-w-0 flex-1 py-4 pl-4 text-left transition sm:pl-5 ${
-                    active ? "" : "hover:bg-deep/[0.04]"
-                  }`}
-                >
-                  <span className="flex items-center justify-between gap-5 pr-4 sm:pr-5">
-                    <span className="min-w-0">
-                      <span className={`font-display text-xl ${active ? "text-deep" : "text-deep/85"}`}>
+            <li key={item.id}>
+              <button
+                type="button"
+                id={item.slug}
+                role="option"
+                aria-selected={active}
+                onClick={() => onChoose(item.slug)}
+                className={`w-full rounded-xl border p-4 text-left transition ${
+                  active
+                    ? "border-deep/25 bg-tint/45 shadow-sm ring-1 ring-deep/10"
+                    : "border-deep/10 bg-cream/15 hover:border-deep/20 hover:bg-cream/35"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`mt-1.5 flex size-[18px] shrink-0 items-center justify-center rounded-full border-2 transition ${
+                      active ? "border-deep bg-deep" : "border-deep/25 bg-white"
+                    }`}
+                    aria-hidden
+                  >
+                    {active ? <span className="size-1.5 rounded-full bg-cream" /> : null}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                      <span className={`font-display text-xl ${active ? "text-deep" : "text-deep/88"}`}>
                         {item.name}
                       </span>
-                      <span className="mt-1 block text-xs text-deep/50">
-                        {item.durationMin} min · booking fee {nairaLabel(item.deposit)}
+                      <span className="text-sm font-medium tabular-nums text-deep/85">
+                        {nairaLabel(item.price)}
                       </span>
                     </span>
-                    <span className="shrink-0 text-right text-sm font-medium tabular-nums text-deep/85">
-                      {nairaLabel(item.price)}
+                    <span className="mt-1 block text-xs text-deep/50">
+                      {item.durationMin} min · booking fee {nairaLabel(item.deposit)}
                     </span>
+                    <span className="mt-2 block text-sm leading-snug text-deep/65">{item.tagline}</span>
                   </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleDetails(item.slug)}
-                  className="flex w-11 shrink-0 items-center justify-center border-l border-deep/10 text-deep/50 transition hover:bg-deep/[0.04] hover:text-deep sm:w-12"
-                  aria-expanded={expanded}
-                  aria-label={expanded ? `Hide ${item.name} details` : `Show ${item.name} details`}
-                >
-                  <ChevronDown className={`size-5 transition ${expanded ? "rotate-180" : ""}`} />
-                </button>
-              </div>
-              {expanded ? <ServiceDetails item={item} /> : null}
+                </div>
+              </button>
+              {active ? (
+                <div className="mt-2 rounded-xl border border-deep/10 bg-cream/30 px-4 py-4 sm:px-5">
+                  <DripDetails item={item} />
+                </div>
+              ) : null}
             </li>
           );
         })}
       </ul>
       {!slug ? (
-        <p className="mt-4 px-4 text-sm text-deep/50 sm:px-5">Select a session, then continue.</p>
+        <p className="mt-5 text-center text-sm text-deep/50">Choose a drip, then tap Continue.</p>
       ) : null}
     </div>
   );
@@ -252,7 +251,7 @@ export function BookingFlow({
   function next() {
     setError("");
     if (step === 0 && !drip) {
-      setError("Select a service to continue.");
+      setError("Choose a drip to continue.");
       return;
     }
     if (step === 1 && !slot) {

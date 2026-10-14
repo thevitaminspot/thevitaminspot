@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { AdminToaster } from "@/components/admin/admin-toaster";
 import {
   AdminMobileBar,
   AdminSidebar,
@@ -21,6 +22,7 @@ export function AdminShell({
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8f5ef_0%,#f4efe4_100%)] md:flex">
+      <AdminToaster />
       <AdminSidebar
         email={email}
         mobileOpen={mobile.open}

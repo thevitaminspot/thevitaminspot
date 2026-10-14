@@ -34,10 +34,6 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true },
   },
   applicationName: site.name,
-  icons: {
-    icon: [{ url: brand.mark.src, type: "image/png" }],
-    apple: [{ url: brand.mark.src, type: "image/png" }],
-  },
   openGraph: {
     title: site.name,
     description: site.description,

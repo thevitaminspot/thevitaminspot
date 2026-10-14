@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
+    serverActions: {
+      // Product image uploads use multipart FormData; default 1MB rejects before our handlers run.
+      bodySizeLimit: "10mb",
+    },
     staleTimes: {
       dynamic: 30,
       static: 180,

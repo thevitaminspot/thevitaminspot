@@ -1,4 +1,5 @@
 import "server-only";
+import { adminRecipientsExcluding } from "@/lib/admin-access";
 import { notifyBookingDepositPaid } from "@/lib/booking-notify";
 import { formatLagosLong } from "@/lib/datetime";
 import { tryPrisma } from "@/lib/db";
@@ -77,6 +78,18 @@ function paymentMatchesOwner(payment: PaymentWithRelations, owner?: PaystackRetu
     return payment.order?.accessToken === owner.orderToken;
   }
   return payment.appointment?.accessToken === owner.appointmentToken;
+}
+
+/** One customer + admin notification batch per successful settlement (webhook vs return-safe). */
+async function claimSettlementNotifications(paymentId: string) {
+  const prisma = await tryPrisma();
+  if (!prisma) return false;
+
+  const claimed = await prisma.payment.updateMany({
+    where: { id: paymentId, status: "PAID", settlementNotifiedAt: null },
+    data: { settlementNotifiedAt: new Date() },
+  });
+  return claimed.count > 0;
 }
 
 async function applySettlement(payment: PaymentWithRelations, outcome: "success" | "failed") {
@@ -205,78 +218,87 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
   }
 
   if (paid && payment.order && !orderCancelled) {
-    const customerMail = await sendOrderUpdate({
-      to: payment.order.email,
-      name: payment.order.name,
-      orderNumber: payment.order.orderNumber,
-      status: "PAID",
-      total: payment.order.total,
-      trackUrl: `${site.url}/orders/${payment.order.accessToken}`,
-      fulfillment: payment.order.fulfillment,
-    });
-    if (!customerMail.ok) {
-      console.error("[paystack:email] customer order confirmation failed", customerMail.error);
-    }
+    const shouldNotify = await claimSettlementNotifications(payment.id);
+    if (shouldNotify) {
+      const customerMail = await sendOrderUpdate({
+        to: payment.order.email,
+        name: payment.order.name,
+        orderNumber: payment.order.orderNumber,
+        status: "PAID",
+        total: payment.order.total,
+        trackUrl: `${site.url}/orders/${payment.order.accessToken}`,
+        fulfillment: payment.order.fulfillment,
+      });
+      if (!customerMail.ok) {
+        console.error("[paystack:email] customer order confirmation failed", customerMail.error);
+      }
 
-    const adminMail = await sendAdminMail({
-      subject: `New order ${payment.order.orderNumber}`,
-      headline: "New paid order",
-      body: `${emailParagraph(`<strong>${escapeHtml(payment.order.name)}</strong> completed checkout.`)}${emailDetailsCard([
-        { label: "Order", value: escapeHtml(payment.order.orderNumber) },
-        { label: "Total", value: escapeHtml(formatNaira(payment.order.total)) },
-      ])}`,
-      cta: {
-        label: "Open order",
-        href: `${site.url}/admin/orders/${payment.order.id}`,
-      },
-    });
-    if (!adminMail.ok) {
-      console.error("[paystack:email] admin paid notification failed", adminMail.error);
-    }
+      const adminMail = await sendAdminMail({
+        to: adminRecipientsExcluding(payment.order.email),
+        subject: `New order ${payment.order.orderNumber}`,
+        headline: "New paid order",
+        body: `${emailParagraph(`<strong>${escapeHtml(payment.order.name)}</strong> completed checkout.`)}${emailDetailsCard([
+          { label: "Order", value: escapeHtml(payment.order.orderNumber) },
+          { label: "Total", value: escapeHtml(formatNaira(payment.order.total)) },
+        ])}`,
+        cta: {
+          label: "Open order",
+          href: `${site.url}/admin/orders/${payment.order.id}`,
+        },
+      });
+      if (!adminMail.ok) {
+        console.error("[paystack:email] admin paid notification failed", adminMail.error);
+      }
 
-    const order = await prisma.order.findUnique({ where: { id: payment.orderId! } });
-    if (order?.notes?.includes("stock ran short")) {
-      await sendAdminMail({
-        subject: `Stock issue on ${order.orderNumber}`,
-        headline: "Stock short at settlement",
-        tone: "alert",
-        body: emailParagraph(
-          `Order <strong>${escapeHtml(order.orderNumber)}</strong> was paid, but inventory ran short during settlement. Check stock and contact the guest.`,
-          { last: true },
-        ),
-        cta: { label: "Open order", href: `${site.url}/admin/orders/${order.id}` },
-      }).catch(() => undefined);
+      const order = await prisma.order.findUnique({ where: { id: payment.orderId! } });
+      if (order?.notes?.includes("stock ran short")) {
+        await sendAdminMail({
+          to: adminRecipientsExcluding(payment.order.email),
+          subject: `Stock issue on ${order.orderNumber}`,
+          headline: "Stock short at settlement",
+          tone: "alert",
+          body: emailParagraph(
+            `Order <strong>${escapeHtml(order.orderNumber)}</strong> was paid, but inventory ran short during settlement. Check stock and contact the guest.`,
+            { last: true },
+          ),
+          cta: { label: "Open order", href: `${site.url}/admin/orders/${order.id}` },
+        }).catch(() => undefined);
+      }
     }
   }
 
   if (paid && payment.appointment && !appointmentCancelled) {
-    const appointment = payment.appointment;
-    try {
-      await notifyBookingDepositPaid({
-        to: appointment.email,
-        name: appointment.name,
-        serviceName: appointment.service.name,
-        startsAt: appointment.startsAt,
-        manageUrl: `${site.url}/appointments/${appointment.accessToken}`,
-        depositAmount: payment.amount,
-        sessionPrice: appointment.service.price,
-      });
-    } catch (error) {
-      console.error("[paystack:email] booking deposit confirmation failed", error);
-    }
+    const shouldNotify = await claimSettlementNotifications(payment.id);
+    if (shouldNotify) {
+      const appointment = payment.appointment;
+      try {
+        await notifyBookingDepositPaid({
+          to: appointment.email,
+          name: appointment.name,
+          serviceName: appointment.service.name,
+          startsAt: appointment.startsAt,
+          manageUrl: `${site.url}/appointments/${appointment.accessToken}`,
+          depositAmount: payment.amount,
+          sessionPrice: appointment.service.price,
+        });
+      } catch (error) {
+        console.error("[paystack:email] booking deposit confirmation failed", error);
+      }
 
-    const adminMail = await sendAdminMail({
-      subject: `Deposit paid: ${appointment.service.name}`,
-      headline: "Booking deposit received",
-      body: `${emailParagraph(`<strong>${escapeHtml(appointment.name)}</strong> paid a deposit.`)}${emailDetailsCard([
-        { label: "Session", value: escapeHtml(appointment.service.name) },
-        { label: "When", value: escapeHtml(formatLagosLong(appointment.startsAt)) },
-        { label: "Deposit", value: escapeHtml(formatNaira(payment.amount)) },
-      ])}`,
-      cta: { label: "Open bookings", href: `${site.url}/admin/appointments` },
-    });
-    if (!adminMail.ok) {
-      console.error("[paystack:email] admin deposit notification failed", adminMail.error);
+      const adminMail = await sendAdminMail({
+        to: adminRecipientsExcluding(appointment.email),
+        subject: `Deposit paid: ${appointment.service.name}`,
+        headline: "Booking deposit received",
+        body: `${emailParagraph(`<strong>${escapeHtml(appointment.name)}</strong> paid a deposit.`)}${emailDetailsCard([
+          { label: "Session", value: escapeHtml(appointment.service.name) },
+          { label: "When", value: escapeHtml(formatLagosLong(appointment.startsAt)) },
+          { label: "Deposit", value: escapeHtml(formatNaira(payment.amount)) },
+        ])}`,
+        cta: { label: "Open bookings", href: `${site.url}/admin/appointments` },
+      });
+      if (!adminMail.ok) {
+        console.error("[paystack:email] admin deposit notification failed", adminMail.error);
+      }
     }
   }
 
