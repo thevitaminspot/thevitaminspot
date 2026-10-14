@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { DeliveryZoneList } from "@/components/admin/delivery-zone-list";
 import { AddZonePanel } from "@/components/admin/zone-form";
-import { AdminFeedback, AdminPageHeader, AdminPanel } from "@/components/admin/ui";
+import { AdminPageHeader, AdminPanel } from "@/components/admin/ui";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 import { useScrollIntoView } from "@/components/admin/use-scroll-into-view";
 
 type Zone = {
@@ -22,8 +23,15 @@ export function ZonesAdmin({
   zones: Zone[];
   activeCount: number;
 }) {
-  const [message, setMessage] = useState("");
   const [adding, setAdding] = useState(false);
+
+  function notify(message: string) {
+    if (/could not|failed|error/i.test(message)) {
+      adminNotifyError(message);
+    } else {
+      adminNotifySuccess(message);
+    }
+  }
   const addFormRef = useScrollIntoView<HTMLDivElement>(adding ? "add" : null);
 
   return (
@@ -43,28 +51,24 @@ export function ZonesAdmin({
         }
       />
 
-      {adding ? (
-        <div ref={addFormRef} className="mb-4">
-          <AddZonePanel
-            onCancel={() => setAdding(false)}
-            onSuccess={(name) => {
-              setAdding(false);
-              setMessage(`${name} added.`);
-            }}
-            onError={setMessage}
-          />
-        </div>
-      ) : null}
+      <div className="space-y-6">
+        {adding ? (
+          <div ref={addFormRef}>
+            <AddZonePanel
+              onCancel={() => setAdding(false)}
+              onSuccess={(name) => {
+                setAdding(false);
+                adminNotifySuccess(`${name} added.`);
+              }}
+              onError={adminNotifyError}
+            />
+          </div>
+        ) : null}
 
-      {message ? (
-        <div className="mb-4">
-          <AdminFeedback message={message} onDismiss={() => setMessage("")} />
-        </div>
-      ) : null}
-
-      <AdminPanel clip={false}>
-        <DeliveryZoneList zones={zones} onMessage={setMessage} />
-      </AdminPanel>
+        <AdminPanel clip={false}>
+          <DeliveryZoneList zones={zones} onMessage={notify} />
+        </AdminPanel>
+      </div>
     </div>
   );
 }

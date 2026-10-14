@@ -14,6 +14,20 @@ export function adminRecipients() {
   return emails.length > 0 ? emails : [site.email];
 }
 
+/** Avoid duplicate inbox when a customer email is also listed in ADMIN_EMAIL. */
+export function adminRecipientsExcluding(...emails: string[]) {
+  const exclude = new Set(
+    emails.map((email) => email.trim().toLowerCase()).filter(Boolean),
+  );
+  const seen = new Set<string>();
+  return adminRecipients().filter((email) => {
+    const key = email.toLowerCase();
+    if (exclude.has(key) || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function isAdminSession(sessionClaims: SessionClaims) {
   if (!sessionClaims) return false;
 

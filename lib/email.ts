@@ -137,9 +137,10 @@ const palette = {
   ...siteBrand.colors,
   champagne: "#e6d7b8",
   white: "#ffffff",
-  paper: "#fbf8f2",
-  line: "#e4ddd0",
-  muted: "#5c6a63",
+  paper: "#f3f5f0",
+  soft: "#fbf8f2",
+  line: "#e3e8df",
+  muted: "#56635b",
   amber: "#b45309",
 };
 
@@ -165,15 +166,15 @@ export function emailDetailsCard(rows: { label: string; value: string }[]) {
   const rowsHtml = rows
     .map(
       (row, index) => `<tr>
-      <td style="padding:${index === 0 ? "0" : "11px"} 16px 11px 0;font-family:${fontSans};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${palette.muted};vertical-align:top;width:112px;border-top:${index === 0 ? "0" : `1px solid ${palette.line}`};">${escapeHtml(row.label)}</td>
-      <td style="padding:${index === 0 ? "0" : "11px"} 0 11px;font-family:${fontSans};font-size:15px;line-height:1.5;color:${palette.deep};border-top:${index === 0 ? "0" : `1px solid ${palette.line}`};">${row.value}</td>
+      <td style="padding:${index === 0 ? "0" : "13px"} 16px 13px 0;font-family:${fontSans};font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:${palette.muted};vertical-align:top;width:112px;border-top:${index === 0 ? "0" : `1px solid ${palette.line}`};">${escapeHtml(row.label)}</td>
+      <td style="padding:${index === 0 ? "0" : "13px"} 0 13px;font-family:${fontSans};font-size:15px;line-height:1.5;color:${palette.deep};border-top:${index === 0 ? "0" : `1px solid ${palette.line}`};">${row.value}</td>
     </tr>`,
     )
     .join("");
 
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border-top:1px solid ${palette.deep};border-bottom:1px solid ${palette.deep};">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:${palette.soft};border:1px solid ${palette.line};border-radius:12px;">
     <tr>
-      <td style="padding:16px 0;">
+      <td style="padding:18px 20px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rowsHtml}</table>
       </td>
     </tr>
@@ -193,8 +194,8 @@ export function emailQuote(content: string) {
 function emailButton(cta: EmailCta) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;">
     <tr>
-      <td style="background:${palette.deep};">
-        <a href="${escapeHtml(cta.href)}" style="display:inline-block;padding:13px 26px;font-family:${fontSans};font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:${palette.cream};text-decoration:none;">${escapeHtml(cta.label)}</a>
+      <td style="background:${palette.deep};border-radius:8px;">
+        <a href="${escapeHtml(cta.href)}" style="display:inline-block;padding:15px 26px;font-family:${fontSans};font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${palette.cream};text-decoration:none;border-radius:8px;">${escapeHtml(cta.label)}</a>
       </td>
     </tr>
   </table>`;
@@ -209,14 +210,14 @@ function emailLetterhead(variant: "customer" | "admin") {
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
-      <td style="vertical-align:middle;padding:0 12px 0 0;width:44px;">
+      <td style="vertical-align:middle;padding:0 12px 0 0;width:32px;">
         <a href="${escapeHtml(EMAIL_ASSET_ORIGIN)}" style="text-decoration:none;">
-          <img src="${markUrl}" width="36" height="48" alt="${escapeHtml(siteBrand.mark.alt)}" style="display:block;width:36px;height:auto;border:0;outline:none;" />
+          <img src="${markUrl}" width="24" height="32" alt="${escapeHtml(siteBrand.mark.alt)}" style="display:block;width:24px;height:auto;border:0;outline:none;" />
         </a>
       </td>
       <td style="vertical-align:middle;">
-        <p style="margin:0;font-family:${fontDisplay};font-size:17px;line-height:1.2;color:${palette.deep};">${escapeHtml(siteBrand.name)}</p>
-        <p style="margin:4px 0 0;font-family:${fontSans};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:${palette.muted};">${meta}</p>
+        <p style="margin:0;font-family:${fontSans};font-size:15px;line-height:1.2;font-weight:750;letter-spacing:0.015em;color:${palette.deep};">${escapeHtml(siteBrand.name)}</p>
+        <p style="margin:5px 0 0;font-family:${fontSans};font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${palette.muted};">${meta}</p>
       </td>
     </tr>
   </table>`;
@@ -237,16 +238,15 @@ function emailShell(input: {
   cta?: EmailCta;
   footer: string;
   variant: "customer" | "admin";
-  alertStripe?: boolean;
 }) {
   const footnote = input.footnote
-    ? `<p style="margin:16px 0 0;font-family:${fontSans};font-size:13px;line-height:1.6;color:${palette.muted};">${input.footnote}</p>`
+    ? `<p style="margin:16px 0 0;padding:14px 16px;background:${palette.soft};border-radius:10px;font-family:${fontSans};font-size:13px;line-height:1.6;color:${palette.muted};">${input.footnote}</p>`
     : "";
   const cta = input.cta ? emailButton(input.cta) : "";
-  const topBar = input.alertStripe ? palette.amber : palette.deep;
-  const greeting = input.greeting
-    ? `<p style="margin:0 0 18px;font-family:${fontSans};font-size:15px;line-height:1.5;color:${palette.ink};">${escapeHtml(input.greeting)}</p>`
-    : "";
+  const heroContent = input.greeting
+    ? `<p style="margin:0 0 12px;font-family:${fontSans};font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${palette.primary};">${escapeHtml(input.headline)}</p>
+                    <h1 style="margin:0;font-family:${fontSans};font-size:30px;line-height:1.2;font-weight:750;letter-spacing:-0.035em;color:${palette.ink};">${escapeHtml(input.greeting)}</h1>`
+    : `<h1 style="margin:0;font-family:${fontSans};font-size:30px;line-height:1.2;font-weight:750;letter-spacing:-0.035em;color:${palette.ink};">${escapeHtml(input.headline)}</h1>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -255,39 +255,42 @@ function emailShell(input: {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
+  <meta name="format-detection" content="telephone=no,address=no,email=no">
   <title>${escapeHtml(input.headline)}</title>
 </head>
 <body style="margin:0;padding:0;background:${palette.paper};font-family:${fontSans};color:${palette.ink};">
   ${emailPreheader(input.preheader)}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${palette.paper};">
     <tr>
-      <td align="center" style="padding:32px 16px 40px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${palette.white};border:1px solid ${palette.line};">
+      <td align="center" style="padding:36px 16px 44px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:${palette.white};border:1px solid ${palette.line};border-radius:18px;overflow:hidden;">
           <tr>
-            <td style="height:4px;background:${topBar};font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-          <tr>
-            <td style="padding:28px 36px 0;">
+            <td style="padding:26px 24px 0;">
               ${emailLetterhead(input.variant)}
               ${emailRule()}
             </td>
           </tr>
           <tr>
-            <td style="padding:28px 36px 32px;">
-              ${greeting}
-              <h1 style="margin:0 0 16px;font-family:${fontDisplay};font-size:26px;line-height:1.25;font-weight:400;color:${palette.deep};">${escapeHtml(input.headline)}</h1>
-              <div style="font-family:${fontSans};font-size:15px;line-height:1.7;color:${palette.ink};">${input.body}</div>
+            <td style="padding:28px 24px 36px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${palette.cream};border-radius:14px;">
+                <tr>
+                  <td style="padding:28px 22px 30px;">
+                    ${heroContent}
+                  </td>
+                </tr>
+              </table>
+              <div style="padding-top:22px;font-family:${fontSans};font-size:15px;line-height:1.7;color:${palette.ink};">${input.body}</div>
               ${footnote}
               ${cta}
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 36px 24px;border-top:1px solid ${palette.line};background:${palette.paper};">
+            <td style="padding:22px 24px 26px;border-top:1px solid ${palette.line};background:${palette.paper};">
               ${input.footer}
             </td>
           </tr>
         </table>
-        <p style="margin:18px 8px 0;font-family:${fontSans};font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${palette.muted};text-align:center;">
+        <p style="margin:18px 8px 0;font-family:${fontSans};font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${palette.muted};text-align:center;">
           ${emailLink(EMAIL_ASSET_ORIGIN, "thevitaminspotltd.com")}
         </p>
       </td>
@@ -354,7 +357,6 @@ export function renderAdminEmail(input: {
     cta: input.cta,
     footer: adminFooter,
     variant: "admin",
-    alertStripe: input.tone === "alert",
   });
 }
 
@@ -364,9 +366,15 @@ export async function sendAdminMail(input: {
   body: string;
   cta?: EmailCta;
   tone?: "default" | "alert";
+  to?: string[];
 }) {
+  const recipients = input.to ?? adminRecipients();
+  if (recipients.length === 0) {
+    return { ok: true as const, provider: "resend" as const, from: primaryFrom() };
+  }
+
   return sendMail({
-    to: adminRecipients(),
+    to: recipients,
     subject: input.subject,
     html: renderAdminEmail({
       headline: input.headline,
@@ -474,7 +482,7 @@ export async function sendOrderUpdate(input: {
     to: input.to,
     subject: `${copy.subject} · ${input.orderNumber}`,
     html: renderCustomerEmail({
-      eyebrow: `Dear ${emailFirstName(input.name)},`,
+      eyebrow: `Hey ${emailFirstName(input.name)},`,
       headline: copy.headline,
       body: `${copy.body}${orderSummaryLine(input.orderNumber, input.total)}`,
       footnote: copy.footnote,
@@ -513,7 +521,7 @@ export async function sendBookingReceived(input: {
     to: input.to,
     subject: `Booking received · ${input.serviceName}`,
     html: renderCustomerEmail({
-      eyebrow: `Dear ${emailFirstName(input.name)},`,
+      eyebrow: `Hey ${emailFirstName(input.name)},`,
       headline: "Booking received",
       body: `${emailParagraph(`Thank you for requesting <strong>${escapeHtml(input.serviceName)}</strong>.`)}${emailDetailsCard([
         { label: "Session", value: escapeHtml(input.serviceName) },
@@ -548,7 +556,7 @@ export async function sendBookingDepositPaid(input: {
     to: input.to,
     subject: `Deposit received · ${input.serviceName}`,
     html: renderCustomerEmail({
-      eyebrow: `Dear ${emailFirstName(input.name)},`,
+      eyebrow: `Hey ${emailFirstName(input.name)},`,
       headline: "Appointment confirmed",
       body: `${emailParagraph(`We have received your booking fee of ${escapeHtml(formatNaira(input.depositAmount))} for <strong>${escapeHtml(input.serviceName)}</strong>. Your appointment is confirmed. Cancellations are not free; the booking fee is non-refundable.`)}${emailDetailsCard([
         { label: "When", value: escapeHtml(when) },
@@ -582,7 +590,7 @@ export async function sendBookingConfirmed(input: {
         }`,
         "neutral",
       )
-      : input.depositDue
+    : input.depositDue
       ? emailCallout(
           `Your booking fee of ${escapeHtml(formatNaira(input.depositDue))} is due to hold this slot. Cancellations are not free; the fee is non-refundable. ${emailLink(input.manageUrl, "Pay online")}.`,
           "accent",
@@ -593,7 +601,7 @@ export async function sendBookingConfirmed(input: {
     to: input.to,
     subject: `Appointment confirmed · ${input.serviceName}`,
     html: renderCustomerEmail({
-      eyebrow: `Dear ${emailFirstName(input.name)},`,
+      eyebrow: `Hey ${emailFirstName(input.name)},`,
       headline: "Appointment confirmed",
       body: `${emailParagraph(`Your <strong>${escapeHtml(input.serviceName)}</strong> appointment is confirmed.`)}${emailDetailsCard([
         { label: "Session", value: escapeHtml(input.serviceName) },
@@ -630,7 +638,7 @@ export async function sendBookingCancelled(input: {
     to: input.to,
     subject: `Appointment cancelled · ${input.serviceName}`,
     html: renderCustomerEmail({
-      eyebrow: `Dear ${emailFirstName(input.name)},`,
+      eyebrow: `Hey ${emailFirstName(input.name)},`,
       headline: "Appointment cancelled",
       body: `${emailParagraph(`Your <strong>${escapeHtml(input.serviceName)}</strong> appointment on ${escapeHtml(when)} has been cancelled.`, { last: true })}${reasonLine}${depositLine}${emailParagraph(`If this was in error, ${emailLink(`${site.url}/book`, "book again")}.`, { last: true })}`,
       cta: { label: "View booking", href: input.manageUrl },

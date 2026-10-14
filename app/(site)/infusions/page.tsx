@@ -19,7 +19,7 @@ export default async function InfusionsPage() {
         <h1 className="font-display text-4xl text-deep md:text-5xl">Book an IV drip</h1>
         <p className="mt-3 text-sm text-deep/65">The Vitamin Spot · Abuja</p>
         <p className="mt-2 text-sm leading-relaxed text-deep/55">
-          Choose a drip, pick a time, and confirm. Most sessions take about an hour.
+          Pick your drip, choose a time, and pay the booking fee online. Most sessions take about an hour.
         </p>
       </div>
       <div className={`${pageNarrow} mt-8`}>

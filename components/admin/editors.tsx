@@ -25,6 +25,11 @@ import {
   adminFormTextarea,
   interactiveControl,
 } from "@/components/ui/form-styles";
+import {
+  estimateServerActionBytes,
+  SERVER_ACTION_SOFT_LIMIT_BYTES,
+  serverActionErrorMessage,
+} from "@/lib/server-action-error";
 
 function naira(kobo: number) {
   return Math.round(kobo / 100);
@@ -71,6 +76,37 @@ type FormCallbacks = {
   onError?: (message: string) => void;
 };
 
+async function runServerAction<T>(
+  work: () => Promise<T>,
+  onError?: (message: string) => void,
+): Promise<T | undefined> {
+  try {
+    return await work();
+  } catch (error) {
+    onError?.(serverActionErrorMessage(error));
+    return undefined;
+  }
+}
+
+function validateProductImagesForSave(
+  images: { url: string; alt: string }[],
+  onError?: (message: string) => void,
+) {
+  if (images.some((image) => image.url.startsWith("data:"))) {
+    onError?.("Wait for pictures to finish uploading before you save.");
+    return false;
+  }
+  return true;
+}
+
+function validateProductPayloadSize(payload: unknown, onError?: (message: string) => void) {
+  if (estimateServerActionBytes(payload) > SERVER_ACTION_SOFT_LIMIT_BYTES) {
+    onError?.("This product is too large to save. Use fewer or smaller pictures.");
+    return false;
+  }
+  return true;
+}
+
 export function AddProductForm({
   library,
   onSuccess,
@@ -93,13 +129,14 @@ export function AddProductForm({
 
   return (
     <form
-      className="grid gap-3 rounded-lg bg-white/60 p-4"
+      className="grid gap-5 rounded-lg bg-white/60 p-1 sm:p-2"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         const form = event.currentTarget;
         start(async () => {
-          const result = await createProduct({
+          if (!validateProductImagesForSave(images, onError)) return;
+          const payload = {
             name: String(data.get("name") ?? ""),
             priceNaira: Number(data.get("price")),
             compareAtPriceNaira: data.get("compareAtPrice") ? Number(data.get("compareAtPrice")) : undefined,
@@ -113,7 +150,10 @@ export function AddProductForm({
             isActive: data.get("active") === "on",
             categorySlug: String(data.get("categorySlug") ?? ""),
             images,
-          });
+          };
+          if (!validateProductPayloadSize(payload, onError)) return;
+          const result = await runServerAction(() => createProduct(payload), onError);
+          if (!result) return;
           if ("ok" in result) {
             form.reset();
             setImages([]);
@@ -267,9 +307,13 @@ function PicturePicker({
               const body = new FormData();
               body.set("file", file);
               onUpload(async () => {
-                const result = await uploadProductImage(body);
-                if ("url" in result && result.url) onAdd(result.url);
-                else onError("error" in result && result.error ? result.error : "Upload failed.");
+                try {
+                  const result = await uploadProductImage(body);
+                  if ("url" in result && result.url) onAdd(result.url);
+                  else onError("error" in result && result.error ? result.error : "Upload failed.");
+                } catch (error) {
+                  onError(serverActionErrorMessage(error, "Upload failed."));
+                }
               });
             }}
           />
@@ -309,12 +353,13 @@ export function ProductEditor({
 
   return (
     <form
-      className="grid gap-3 rounded-lg bg-white/50 p-4"
+      className="grid gap-5 rounded-lg bg-white/50 p-1 sm:p-2"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         start(async () => {
-          const result = await updateProduct({
+          if (!validateProductImagesForSave(images, onError)) return;
+          const payload = {
             id: product.id,
             name: String(data.get("name") ?? ""),
             priceNaira: Number(data.get("price")),
@@ -329,7 +374,10 @@ export function ProductEditor({
             isActive: data.get("active") === "on",
             categorySlug: String(data.get("categorySlug") ?? ""),
             images,
-          });
+          };
+          if (!validateProductPayloadSize(payload, onError)) return;
+          const result = await runServerAction(() => updateProduct(payload), onError);
+          if (!result) return;
           if ("ok" in result) {
             router.refresh();
             onSuccess?.();
@@ -476,7 +524,7 @@ export function AddInfusionForm({
 
   return (
     <form
-      className="grid gap-3 rounded-lg bg-white/60 p-4"
+      className="grid gap-5 rounded-lg bg-white/60 p-1 sm:p-2"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -520,7 +568,7 @@ export function InfusionEditor({
 
   return (
     <form
-      className="grid gap-3 rounded-lg bg-white/50 p-4"
+      className="grid gap-5 rounded-lg bg-white/50 p-1 sm:p-2"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
