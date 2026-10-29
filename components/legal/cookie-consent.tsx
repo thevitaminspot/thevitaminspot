@@ -5,9 +5,8 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { Analytics } from "@vercel/analytics/next";
@@ -25,16 +24,37 @@ type ConsentContextValue = {
 
 const ConsentContext = createContext<ConsentContextValue | null>(null);
 
-export function CookieConsentProvider({ children }: { children: ReactNode }) {
-  const [consent, setConsentState] = useState<ConsentChoice | null>(null);
+const consentListeners = new Set<() => void>();
 
-  useEffect(() => {
-    setConsentState(readConsentFromDocument());
-  }, []);
+function subscribeConsent(onStoreChange: () => void) {
+  consentListeners.add(onStoreChange);
+  return () => {
+    consentListeners.delete(onStoreChange);
+  };
+}
+
+function emitConsentChange() {
+  for (const listener of consentListeners) listener();
+}
+
+function getConsentSnapshot() {
+  return readConsentFromDocument();
+}
+
+function getServerConsentSnapshot(): ConsentChoice | null {
+  return null;
+}
+
+export function CookieConsentProvider({ children }: { children: ReactNode }) {
+  const consent = useSyncExternalStore(
+    subscribeConsent,
+    getConsentSnapshot,
+    getServerConsentSnapshot,
+  );
 
   const setConsent = useCallback((choice: ConsentChoice) => {
     writeConsentCookie(choice);
-    setConsentState(choice);
+    emitConsentChange();
   }, []);
 
   const value = useMemo(() => ({ consent, setConsent }), [consent, setConsent]);
