@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrderStatus } from "@/actions/admin";
+import { OrderStatusSelect } from "@/components/admin/order-status-select";
 import { adminButtonPrimary, interactiveControl } from "@/components/ui/form-styles";
 import {
   fulfillmentLabel,
@@ -75,16 +76,19 @@ export function OrderActions({
           : null}
       </p>
 
-      {next ? (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => apply(next.status)}
-          className={adminButtonPrimary}
-        >
-          {pending ? "Saving…" : next.label}
-        </button>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-3">
+        {next ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => apply(next.status)}
+            className={adminButtonPrimary}
+          >
+            {pending ? "Saving…" : next.label}
+          </button>
+        ) : null}
+        <OrderStatusSelect id={id} status={status} fulfillment={fulfillment} />
+      </div>
 
       {!done ? (
         <button

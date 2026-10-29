@@ -12,6 +12,6 @@ export async function requireAdmin(): Promise<SessionProfile> {
   const profile = await getSessionProfile();
   if (!profile) redirect("/login");
   const admin = await getAdminProfile();
-  if (!admin) redirect("/account");
+  if (!admin) redirect("/account/orders");
   return admin;
 }

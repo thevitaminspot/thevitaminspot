@@ -1,3 +1,4 @@
+import { majorAbujaAreas } from "@/lib/abuja-areas";
 import { nairaToKobo } from "@/lib/money";
 
 /** Max product photos in admin and on the storefront gallery. */
@@ -44,13 +45,6 @@ export type CatalogInfusion = {
   isActive?: boolean;
   appointmentCount?: number;
   image: string;
-};
-
-export type CatalogTestimonial = {
-  id: string;
-  name: string;
-  role: string;
-  quote: string;
 };
 
 export type CatalogZone = {
@@ -162,7 +156,7 @@ export const products: CatalogProduct[] = [
     slug: "collagen-atelier",
     tagline: "Collagen vials for the month.",
     description:
-      "Small-molecule collagen with vitamin C and hyaluronic acid. Stir one vial into cool water each morning.",
+      "Small-molecule collagen with vitamin C and hyaluronic acid — a full case for a month of mornings.",
     benefits: [
       "Small-molecule collagen for daily use",
       "Simple routine for home or travel",
@@ -342,60 +336,13 @@ export const infusions: CatalogInfusion[] = [
   },
 ];
 
-export const testimonials: CatalogTestimonial[] = [
-  {
-    id: "t1",
-    name: "Amaka O.",
-    role: "Maitama",
-    quote:
-      "It does not feel like a clinic. It feels like someone finally understood how Abuja women want to be looked after.",
-  },
-  {
-    id: "t2",
-    name: "Halima B.",
-    role: "Asokoro",
-    quote:
-      "I book the Glow Drip before every wedding season. The room is quiet. The hour is mine.",
-  },
-  {
-    id: "t3",
-    name: "Chioma E.",
-    role: "Wuse II",
-    quote:
-      "The cranberry ritual sits on my dressing table like a bottle of perfume. That is the standard.",
-  },
-  {
-    id: "t4",
-    name: "Zainab A.",
-    role: "Jabi",
-    quote:
-      "After a London flight I go straight to Recovery. By evening I am present again.",
-  },
-];
-
-export const deliveryZones: CatalogZone[] = [
-  {
-    id: "zone-central",
-    name: "Abuja Central",
-    slug: "abuja-central",
-    fee: nairaToKobo(2500),
-    eta: "Same day, Maitama to Garki",
-  },
-  {
-    id: "zone-extended",
-    name: "Abuja Extended",
-    slug: "abuja-extended",
-    fee: nairaToKobo(4000),
-    eta: "Next day, Gwarinpa to Kubwa",
-  },
-  {
-    id: "zone-nationwide",
-    name: "Nationwide",
-    slug: "nationwide",
-    fee: nairaToKobo(8500),
-    eta: "Two to five working days",
-  },
-];
+export const deliveryZones: CatalogZone[] = majorAbujaAreas.map((area) => ({
+  id: `zone-${area.slug}`,
+  name: area.name,
+  slug: area.slug,
+  fee: nairaToKobo(area.price),
+  eta: "Abuja delivery",
+}));
 
 export const gallery = [
   {

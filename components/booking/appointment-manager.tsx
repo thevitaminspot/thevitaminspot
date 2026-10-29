@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cancelAppointment, fetchSlots, updateAppointment } from "@/actions/booking";
@@ -274,7 +275,14 @@ export function AppointmentManager({
               />
               <span>
                 I understand this will cancel my session, release my time slot, and send me a
-                confirmation email. {BOOKING_CANCEL_FEE_ACK}
+                confirmation email. {BOOKING_CANCEL_FEE_ACK}{" "}
+                <Link
+                  href="/refunds#booking"
+                  className="text-deep underline decoration-deep/25 underline-offset-2"
+                >
+                  Read the policy
+                </Link>
+                .
               </span>
             </label>
 

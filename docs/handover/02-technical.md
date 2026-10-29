@@ -40,15 +40,14 @@ public/brand/      Logo and mark assets
 
 Core entities:
 
-- **Product** / **ProductCategory** / **ProductImage** — shop catalogue, stock integer (kobo not used; amounts are **integer Naira** throughout).
+- **Product** / **ProductCategory** / **ProductImage** — shop catalogue; money fields are **integer kobo** in the DB (admin UI edits whole Naira).
 - **DeliveryZone** — slug, fee, ETA text.
 - **Order** / **OrderItem** — `accessToken` for public order page; statuses `PENDING` → `PAID` → `PACKED` → `OUT_FOR_DELIVERY` / pickup path → `DELIVERED` or `CANCELLED`.
 - **Payment** — one per order or appointment deposit; `paystackReference` unique.
 - **InfusionService** — drip definition, price, deposit.
 - **Appointment** — slot, `accessToken`, links to service and optional payment.
-- **AvailabilityRule** / **BlockedDate** — booking slots (Africa/Lagos-oriented helpers in `lib/datetime.ts`, `lib/availability.ts`).
+- **AvailabilityRule** / **BlockedDate** — booking slots (Africa/Lagos-oriented helpers in `lib/datetime.ts`, `lib/availability.ts`); editable in `/admin/availability`.
 - **ContactMessage** — contact form submissions.
-- **Testimonial** — optional homepage content.
 
 Client generated to `lib/generated/prisma` on `prisma generate` (runs in `postinstall` and `npm run build`).
 
@@ -61,10 +60,13 @@ Client generated to `lib/generated/prisma` on `prisma generate` (runs in `postin
 First-time DB setup:
 
 ```bash
-npx prisma db push
+npx prisma migrate deploy
+# or, for local iteration only: npx prisma migrate dev
 ```
 
 Then in `/admin`, use **Load starter catalogue** (`seedCatalogue` in `actions/admin.ts`) to copy starter products, infusions, zones, and availability into Neon.
+
+Prefer **migrations** (`prisma/migrations`) over ad-hoc `db push` on shared/production databases.
 
 ## Caching
 

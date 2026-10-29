@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { CheckoutForm } from "@/components/shop/checkout-form";
-import { listZones } from "@/lib/data";
+import { listCheckoutZones } from "@/lib/sync-zones";
 import { pageShell, pageWide } from "@/components/ui/layout-styles";
 
 export const metadata = {
@@ -32,13 +32,16 @@ async function PaystackReturnRedirect({
   redirect(`/orders/${orderToken}${qs ? `?${qs}` : ""}`);
 }
 
-export default async function CheckoutPage({
+async function CheckoutBody() {
+  const zones = await listCheckoutZones();
+  return <CheckoutForm zones={zones} />;
+}
+
+export default function CheckoutPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const zones = await listZones();
-
   return (
     <main className={pageShell}>
       <Suspense fallback={null}>
@@ -64,7 +67,7 @@ export default async function CheckoutPage({
               <div className="py-20 text-center text-sm text-deep/50">Loading checkout…</div>
             }
           >
-            <CheckoutForm zones={zones} />
+            <CheckoutBody />
           </Suspense>
         </div>
       </div>

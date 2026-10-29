@@ -6,8 +6,8 @@ import { useEffect, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, ShoppingBag, X } from "lucide-react";
 import { AccountButton } from "@/components/layout/account-button";
+import { BrandWordmark } from "@/components/brand/wordmark";
 import { brand } from "@/lib/brand";
-import { site } from "@/lib/site";
 import { useCartStore } from "@/stores/cart-store";
 import { useUiStore } from "@/stores/ui-store";
 
@@ -72,7 +72,7 @@ function MobileNav({
               className="size-9 object-contain"
               aria-hidden
             />
-            <span className="font-display text-lg text-deep">{site.name}</span>
+            <BrandWordmark className="text-xl leading-none text-deep" />
           </div>
           <button
             type="button"
@@ -85,14 +85,6 @@ function MobileNav({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5">
-          <Link
-            href="/infusions"
-            onClick={onClose}
-            className="mb-5 flex items-center justify-center rounded-xl bg-deep py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a]"
-          >
-            Book an IV drip
-          </Link>
-
           <ul className="space-y-1">
             {links.map((link) => {
               const current = isCurrent(link.href, pathname);
@@ -120,10 +112,7 @@ function MobileNav({
         </div>
 
         <div className="border-t border-deep/10 px-5 py-4">
-          <AccountButton
-            className="flex w-full items-center justify-center rounded-xl border border-deep/15 py-3 text-sm font-medium tracking-wide text-deep transition hover:bg-deep/5"
-            onNavigate={onClose}
-          />
+          <AccountButton className="text-deep" onNavigate={onClose} />
         </div>
       </nav>
     </div>
@@ -161,9 +150,7 @@ export function Header() {
               className="size-10 shrink-0 object-contain md:size-11"
               aria-hidden
             />
-            <span className="font-display truncate text-lg tracking-[0.03em] sm:text-xl">
-              {site.name}
-            </span>
+            <BrandWordmark className="truncate text-[1.35rem] leading-none sm:text-[1.65rem]" />
           </Link>
 
           <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
@@ -187,13 +174,7 @@ export function Header() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-            <AccountButton className="hidden text-[11px] tracking-[0.2em] text-deep/60 uppercase md:inline" />
-            <Link
-              href="/infusions"
-              className="hidden rounded-xl border border-deep/15 px-4 py-2 text-[11px] font-medium tracking-[0.16em] text-deep uppercase transition hover:bg-deep/5 md:inline-flex"
-            >
-              Book
-            </Link>
+            <AccountButton className="text-deep" />
             <button
               type="button"
               onClick={() => {

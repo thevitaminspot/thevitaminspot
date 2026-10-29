@@ -3,5 +3,4 @@ export const CACHE_TAGS = {
   infusions: "infusions",
   categories: "categories",
   zones: "zones",
-  testimonials: "testimonials",
 } as const;

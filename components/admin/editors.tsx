@@ -39,17 +39,9 @@ const field = adminFormControl;
 const area = adminFormTextarea;
 
 function CategoryField({ value }: { value?: string }) {
+  // Categories are no longer shown in the shop; keep a stable default for the DB row.
   return (
-    <label className="text-sm text-deep">
-      Category
-      <select name="categorySlug" defaultValue={value ?? categories[0]?.slug} className={`${adminFormSelect} mt-1`}>
-        {categories.map((category) => (
-          <option key={category.slug} value={category.slug}>
-            {category.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <input type="hidden" name="categorySlug" value={value ?? categories[0]?.slug ?? "daily-rituals"} />
   );
 }
 

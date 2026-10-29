@@ -11,23 +11,23 @@ import {
   verifyAndSettleExistingReference,
 } from "@/lib/payments";
 import { initializePaystack } from "@/lib/paystack";
-import { orderPaystackReturnUrl } from "@/lib/paystack-return";
-import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { orderPaystackReturnUrl, orderReturnPath, withPaymentCancelled } from "@/lib/paystack-return";
+import { limitByIpAndEmail, rateLimitMessage } from "@/lib/rate-limit";
 import { createOrderNumber, createToken } from "@/lib/tokens";
 
 export async function createCheckout(
   items: { productId: string; quantity: number; unitPrice?: number }[],
   input: unknown,
 ) {
-  const requestHeaders = await headers();
-  const ip = getClientIp(requestHeaders);
-  if (!rateLimit(`checkout:${ip}`).ok) {
-    return { error: "Please wait a moment before checking out again." };
-  }
-
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) return { error: "Please complete the delivery details." };
   if (items.length === 0) return { error: "Your bag is empty." };
+
+  const requestHeaders = await headers();
+  const limited = limitByIpAndEmail(requestHeaders, "checkout", parsed.data.email, "checkout");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
 
   const prisma = await tryPrisma();
   if (!prisma) {
@@ -77,11 +77,10 @@ export async function createCheckout(
     if (!parsed.data.zoneSlug) return { error: "Choose a delivery zone." };
     if (!parsed.data.addressLine1) return { error: "Add a delivery address." };
     const existing = await prisma.deliveryZone.findUnique({ where: { slug: parsed.data.zoneSlug } });
-    const zoneCount = await prisma.deliveryZone.count();
     const catalogZone = deliveryZones.find((entry) => entry.slug === parsed.data.zoneSlug);
     const zone =
       existing ??
-      (zoneCount === 0 && catalogZone
+      (catalogZone
         ? await prisma.deliveryZone.create({
             data: {
               name: catalogZone.name,
@@ -132,7 +131,13 @@ export async function createCheckout(
   const checkoutReturnUrl = orderPaystackReturnUrl(accessToken);
 
   if (!hasPaystack()) {
-    return { token: accessToken };
+    return { token: accessToken, returnPath: orderReturnPath(accessToken) };
+  }
+
+  const payLimit = limitByIpAndEmail(requestHeaders, "paystack", parsed.data.email, "paystackInit");
+  if (!payLimit.ok) {
+    await prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
+    return { error: rateLimitMessage(payLimit.retryAfterSec) };
   }
 
   const reference = nextPaystackReference("ord", order.id);
@@ -143,6 +148,7 @@ export async function createCheckout(
       amount: order.total,
       reference,
       callbackUrl: checkoutReturnUrl,
+      cancelUrl: withPaymentCancelled(checkoutReturnUrl),
       metadata: { purpose: "ORDER", orderId: order.id },
     });
 
@@ -156,7 +162,13 @@ export async function createCheckout(
       },
     });
 
-    return { token: accessToken, checkoutUrl: payment.authorization_url };
+    return {
+      token: accessToken,
+      accessCode: payment.access_code,
+      authorizationUrl: payment.authorization_url,
+      reference,
+      returnPath: orderReturnPath(accessToken),
+    };
   } catch (error) {
     await prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
     return {
@@ -167,6 +179,12 @@ export async function createCheckout(
 
 export async function completeCheckoutReturn(token: string, reference: string) {
   if (!token || !reference) return { error: "Missing payment details." as const };
+
+  const requestHeaders = await headers();
+  const limited = limitByIpAndEmail(requestHeaders, "pay-confirm", undefined, "paymentConfirm");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
 
   const verified = await confirmPaystackReturn(reference, { orderToken: token });
   if (verified.outcome === "error") {
@@ -207,6 +225,12 @@ export async function resumeOrderPayment(token: string) {
     include: { payment: true },
   });
   if (!order) return { error: "Order not found." as const };
+
+  const requestHeaders = await headers();
+  const limited = limitByIpAndEmail(requestHeaders, "paystack", order.email, "paystackInit");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
   if (order.status === "CANCELLED") {
     return { error: "This order was cancelled." as const };
   }
@@ -230,6 +254,7 @@ export async function resumeOrderPayment(token: string) {
       amount: order.total,
       reference,
       callbackUrl: checkoutReturnUrl,
+      cancelUrl: withPaymentCancelled(checkoutReturnUrl),
       metadata: { purpose: "ORDER", orderId: order.id },
     });
 
@@ -254,7 +279,13 @@ export async function resumeOrderPayment(token: string) {
       });
     }
 
-    return { checkoutUrl: payment.authorization_url };
+    return {
+      token,
+      accessCode: payment.access_code,
+      authorizationUrl: payment.authorization_url,
+      reference,
+      returnPath: orderReturnPath(token),
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Could not open Paystack.",

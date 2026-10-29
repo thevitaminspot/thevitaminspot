@@ -3,7 +3,6 @@ import {
   deliveryZones,
   infusions,
   products,
-  testimonials,
 } from "./catalog";
 import type { PrismaClient } from "./generated/prisma/client";
 
@@ -66,13 +65,6 @@ export async function seedCatalog(prisma: PrismaClient) {
         isActive: infusion.isActive ?? true,
       },
     });
-    created += 1;
-  }
-
-  for (const testimonial of testimonials) {
-    const existing = await prisma.testimonial.findUnique({ where: { id: testimonial.id } });
-    if (existing) continue;
-    await prisma.testimonial.create({ data: testimonial });
     created += 1;
   }
 

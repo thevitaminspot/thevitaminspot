@@ -8,25 +8,33 @@ export type AdminOrderStatus =
 
 export type AdminFulfillment = "DELIVERY" | "PICKUP";
 
-export type OrderQueue = "open" | "fulfilled" | "cancelled" | "all";
+export type OrderQueue =
+  | "all"
+  | "confirmed"
+  | "packed"
+  | "sent"
+  | "delivered"
+  | "cancelled";
 
 export function isOpenOrder(status: string) {
   return status === "PAID" || status === "PACKED" || status === "OUT_FOR_DELIVERY";
 }
 
 export function orderQueue(status: string): Exclude<OrderQueue, "all"> {
-  if (status === "DELIVERED") return "fulfilled";
+  if (status === "DELIVERED") return "delivered";
   if (status === "CANCELLED") return "cancelled";
-  return "open";
+  if (status === "PACKED") return "packed";
+  if (status === "OUT_FOR_DELIVERY") return "sent";
+  return "confirmed";
 }
 
 export function fulfillmentLabel(status: string, fulfillment: AdminFulfillment) {
   if (status === "CANCELLED") return "Cancelled";
   if (status === "DELIVERED") return fulfillment === "PICKUP" ? "Picked up" : "Delivered";
-  if (status === "OUT_FOR_DELIVERY") return "Out for delivery";
+  if (status === "OUT_FOR_DELIVERY") return "On the way";
   if (status === "PACKED") return fulfillment === "PICKUP" ? "Ready for pickup" : "Packed";
-  if (status === "PAID") return "Unfulfilled";
-  return "Unpaid";
+  if (status === "PAID") return "Confirmed";
+  return "Awaiting payment";
 }
 
 export function nextOrderStep(
@@ -35,13 +43,13 @@ export function nextOrderStep(
 ): { status: AdminOrderStatus; label: string } | null {
   if (status === "PAID") {
     return fulfillment === "PICKUP"
-      ? { status: "PACKED", label: "Ready for pickup" }
+      ? { status: "PACKED", label: "Mark ready for pickup" }
       : { status: "PACKED", label: "Mark packed" };
   }
   if (status === "PACKED") {
     return fulfillment === "PICKUP"
       ? { status: "DELIVERED", label: "Mark picked up" }
-      : { status: "OUT_FOR_DELIVERY", label: "Out for delivery" };
+      : { status: "OUT_FOR_DELIVERY", label: "Mark on the way" };
   }
   if (status === "OUT_FOR_DELIVERY") {
     return { status: "DELIVERED", label: "Mark delivered" };
@@ -54,8 +62,11 @@ export function canTransitionOrder(
   to: AdminOrderStatus,
   fulfillment: AdminFulfillment,
 ) {
-  if (to === "CANCELLED") return from !== "DELIVERED" && from !== "CANCELLED";
-  return nextOrderStep(from, fulfillment)?.status === to;
+  if (from === to) return false;
+  if (from === "PENDING" || to === "PENDING" || from === "CANCELLED") return false;
+  if (to === "CANCELLED") return from !== "DELIVERED";
+  const steps = orderSteps(fulfillment);
+  return steps.includes(from) && steps.includes(to);
 }
 
 export const orderSteps = (fulfillment: AdminFulfillment): AdminOrderStatus[] =>

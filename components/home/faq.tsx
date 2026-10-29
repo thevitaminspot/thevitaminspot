@@ -41,8 +41,11 @@ export function Faq() {
     <section className="px-5 py-20 md:px-8 md:py-28">
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,18rem)_1fr] lg:gap-20">
         <Reveal>
-          <h2 className="font-display text-4xl leading-tight text-deep md:text-5xl">Good to know.</h2>
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-deep/70">
+          <p className="text-[11px] tracking-[0.22em] text-deep/45 uppercase">Questions</p>
+          <h2 className="font-display mt-3 text-4xl leading-tight text-deep md:text-5xl">
+            Good to know.
+          </h2>
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-deep/65">
             Delivery, drips, and paying. Ask us if yours isn’t here.
           </p>
         </Reveal>

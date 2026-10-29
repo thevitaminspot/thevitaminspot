@@ -4,11 +4,8 @@ import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { CartDrawerLoader } from "@/components/shop/cart-drawer-loader";
-import { getFeaturedFooterPacks } from "@/lib/data";
 
-export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const packs = await getFeaturedFooterPacks();
-
+export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <CookieConsentProvider>
       <Suspense fallback={null}>
@@ -27,7 +24,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         <Header />
       </Suspense>
       <div className="page-enter">{children}</div>
-      <Footer packs={packs} />
+      <Footer />
       <CartDrawerLoader />
     </CookieConsentProvider>
   );

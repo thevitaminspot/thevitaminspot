@@ -1,10 +1,37 @@
 import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
+import { Suspense } from "react";
+import { ClerkAuthMount } from "@/components/clerk-auth-mount";
 import { siteClerkAppearance } from "@/lib/clerk-appearance";
 import { hasClerk } from "@/lib/env";
 import { pageAuth, pageShell, pageX, pageY } from "@/components/ui/layout-styles";
 
 export const metadata = { title: "Create account" };
+export const instant = false;
+export const prefetch = "force-disabled";
+
+function SignUpFallback() {
+  return (
+    <div
+      className="h-80 w-full max-w-sm animate-pulse rounded-2xl border border-deep/10 bg-white/70"
+      aria-hidden
+    />
+  );
+}
+
+function SignUpPanel() {
+  return (
+    <ClerkAuthMount fallback={<SignUpFallback />}>
+      <SignUp
+        routing="path"
+        path="/sign-up"
+        forceRedirectUrl="/account/orders"
+        fallbackRedirectUrl="/account/orders"
+        appearance={siteClerkAppearance}
+      />
+    </ClerkAuthMount>
+  );
+}
 
 export default function SignUpPage() {
   if (!hasClerk()) {
@@ -27,11 +54,9 @@ export default function SignUpPage() {
         </div>
 
         <div className="flex justify-center">
-          <SignUp
-            routing="hash"
-            forceRedirectUrl="/account"
-            appearance={siteClerkAppearance}
-          />
+          <Suspense fallback={<SignUpFallback />}>
+            <SignUpPanel />
+          </Suspense>
         </div>
 
         <div className="rounded-2xl border border-deep/10 bg-white p-4 text-center text-xs text-deep/70">

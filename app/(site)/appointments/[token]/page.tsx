@@ -41,6 +41,7 @@ export default async function AppointmentPage({
   const { token } = await params;
   const query = await searchParams;
   const reference = typeof query.reference === "string" ? query.reference : query.trxref;
+  const paymentCancelled = query.payment === "cancelled";
   const paystackReturn = await confirmPaystackReturn(
     typeof reference === "string" ? reference : undefined,
     { appointmentToken: token },
@@ -97,12 +98,12 @@ export default async function AppointmentPage({
   const needsDeposit =
     Boolean("showPayDeposit" in appointment && appointment.showPayDeposit);
   const confirmingDeposit =
-    needsDeposit && !paidDeposit && paystackReturn.outcome === "pending";
+    needsDeposit && !paidDeposit && !paymentCancelled && paystackReturn.outcome === "pending";
   const paymentNotCompleted =
     needsDeposit &&
     !paidDeposit &&
-    typeof reference === "string" &&
-    paystackReturn.outcome === "failed";
+    (paymentCancelled ||
+      (typeof reference === "string" && paystackReturn.outcome === "failed"));
   const clearPaystackQuery =
     typeof reference === "string" && paystackReturn.outcome !== "pending";
 
@@ -131,12 +132,14 @@ export default async function AppointmentPage({
       </p>
       {confirmingDeposit ? (
         <p className={`${surfaceMuted} mt-4 px-4 py-3 text-sm text-deep/70`}>
-          Checking Paystack… this page will update on its own.
+          Checking your payment… this page will update on its own.
         </p>
       ) : null}
       {paymentNotCompleted ? (
         <p className={`${surfaceMuted} mt-4 px-4 py-3 text-sm text-deep/70`}>
-          Payment was not completed. Your slot is not held until you pay the booking fee below.
+          {paymentCancelled
+            ? "Payment was cancelled. Pay the booking fee below to hold this time."
+            : "Payment was not completed. Pay the booking fee below to hold this time."}
         </p>
       ) : null}
       <p className="mt-6 leading-8 text-deep">
@@ -149,7 +152,11 @@ export default async function AppointmentPage({
         </span>
       </p>
       {appointment.status !== "CANCELLED" && needsDeposit ? (
-        <PayDepositButton token={token} deposit={appointment.deposit ?? 0} />
+        <PayDepositButton
+          token={token}
+          deposit={appointment.deposit ?? 0}
+          disabled={confirmingDeposit}
+        />
       ) : null}
       {appointment.status !== "CANCELLED" ? (
         <a

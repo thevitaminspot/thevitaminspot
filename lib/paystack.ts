@@ -9,6 +9,7 @@ type InitializeInput = {
   amount: number;
   reference: string;
   callbackUrl: string;
+  cancelUrl?: string;
   metadata?: Record<string, unknown>;
 };
 
@@ -25,7 +26,10 @@ export async function initializePaystack(input: InitializeInput) {
       reference: input.reference,
       callback_url: input.callbackUrl,
       currency: "NGN",
-      metadata: input.metadata,
+      metadata: {
+        ...input.metadata,
+        ...(input.cancelUrl ? { cancel_action: input.cancelUrl } : {}),
+      },
     }),
   });
 

@@ -1,65 +1,47 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { resumeAppointmentDeposit } from "@/actions/booking";
 import { nairaLabel } from "@/lib/money";
 import { formSubmitInline } from "@/components/ui/form-styles";
 import { PaystackHandoff } from "@/components/ui/paystack-handoff";
+import { PaystackButtonContent, usePaystackCheckout } from "@/components/ui/use-paystack-checkout";
 
 export function PayDepositButton({
   token,
   deposit,
+  disabled = false,
 }: {
   token: string;
   deposit: number;
+  disabled?: boolean;
 }) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
-  const clearPending = useCallback(() => setPending(false), []);
-
-  useEffect(() => {
-    const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) clearPending();
-    };
-    window.addEventListener("pageshow", handlePageShow);
-    return () => window.removeEventListener("pageshow", handlePageShow);
-  }, [clearPending]);
+  const paystack = usePaystackCheckout();
 
   if (deposit <= 0) return null;
 
   return (
     <div className="mt-6">
-      <PaystackHandoff open={pending} title="Opening Paystack" />
+      <PaystackHandoff
+        open={paystack.overlay !== null}
+        title={paystack.overlay?.title}
+        detail={paystack.overlay?.detail}
+      />
       <button
         type="button"
-        disabled={pending}
-        onClick={async () => {
-          if (pending) return;
-          setPending(true);
-          setError("");
-          try {
-            const result = await resumeAppointmentDeposit(token);
-            if ("error" in result && result.error) {
-              setError(result.error);
-              setPending(false);
-              return;
-            }
-            if ("checkoutUrl" in result && result.checkoutUrl) {
-              window.location.replace(result.checkoutUrl);
-              return;
-            }
-            setError("Could not open Paystack. Please try again.");
-            setPending(false);
-          } catch {
-            setError("Something went wrong. Please try again.");
-            setPending(false);
-          }
+        disabled={paystack.busy || disabled}
+        aria-busy={paystack.busy || disabled}
+        onClick={() => {
+          if (disabled) return;
+          void paystack.start(() => resumeAppointmentDeposit(token), { cancel: "stay" });
         }}
         className={`${formSubmitInline} w-full sm:w-auto`}
       >
-        {pending ? "Opening Paystack…" : `Pay booking fee (${nairaLabel(deposit)})`}
+        <PaystackButtonContent
+          phase={paystack.phase}
+          idle={`Pay booking fee (${nairaLabel(deposit)})`}
+        />
       </button>
-      {error ? <p className="mt-2 text-sm text-deep">{error}</p> : null}
+      {paystack.error ? <p className="mt-2 text-sm text-deep">{paystack.error}</p> : null}
     </div>
   );
 }

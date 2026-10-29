@@ -236,7 +236,7 @@ export function AdminMessageCard({
   children: ReactNode;
 }) {
   return (
-    <article className="rounded-2xl border border-deep/10 bg-white px-5 py-4 transition hover:border-deep/15">
+    <article>
       <p className="text-[11px] tracking-[0.08em] text-deep/45">{meta}</p>
       <div className="mt-3 text-sm leading-7 text-deep/80">{children}</div>
     </article>

@@ -1,7 +1,7 @@
 import { Faq } from "@/components/home/faq";
 import { ProductStories, WalkIn } from "@/components/home/home-sections";
 import { Hero } from "@/components/home/hero";
-import { listProducts } from "@/lib/data";
+import { listFeaturedProducts } from "@/lib/data";
 import { site } from "@/lib/site";
 
 export const metadata = {
@@ -16,7 +16,7 @@ function nairaLabel(kobo: number) {
 }
 
 export default async function HomePage() {
-  const featured = (await listProducts()).filter((product) => product.featured);
+  const featured = await listFeaturedProducts();
 
   return (
     <main>

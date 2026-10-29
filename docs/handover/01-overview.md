@@ -24,6 +24,9 @@ Staff use **`/admin`** (Clerk-protected) to manage products, infusions, delivery
 | `/account` | Signed-in order and booking history |
 | `/contact` | Contact form |
 | `/privacy` | Privacy and cookies |
+| `/terms` | Terms of use |
+| `/shipping` | Shipping and pickup |
+| `/refunds` | Returns, refunds, booking fee |
 | `/login`, `/sign-up` | Clerk auth |
 
 ## Admin routes

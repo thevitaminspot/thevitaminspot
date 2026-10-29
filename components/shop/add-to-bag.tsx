@@ -2,7 +2,7 @@
 
 import type { CatalogProduct } from "@/lib/catalog";
 import { useCartStore } from "@/stores/cart-store";
-import { formSubmitInline } from "@/components/ui/form-styles";
+import { formSubmit } from "@/components/ui/form-styles";
 
 export function AddToBag({ product }: { product: CatalogProduct }) {
   const add = useCartStore((state) => state.add);
@@ -17,10 +17,10 @@ export function AddToBag({ product }: { product: CatalogProduct }) {
           slug: product.slug,
           name: product.name,
           price: product.price,
-          image: product.images[0].url,
+          image: product.images[0]?.url ?? "",
         })
       }
-      className={`mt-8 ${formSubmitInline}`}
+      className={formSubmit}
     >
       {product.stock < 1 ? "Sold through" : "Add to bag"}
     </button>

@@ -1,110 +1,140 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+import { BrandWordmark } from "@/components/brand/wordmark";
+import { FooterTrackOrder } from "@/components/layout/footer-track-order";
 import { brand } from "@/lib/brand";
 import { site, whatsappHref } from "@/lib/site";
 
-const links = [
+const explore = [
   { href: "/shop", label: "Shop" },
   { href: "/infusions", label: "Infusions" },
+  { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
-];
+] as const;
 
-export function Footer({ packs }: { packs: { href: string; label: string }[] }) {
+const policies = [
+  { href: "/terms", label: "Terms" },
+  { href: "/shipping", label: "Shipping & pickup" },
+  { href: "/refunds", label: "Returns & refunds" },
+  { href: "/privacy", label: "Privacy & cookies" },
+] as const;
+
+const linkClass = "text-cream/80 transition hover:text-tint";
+const headingClass = "text-[11px] tracking-[0.16em] text-sage uppercase";
+
+export function Footer() {
   return (
     <footer className="bg-deep text-cream">
-      <div className="mx-auto max-w-6xl px-5 py-12 md:px-8 md:py-16">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
-          <div>
+      <div className="mx-auto max-w-6xl px-5 pt-14 pb-10 md:px-8 md:pt-16 md:pb-12">
+        <div className="flex flex-col gap-8 border-b border-cream/12 pb-12 md:flex-row md:items-end md:justify-between md:gap-12">
+          <div className="max-w-md">
             <div className="flex items-center gap-3">
               <Image
                 src={brand.mark.src}
                 alt=""
-                width={48}
-                height={48}
-                sizes="48px"
-                className="size-12 shrink-0 object-contain"
+                width={44}
+                height={44}
+                sizes="44px"
+                className="size-11 shrink-0 object-contain"
                 aria-hidden
               />
-              <p className="font-display text-3xl leading-none">{site.name}</p>
+              <BrandWordmark className="text-[1.85rem] leading-none text-cream sm:text-[2.15rem]" />
             </div>
-            <p className="mt-5 max-w-sm text-sm leading-7 text-cream/70">{site.tagline}</p>
-            <p className="mt-4 text-sm leading-relaxed text-cream/50">{site.address.label}</p>
+            <p className="mt-5 text-sm leading-7 text-cream/65">{site.tagline}</p>
+            <p className="mt-3 text-sm leading-relaxed text-cream/45">{site.address.label}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <p className="text-[11px] tracking-[0.13em] text-sage uppercase">Visit</p>
-              <ul className="mt-5 space-y-3 text-sm">
-                {links.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} className="text-cream/85 hover:text-tint">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="text-[11px] tracking-[0.13em] text-sage uppercase">Packs</p>
-              <ul className="mt-5 space-y-3 text-sm">
-                {packs.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} className="text-cream/85 hover:text-tint">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <Link
+            href="/shop"
+            className="inline-flex w-fit items-center justify-center rounded-xl border border-cream/25 px-5 py-3 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:border-cream/50 hover:bg-cream/5"
+          >
+            Shop packs
+          </Link>
+        </div>
+
+        <div className="mt-12 grid gap-10 sm:grid-cols-3">
+          <div>
+            <p className={headingClass}>Explore</p>
+            <ul className="mt-5 space-y-3 text-sm">
+              {explore.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+              <Suspense fallback={null}>
+                <FooterTrackOrder />
+              </Suspense>
+            </ul>
           </div>
 
-          <div className="md:col-start-2 md:row-start-1 lg:col-start-auto lg:row-start-auto">
-            <p className="text-[11px] tracking-[0.13em] text-sage uppercase">Contact</p>
+          <div>
+            <p className={headingClass}>Contact</p>
             <ul className="mt-5 space-y-3 text-sm">
               <li>
-                <a href={`tel:${site.phoneHref}`} className="hover:text-tint">
+                <a href={`tel:${site.phoneHref}`} className={linkClass}>
                   {site.phone}
                 </a>
               </li>
               <li>
-                <a href={`mailto:${site.email}`} className="break-all hover:text-tint">
+                <a href={`mailto:${site.email}`} className={`break-all ${linkClass}`}>
                   {site.email}
                 </a>
               </li>
               <li>
-                <a href={whatsappHref()} className="hover:text-tint">
+                <a href={whatsappHref()} className={linkClass}>
                   WhatsApp NG
                 </a>
               </li>
               <li>
-                <a href={whatsappHref("Hello The Vitamin Spot", site.whatsappUs)} className="hover:text-tint">
-                  WhatsApp US · +1 312 998-0147
+                <a
+                  href={whatsappHref("Hello The Vitamin Spot", site.whatsappUs)}
+                  className={linkClass}
+                >
+                  WhatsApp US
                 </a>
               </li>
               <li>
-                <a href={site.instagram} className="hover:text-tint">
+                <a
+                  href={site.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={linkClass}
+                >
                   {site.instagramHandle}
                 </a>
               </li>
             </ul>
           </div>
-        </div>
 
-        <div className="mt-14 flex flex-col gap-3 border-t border-cream/15 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-cream/45">© 2026 The Vitamin Spot. All rights reserved.</p>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-            <Link href="/privacy" className="text-cream/55 hover:text-tint">
-              Privacy & cookies
-            </Link>
-            <a
-              href={site.developer.url}
-              className="text-cream/55 hover:text-tint"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Developed by {site.developer.name}
-            </a>
+          <div>
+            <p className={headingClass}>Policies</p>
+            <ul className="mt-5 space-y-3 text-sm">
+              {policies.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className={linkClass}>
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
+        </div>
+      </div>
+
+      <div className="border-t border-cream/10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-cream/40 sm:flex-row sm:items-center sm:justify-between md:px-8">
+          <p>© 2026 {site.name}. All rights reserved.</p>
+          <a
+            href={site.developer.url}
+            className="transition hover:text-cream/70"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Developed by {site.developer.name}
+          </a>
         </div>
       </div>
     </footer>

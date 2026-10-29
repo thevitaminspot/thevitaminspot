@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { clearSavedCheckout } from "@/lib/checkout-session";
 import { useCartStore } from "@/stores/cart-store";
 
 export function ClearCartOnPaid() {
@@ -8,6 +9,7 @@ export function ClearCartOnPaid() {
 
   useEffect(() => {
     clear();
+    clearSavedCheckout();
   }, [clear]);
 
   return null;

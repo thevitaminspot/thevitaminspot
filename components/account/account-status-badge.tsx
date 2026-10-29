@@ -9,13 +9,13 @@ const tones: Record<string, string> = {
   COMPLETED: "bg-deep/5 text-deep/70 ring-deep/10",
 };
 
-export function AccountStatusBadge({ status }: { status: string }) {
+export function AccountStatusBadge({ status, label }: { status: string; label?: string }) {
   const tone = tones[status] ?? "bg-deep/5 text-deep/70 ring-deep/10";
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-[0.08em] uppercase ring-1 ring-inset ${tone}`}
     >
-      {status.replaceAll("_", " ")}
+      {label ?? status.replaceAll("_", " ")}
     </span>
   );
 }

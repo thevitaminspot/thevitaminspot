@@ -15,7 +15,7 @@ export default async function AdminOrdersPage() {
   const rows = await prisma.order.findMany({
     where: { payment: { status: "PAID" } },
     orderBy: { createdAt: "desc" },
-    include: { payment: true, items: true },
+    include: { payment: true, items: true, deliveryZone: true },
   });
 
   return (
@@ -23,7 +23,7 @@ export default async function AdminOrdersPage() {
       <AdminPageHeader
         eyebrow="Shop"
         title="Orders"
-        description="Paid orders only. Open covers anything still being packed or delivered."
+        description="Paid orders move from confirmed, to packed, to on the way, then delivered."
       />
 
       <AdminOrders rows={rows} />

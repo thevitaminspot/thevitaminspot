@@ -3,6 +3,7 @@ import { DatabaseSetup, SeedCatalogueButton } from "@/components/admin/setup";
 import { AdminPageHeader, AdminPanel } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
+import { listCheckoutZones } from "@/lib/sync-zones";
 
 export const metadata = { title: "Delivery Zones" };
 export const instant = false;
@@ -12,7 +13,8 @@ export default async function AdminZonesPage() {
   const prisma = await tryPrisma();
   if (!prisma) return <DatabaseSetup />;
 
-  const zones = await prisma.deliveryZone.findMany({ orderBy: { fee: "asc" } });
+  await listCheckoutZones();
+  const zones = await prisma.deliveryZone.findMany({ orderBy: { name: "asc" } });
   const activeCount = zones.filter((z) => z.isActive).length;
 
   if (zones.length === 0) {

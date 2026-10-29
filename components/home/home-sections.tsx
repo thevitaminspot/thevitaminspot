@@ -5,18 +5,29 @@ import { formatNaira } from "@/lib/money";
 import type { CatalogProduct } from "@/lib/catalog";
 import { site, whatsappHref } from "@/lib/site";
 
+function packIndex(index: number) {
+  return String(index + 1).padStart(2, "0");
+}
+
 export function ProductStories({ products }: { products: CatalogProduct[] }) {
   return (
     <section id="the-range" className="range-wash px-5 py-20 md:px-8 md:py-28">
       <div className="mx-auto max-w-6xl">
         <Reveal>
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <h2 className="font-display max-w-2xl text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
-              The packs.
-            </h2>
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div className="max-w-xl">
+              <p className="text-[11px] tracking-[0.22em] text-deep/45 uppercase">In the shop</p>
+              <h2 className="font-display mt-3 text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
+                The packs.
+              </h2>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-deep/65">
+                Take-home formulas you can open tonight. Each one below is a complete pack — open it
+                for how to take it.
+              </p>
+            </div>
             <Link
               href="/shop"
-              className="text-xs font-medium tracking-[0.15em] text-deep/70 uppercase transition hover:text-deep"
+              className="shrink-0 text-xs font-medium tracking-[0.15em] text-deep/70 uppercase transition hover:text-deep"
             >
               See all packs
             </Link>
@@ -29,7 +40,7 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
           Nothing listed yet. Check back soon.
         </p>
       ) : (
-        <div className="mx-auto mt-14 max-w-6xl space-y-16 md:space-y-24">
+        <div className="mx-auto mt-16 max-w-6xl space-y-20 md:mt-20 md:space-y-28">
           {products.map((product, index) => {
             const image = product.images[0]?.url;
             const poster = product.images[1]?.url ?? image;
@@ -38,7 +49,7 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
 
             return (
               <Reveal key={product.id} delay={(index % 4) * 80}>
-                <article className="grid items-center gap-8 md:grid-cols-12 lg:gap-12">
+                <article className="grid items-center gap-10 md:grid-cols-12 lg:gap-14">
                   <div className={`relative md:col-span-7 ${index % 2 ? "md:order-2" : ""}`}>
                     <div className="relative overflow-hidden rounded-2xl border border-deep/10 bg-tint/40">
                       {image ? (
@@ -78,44 +89,53 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
                     ) : null}
                   </div>
 
-                  <div className={`md:col-span-5 ${index % 2 ? "md:order-1 md:pr-4" : "md:pl-4"}`}>
-                    <h3 className="font-display text-3xl leading-tight text-deep md:text-4xl lg:text-[2.75rem]">
+                  <div
+                    className={`flex flex-col md:col-span-5 ${
+                      index % 2 ? "md:order-1 md:pr-2 lg:pr-6" : "md:pl-2 lg:pl-6"
+                    }`}
+                  >
+                    <p className="text-[11px] tracking-[0.22em] text-deep/40 uppercase">
+                      Pack {packIndex(index)}
+                    </p>
+
+                    <h3 className="font-display mt-3 text-3xl leading-[1.05] text-deep md:text-4xl lg:text-[2.65rem]">
                       {product.name}
                     </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-deep/75">
-                      {product.description || product.tagline}
+
+                    <p className="mt-3 max-w-sm text-sm leading-relaxed text-deep/60">
+                      {product.tagline}
                     </p>
 
                     {details.length > 0 ? (
-                      <ul className="mt-5 space-y-2.5 text-xs leading-relaxed text-deep/70">
-                        {details.slice(0, 4).map((detail) => (
-                          <li key={detail}>{detail}</li>
+                      <ul className="mt-7 space-y-3 border-l border-deep/12 pl-4">
+                        {details.slice(0, 3).map((detail) => (
+                          <li key={detail} className="text-sm leading-snug text-deep/70">
+                            {detail}
+                          </li>
                         ))}
                       </ul>
                     ) : null}
 
-                    <div className="mt-6 flex items-baseline gap-3">
-                      <p className="font-display text-3xl text-deep">{formatNaira(product.price)}</p>
+                    <div className="mt-8 flex items-baseline gap-2.5 border-t border-deep/10 pt-6">
+                      <p className="font-display text-3xl tracking-tight text-deep">
+                        {formatNaira(product.price)}
+                      </p>
                       {hasDiscount ? (
-                        <p className="text-sm text-deep/40 line-through">
+                        <p className="text-sm text-deep/35 line-through">
                           {formatNaira(product.compareAtPrice!)}
                         </p>
                       ) : null}
-                      <span className="text-xs text-deep/50">each</span>
+                      <span className="text-[11px] tracking-[0.12em] text-deep/45 uppercase">
+                        each
+                      </span>
                     </div>
 
-                    <div className="mt-6 flex flex-wrap items-center gap-3">
+                    <div className="mt-6">
                       <Link
                         href={`/shop/${product.slug}`}
                         className="inline-flex items-center justify-center rounded-xl bg-deep px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a]"
                       >
                         See this pack
-                      </Link>
-                      <Link
-                        href="/shop"
-                        className="inline-flex items-center justify-center rounded-xl border border-deep/15 bg-transparent px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-deep uppercase transition hover:bg-white"
-                      >
-                        See the shop
                       </Link>
                     </div>
                   </div>
@@ -144,25 +164,28 @@ export function WalkIn() {
           />
         </Reveal>
         <Reveal delay={100}>
-          <h2 className="font-display text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
+          <p className="text-[11px] tracking-[0.22em] text-deep/45 uppercase">The lounge</p>
+          <h2 className="font-display mt-3 text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
             Come in for a drip.
           </h2>
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-deep/75 md:text-base">
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-deep/70 md:text-base">
             You sit for about an hour while a nurse runs the drip. Walk in when it suits you, or
             send a WhatsApp if you want to know a chair is ready.
           </p>
-          <dl className="mt-8 max-w-md border-t border-deep/15 text-sm">
-            <div className="grid grid-cols-[6.5rem_1fr] gap-4 border-b border-deep/15 py-3">
-              <dt className="text-deep/50">Find us</dt>
-              <dd>{site.address.line1}, {site.address.area}</dd>
+          <dl className="mt-9 max-w-md border-t border-deep/12 text-sm">
+            <div className="grid grid-cols-[7rem_1fr] gap-4 border-b border-deep/12 py-3.5">
+              <dt className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">Find us</dt>
+              <dd className="text-deep/80">
+                {site.address.line1}, {site.address.area}
+              </dd>
             </div>
-            <div className="grid grid-cols-[6.5rem_1fr] gap-4 border-b border-deep/15 py-3">
-              <dt className="text-deep/50">Plan for</dt>
-              <dd>Roughly an hour in the chair</dd>
+            <div className="grid grid-cols-[7rem_1fr] gap-4 border-b border-deep/12 py-3.5">
+              <dt className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">Plan for</dt>
+              <dd className="text-deep/80">Roughly an hour in the chair</dd>
             </div>
-            <div className="grid grid-cols-[6.5rem_1fr] gap-4 border-b border-deep/15 py-3">
-              <dt className="text-deep/50">No booking?</dt>
-              <dd>Fine. Book online if you want a set time</dd>
+            <div className="grid grid-cols-[7rem_1fr] gap-4 border-b border-deep/12 py-3.5">
+              <dt className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">Walk-in</dt>
+              <dd className="text-deep/80">Fine. Book online if you want a set time</dd>
             </div>
           </dl>
           <div className="mt-8 flex flex-wrap gap-3">

@@ -88,9 +88,11 @@ export function Hero({
                   ) : (
                     <span className="size-14 rounded-xl bg-cream/10" />
                   )}
-                  <span>
-                    <span className="block text-sm text-cream">{pack.name}</span>
-                    <span className="mt-1 block text-sm text-cream/55">{pack.price}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm text-cream">{pack.name}</span>
+                    <span className="mt-1 block text-[11px] tracking-[0.12em] text-cream/50 uppercase">
+                      {pack.price}
+                    </span>
                   </span>
                 </Link>
               </li>

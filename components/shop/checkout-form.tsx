@@ -5,7 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { createCheckout } from "@/actions/checkout";
+import { createCheckout, resumeOrderPayment } from "@/actions/checkout";
+import {
+  checkoutFingerprint,
+  clearSavedCheckout,
+  readSavedCheckout,
+  saveCheckout,
+} from "@/lib/checkout-session";
 import { formatNaira } from "@/lib/money";
 import { site } from "@/lib/site";
 import type { CatalogZone } from "@/lib/catalog";
@@ -14,11 +20,12 @@ import {
   formControl,
   formErrorBox,
   formLabel,
-  formSelect,
   formSubmitInline,
   formTextarea,
 } from "@/components/ui/form-styles";
+import { DeliveryAreaPicker } from "@/components/shop/delivery-area-picker";
 import { PaystackHandoff } from "@/components/ui/paystack-handoff";
+import { PaystackButtonContent, usePaystackCheckout } from "@/components/ui/use-paystack-checkout";
 import { surfaceCard } from "@/components/ui/layout-styles";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { useCartStore } from "@/stores/cart-store";
@@ -37,13 +44,12 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
 
   const [fulfillment, setFulfillment] = useState<"DELIVERY" | "PICKUP">("DELIVERY");
   const [selectedZoneSlug, setSelectedZoneSlug] = useState<string>(
-    zones[0]?.slug ?? "maitama",
+    zones.find((zone) => zone.slug === "cbd")?.slug ?? zones[0]?.slug ?? "cbd",
   );
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
+  const paystack = usePaystackCheckout();
 
   const handleAutofill = useCallback((data: { name: string; email: string }) => {
     setCustomerName((prev) => prev || data.name);
@@ -64,7 +70,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
     );
   }
 
-  if (items.length === 0 && !pending) {
+  if (items.length === 0 && !paystack.busy) {
     return (
       <div className={`my-8 ${surfaceCard} text-center sm:p-10`}>
         <h2 className="font-display text-3xl text-deep md:text-4xl">Your bag is empty</h2>
@@ -92,55 +98,72 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   return (
     <>
     <PaystackHandoff
-      open={pending}
-      title="Taking you to Paystack"
-      detail="Don’t close this page. You’ll come back here once payment is done."
+      open={paystack.overlay !== null}
+      title={paystack.overlay?.title}
+      detail={paystack.overlay?.detail}
     />
     <form
       id={formId}
-      aria-busy={pending}
+      aria-busy={paystack.busy}
       className="grid gap-8 lg:grid-cols-12 lg:items-start"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (pending) return;
-        setError("");
+        if (paystack.busy) return;
         const form = new FormData(event.currentTarget);
-        setPending(true);
+        const customer = {
+          name: String(form.get("name") ?? "").trim(),
+          email: String(form.get("email") ?? "").trim(),
+          phone: String(form.get("phone") ?? "").trim(),
+          fulfillment,
+          zoneSlug: fulfillment === "DELIVERY" ? selectedZoneSlug : undefined,
+          addressLine1: fulfillment === "DELIVERY" ? String(form.get("addressLine1") ?? "").trim() : undefined,
+          city: fulfillment === "DELIVERY" ? String(form.get("city") ?? "Abuja").trim() : undefined,
+          notes: String(form.get("notes") ?? "").trim(),
+        };
+        const fingerprint = checkoutFingerprint({
+          items,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          fulfillment,
+          zoneSlug: customer.zoneSlug,
+          address: customer.addressLine1,
+          notes: customer.notes,
+        });
+        const saved = readSavedCheckout();
+        const resume = saved?.fingerprint === fingerprint ? saved : null;
 
-        const result = await createCheckout(
-          items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.price,
-          })),
+        const result = await paystack.start(
+          () =>
+            resume
+              ? resumeOrderPayment(resume.token)
+              : createCheckout(
+                  items.map((item) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                  })),
+                  customer,
+                ),
           {
-            name: String(form.get("name") ?? "").trim(),
-            email: String(form.get("email") ?? "").trim(),
-            phone: String(form.get("phone") ?? "").trim(),
-            fulfillment,
-            zoneSlug: fulfillment === "DELIVERY" ? selectedZoneSlug : undefined,
-            addressLine1: fulfillment === "DELIVERY" ? String(form.get("addressLine1") ?? "").trim() : undefined,
-            city: fulfillment === "DELIVERY" ? String(form.get("city") ?? "Abuja").trim() : undefined,
-            notes: String(form.get("notes") ?? "").trim(),
+            cancel: "stay",
+            cancelMessage: "Payment cancelled. Your bag is still here when you’re ready.",
           },
         );
 
-        if (result.error) {
-          if ("prices" in result && result.prices) {
-            updatePrices(result.prices);
-          }
-          setError(result.error);
-          setPending(false);
+        if (result?.prices) updatePrices(result.prices);
+        if (result?.error && resume && /not found|cancelled|already paid/i.test(result.error)) {
+          clearSavedCheckout();
+          if (/already paid/i.test(result.error)) router.push(`/orders/${resume.token}`);
           return;
         }
-
-        if (result.checkoutUrl) {
-          window.location.assign(result.checkoutUrl);
-          return;
+        if (result?.token && result.accessCode) {
+          saveCheckout({ token: result.token, fingerprint });
         }
-
-        clear();
-        router.push(`/orders/${result.token}`);
+        if (result && !result.error && !result.accessCode && !result.authorizationUrl) {
+          clear();
+          clearSavedCheckout();
+        }
       }}
     >
       {/* Left Column: Form Details */}
@@ -238,28 +261,11 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
 
           {fulfillment === "DELIVERY" ? (
             <div className="mt-6 space-y-4 border-t border-deep/10 pt-6">
-              <div>
-                <label className={formLabel}>
-                  Select Delivery Zone in Abuja *
-                </label>
-                <select
-                  name="zoneSlug"
-                  value={selectedZoneSlug}
-                  onChange={(e) => setSelectedZoneSlug(e.target.value)}
-                  className={formSelect}
-                >
-                  {zones.map((zone) => (
-                    <option key={zone.slug} value={zone.slug}>
-                      {zone.name}, {formatNaira(zone.fee)} ({zone.eta})
-                    </option>
-                  ))}
-                </select>
-                {selectedZone ? (
-                  <p className="mt-1.5 text-[11px] text-sage font-medium">
-                    Estimated courier dispatch time: {selectedZone.eta}
-                  </p>
-                ) : null}
-              </div>
+              <DeliveryAreaPicker
+                zones={zones}
+                value={selectedZoneSlug}
+                onChange={setSelectedZoneSlug}
+              />
 
               <div>
                 <label className={formLabel}>
@@ -373,22 +379,35 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
             <span className="font-display text-3xl text-deep">{formatNaira(grandTotal)}</span>
           </div>
 
-          {error ? (
+          {paystack.error ? (
             <p className={`mt-5 ${formErrorBox}`}>
-              {error}
+              {paystack.error}
             </p>
           ) : null}
 
           <button
             type="submit"
-            disabled={pending || items.length === 0}
+            disabled={paystack.busy || items.length === 0}
             className={`mt-6 flex w-full py-4 ${formSubmitInline}`}
           >
-            {pending ? "Opening Paystack…" : `Pay ${formatNaira(grandTotal)}`}
+            <PaystackButtonContent phase={paystack.phase} idle={`Pay ${formatNaira(grandTotal)}`} />
           </button>
 
           <p className="mt-5 border-t border-deep/10 pt-4 text-[11px] leading-5 text-deep/60">
-            Card, transfer, or USSD. We deliver around Abuja. Packed at the shop.
+            Paystack opens on this page. If you close it, your bag stays here. Card, transfer, or USSD.
+            By paying you agree to our{" "}
+            <Link href="/terms" className="text-deep underline decoration-deep/20">
+              Terms
+            </Link>
+            ,{" "}
+            <Link href="/shipping" className="text-deep underline decoration-deep/20">
+              Shipping
+            </Link>
+            , and{" "}
+            <Link href="/refunds" className="text-deep underline decoration-deep/20">
+              Returns & refunds
+            </Link>
+            .
           </p>
         </div>
       </div>
