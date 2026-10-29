@@ -3,23 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AdminListSearch, filterByQuery } from "@/components/admin/list-search";
-import {
-  AdminEmptyState,
-  AdminFilterTabs,
-  AdminStatusBadge,
-  AdminTable,
-  AdminTableCell,
-  AdminTableHead,
-  AdminTableHeaderCell,
-  AdminTableRow,
-} from "@/components/admin/ui";
+import { AdminEmptyState, AdminFilterTabs, AdminStatusBadge } from "@/components/admin/ui";
 import { OrderNextButton } from "@/components/admin/order-next-button";
+import { OrderStatusSelect } from "@/components/admin/order-status-select";
 import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatLagos } from "@/lib/datetime";
 import {
   fulfillmentLabel,
-  isOpenOrder,
   orderQueue,
   type AdminFulfillment,
   type OrderQueue,
@@ -36,8 +27,14 @@ export type AdminOrderRow = {
   total: number;
   status: string;
   createdAt: Date | string;
+  phone?: string;
+  notes?: string | null;
+  addressLine1?: string | null;
+  city?: string | null;
+  deliveryFee?: number;
+  deliveryZone?: { name: string } | null;
   payment?: { status: string } | null;
-  items?: { quantity: number }[];
+  items?: { name?: string; quantity: number; unitPrice?: number }[];
 };
 
 function orderSearchText(row: AdminOrderRow) {
@@ -50,12 +47,17 @@ function asFulfillment(value: string): AdminFulfillment {
 
 export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
   const [query, setQuery] = useState("");
-  const [queue, setQueue] = useState<OrderQueue>(() =>
-    rows.some((row) => isOpenOrder(row.status)) ? "open" : "all",
-  );
+  const [queue, setQueue] = useState<OrderQueue>("all");
 
   const counts = useMemo(() => {
-    const next = { open: 0, fulfilled: 0, cancelled: 0, all: rows.length };
+    const next = {
+      confirmed: 0,
+      packed: 0,
+      sent: 0,
+      delivered: 0,
+      cancelled: 0,
+      all: rows.length,
+    };
     for (const row of rows) next[orderQueue(row.status)] += 1;
     return next;
   }, [rows]);
@@ -81,10 +83,12 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
         value={queue}
         onChange={(id) => setQueue(id as OrderQueue)}
         tabs={[
-          { id: "open", label: "Open", count: counts.open },
-          { id: "fulfilled", label: "Fulfilled", count: counts.fulfilled },
-          { id: "cancelled", label: "Cancelled", count: counts.cancelled },
           { id: "all", label: "All", count: counts.all },
+          { id: "confirmed", label: "Confirmed", count: counts.confirmed },
+          { id: "packed", label: "Packed", count: counts.packed },
+          { id: "sent", label: "On the way", count: counts.sent },
+          { id: "delivered", label: "Delivered", count: counts.delivered },
+          { id: "cancelled", label: "Cancelled", count: counts.cancelled },
         ]}
       />
 
@@ -95,78 +99,81 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
             : "No orders in this view."}
         </AdminEmptyState>
       ) : (
-        <PaginatedTableWrap pagination={pagination.tablePaginationProps("orders")}>
-          <AdminTable>
-            <AdminTableHead>
-              <tr>
-                <AdminTableHeaderCell>Order</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Date</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Customer</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Fulfillment</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Total</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Next</AdminTableHeaderCell>
-              </tr>
-            </AdminTableHead>
-            <tbody>
+        <PaginatedTableWrap pagination={pagination.tablePaginationProps("orders")} scroll={false}>
+            <ul className="divide-y divide-deep/8">
               {pagination.visible.map((row) => {
                 const createdAt =
                   row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt);
                 const fulfillment = asFulfillment(row.fulfillment);
-                const itemCount = row.items?.reduce((sum, item) => sum + item.quantity, 0);
+                const address = [row.addressLine1, row.city].filter(Boolean).join(", ");
 
                 return (
-                  <AdminTableRow key={row.id}>
-                    <AdminTableCell>
+                  <li key={row.id} className="px-5 py-5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <Link
                         href={`/admin/orders/${row.id}`}
                         className="font-medium text-deep underline decoration-deep/20 underline-offset-2 hover:decoration-deep"
                       >
                         {row.orderNumber}
                       </Link>
-                      <span className="mt-1 block text-[11px] text-deep/45">
-                        {itemCount == null
-                          ? fulfillment === "PICKUP"
-                            ? "Pickup"
-                            : "Delivery"
-                          : `${itemCount} ${itemCount === 1 ? "item" : "items"} · ${
-                              fulfillment === "PICKUP" ? "Pickup" : "Delivery"
-                            }`}
-                      </span>
-                    </AdminTableCell>
-                    <AdminTableCell className="whitespace-nowrap">
-                      <TimeAgo value={createdAt} className="text-deep/75" />
-                      <span className="mt-1 block text-[11px] text-deep/40">
+                      <p className="font-display text-2xl text-deep">{formatNaira(row.total)}</p>
+                    </div>
+                    <p className="mt-2 text-sm text-deep/75">
+                      {row.name || "Guest"} · {row.email}
+                      {row.phone ? ` · ${row.phone}` : ""}
+                    </p>
+                    {address ? <p className="mt-1 text-sm text-deep/50">{address}</p> : null}
+                    {fulfillment === "PICKUP" ? (
+                      <p className="mt-1 text-sm text-deep/50">Shop pickup</p>
+                    ) : row.deliveryZone ? (
+                      <p className="mt-1 text-sm text-deep/50">
+                        Delivery: {row.deliveryZone.name}
+                        {row.deliveryFee ? ` · ${formatNaira(row.deliveryFee)}` : ""}
+                      </p>
+                    ) : null}
+                    {row.notes?.trim() ? (
+                      <p className="mt-1 text-sm text-deep/60">Notes: {row.notes.trim()}</p>
+                    ) : null}
+                    {row.items && row.items.length > 0 ? (
+                      <ul className="mt-3 space-y-1 text-sm text-deep/60">
+                        {row.items.map((item, index) => (
+                          <li key={`${row.id}-${index}`}>
+                            {item.quantity}× {item.name ?? "Item"}
+                            {item.unitPrice != null ? ` · ${formatNaira(item.unitPrice)}` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <AdminStatusBadge
+                        status={row.status}
+                        label={fulfillmentLabel(row.status, fulfillment)}
+                      />
+                      <p className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">
+                        <TimeAgo value={createdAt} />
+                        <span className="mx-1.5 text-deep/20">·</span>
                         {formatLagos(createdAt, {
                           day: "numeric",
                           month: "short",
                           hour: "numeric",
                           minute: "2-digit",
                         })}
-                      </span>
-                    </AdminTableCell>
-                    <AdminTableCell>
-                      <span className="font-medium text-deep">{row.name}</span>
-                      <span className="mt-1 block text-deep/50">{row.email}</span>
-                    </AdminTableCell>
-                    <AdminTableCell>
-                      <AdminStatusBadge
-                        status={row.status}
-                        label={fulfillmentLabel(row.status, fulfillment)}
-                      />
-                    </AdminTableCell>
-                    <AdminTableCell className="font-medium">{formatNaira(row.total)}</AdminTableCell>
-                    <AdminTableCell>
+                      </p>
                       <OrderNextButton
                         id={row.id}
                         status={row.status}
                         fulfillment={row.fulfillment}
                       />
-                    </AdminTableCell>
-                  </AdminTableRow>
+                      <OrderStatusSelect
+                        id={row.id}
+                        status={row.status}
+                        fulfillment={row.fulfillment}
+                      />
+                    </div>
+                  </li>
                 );
               })}
-            </tbody>
-          </AdminTable>
+            </ul>
         </PaginatedTableWrap>
       )}
     </div>

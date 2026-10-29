@@ -23,18 +23,21 @@ export function ProductGallery({
   const current = slides[index] ?? slides[0];
 
   return (
-    <div className="grid gap-4">
-      <Image
-        src={current.url}
-        alt={current.alt}
-        width={900}
-        height={1100}
-        sizes="(min-width: 1024px) 50vw, 100vw"
-        className="w-full rounded-2xl object-cover"
-        priority
-      />
+    <div className="grid gap-3">
+      <div className="overflow-hidden rounded-2xl border border-deep/10 bg-tint/30">
+        <Image
+          src={current.url}
+          alt={current.alt}
+          width={900}
+          height={1125}
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className="aspect-[4/5] w-full object-cover"
+          priority
+        />
+      </div>
+
       {slides.length > 1 ? (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+        <div className="flex gap-3">
           {slides.map((image, i) => {
             const active = i === index;
             return (
@@ -42,11 +45,13 @@ export function ProductGallery({
                 key={`${image.url}-${i}`}
                 type="button"
                 onClick={() => setIndex(i)}
-                className={`overflow-hidden rounded-2xl ring-2 ring-offset-2 ring-offset-cream transition ${
-                  active ? "ring-deep" : "ring-transparent hover:ring-deep/25"
+                className={`min-w-0 flex-1 overflow-hidden rounded-xl border transition ${
+                  active
+                    ? "border-deep"
+                    : "border-deep/10 hover:border-deep/30"
                 }`}
                 aria-label={`Show image ${i + 1} of ${slides.length}`}
-                aria-current={active}
+                aria-pressed={active}
               >
                 <Image
                   src={image.url}
@@ -54,7 +59,7 @@ export function ProductGallery({
                   width={280}
                   height={280}
                   loading="lazy"
-                  sizes="(min-width: 1024px) 15vw, 30vw"
+                  sizes="(min-width: 1024px) 12vw, 22vw"
                   className="aspect-square w-full object-cover"
                 />
               </button>

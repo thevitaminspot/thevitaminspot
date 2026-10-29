@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { ChevronLeft } from "lucide-react";
-import { createBooking, fetchSlots } from "@/actions/booking";
+import { createBooking, fetchSlots, resumeAppointmentDeposit } from "@/actions/booking";
 import { parseBookingDetails } from "@/lib/env";
 import { nairaLabel } from "@/lib/money";
 import type { CatalogInfusion } from "@/lib/catalog";
@@ -19,7 +19,7 @@ import {
   formTextarea,
 } from "@/components/ui/form-styles";
 import { PaystackHandoff } from "@/components/ui/paystack-handoff";
-import { PaystackHandoffReset } from "@/components/ui/paystack-handoff-reset";
+import { PaystackButtonContent, usePaystackCheckout } from "@/components/ui/use-paystack-checkout";
 import {
   BOOKING_CANCELLATION_NOT_FREE,
   BOOKING_FEE_ACK_LABEL,
@@ -28,6 +28,30 @@ import {
 import { surfaceCard } from "@/components/ui/layout-styles";
 
 type Slot = { start: string; end: string; label: string };
+
+function readBookingToken(key: string) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeBookingToken(key: string, token: string) {
+  try {
+    sessionStorage.setItem(key, token);
+  } catch {
+    /* private mode */
+  }
+}
+
+function clearBookingToken(key: string) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* private mode */
+  }
+}
 
 const stepTitles = [
   "Choose a drip",
@@ -200,16 +224,11 @@ export function BookingFlow({
     notes: "",
   });
   const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
-  const [paying, setPaying] = useState(false);
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
+  const paystack = usePaystackCheckout();
   const drip = useMemo(() => drips.find((item) => item.slug === slug), [drips, slug]);
   const formTopRef = useRef<HTMLDivElement>(null);
   const skipStepScrollRef = useRef(true);
-  const resetPaystackHandoff = useCallback(() => {
-    setPending(false);
-    setPaying(false);
-  }, []);
 
   function scrollToFormTop() {
     formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -295,43 +314,37 @@ export function BookingFlow({
       setError("This session is not available for online booking. Please contact us.");
       return;
     }
-    setPending(true);
-    setPaying(true);
+    if (paystack.busy) return;
     setError("");
-    try {
-      const result = await createBooking({
-        slug: drip.slug,
-        start: slot.start,
-        ...parsed.data,
-        payDeposit: true,
-      });
-      if ("error" in result && result.error) {
-        setError(result.error);
-        setPending(false);
-        setPaying(false);
-        return;
-      }
-      if ("checkoutUrl" in result && result.checkoutUrl) {
-        window.location.replace(result.checkoutUrl);
-        return;
-      }
-      setError("Could not open Paystack. Please try again.");
-      setPending(false);
-      setPaying(false);
-    } catch {
-      setError("Something went wrong while booking. Please try again.");
-      setPending(false);
-      setPaying(false);
+    const storageKey = `tvs-booking:${drip.slug}:${slot.start}`;
+    const savedToken = readBookingToken(storageKey);
+    const result = await paystack.start(
+      () =>
+        savedToken
+          ? resumeAppointmentDeposit(savedToken)
+          : createBooking({
+              slug: drip.slug,
+              start: slot.start,
+              ...parsed.data,
+              payDeposit: true,
+            }),
+      {
+        cancel: "stay",
+        cancelMessage: "Payment cancelled. Your booking details are still here when you’re ready.",
+      },
+    );
+    if (result?.token) writeBookingToken(storageKey, result.token);
+    if (result?.error && savedToken && /not found|cancelled/i.test(result.error)) {
+      clearBookingToken(storageKey);
     }
   }
 
   return (
     <div ref={formTopRef} className="mx-auto w-full min-w-0 scroll-mt-24">
-      <PaystackHandoffReset onReset={resetPaystackHandoff} />
       <PaystackHandoff
-        open={pending}
-        title={paying ? "Taking you to Paystack" : "Saving your booking"}
-        detail="Stay on this page."
+        open={paystack.overlay !== null}
+        title={paystack.overlay?.title}
+        detail={paystack.overlay?.detail}
       />
       <form
         onSubmit={(event) => {
@@ -519,9 +532,9 @@ export function BookingFlow({
             </dl>
           ) : null}
 
-          {error ? (
+          {error || paystack.error ? (
             <p role="alert" className={`mt-4 ${formError}`}>
-              {error}
+              {error || paystack.error}
             </p>
           ) : null}
         </div>
@@ -544,14 +557,26 @@ export function BookingFlow({
                   onChange={(event) => setPolicyAcknowledged(event.target.checked)}
                   className="mt-0.5"
                 />
-                <span>{BOOKING_FEE_ACK_LABEL}</span>
+                <span>
+                  {BOOKING_FEE_ACK_LABEL}{" "}
+                  <Link
+                    href="/refunds#booking"
+                    className="text-deep underline decoration-deep/25 underline-offset-2"
+                  >
+                    Read the booking fee policy
+                  </Link>
+                  .
+                </span>
               </label>
               <button
                 type="submit"
-                disabled={pending || !policyAcknowledged || drip.deposit <= 0}
+                disabled={paystack.busy || !policyAcknowledged || drip.deposit <= 0}
                 className={formSubmit}
               >
-                {pending ? "Opening Paystack…" : `Pay booking fee (${nairaLabel(drip.deposit)})`}
+                <PaystackButtonContent
+                  phase={paystack.phase}
+                  idle={`Pay booking fee (${nairaLabel(drip.deposit)})`}
+                />
               </button>
             </>
           ) : null}

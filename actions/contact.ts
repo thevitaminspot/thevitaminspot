@@ -4,16 +4,10 @@ import { headers } from "next/headers";
 import { contactSchema, newsletterSchema } from "@/lib/env";
 import { tryPrisma } from "@/lib/db";
 import { escapeHtml, sendMail } from "@/lib/email";
-import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { limitByIpAndEmail, rateLimitMessage } from "@/lib/rate-limit";
 import { site } from "@/lib/site";
 
 export async function submitContact(input: unknown) {
-  const requestHeaders = await headers();
-  const ip = getClientIp(requestHeaders);
-  if (!rateLimit(`contact:${ip}`, 5).ok) {
-    return { error: "Please wait before sending another note." };
-  }
-
   const parsed = contactSchema.safeParse(input);
   if (!parsed.success) {
     const messageTooShort = parsed.error.issues.some((issue) => issue.path[0] === "message");
@@ -22,6 +16,12 @@ export async function submitContact(input: unknown) {
         ? "Write a little more so we know how to help."
         : "Check your name and email, then try again.",
     };
+  }
+
+  const requestHeaders = await headers();
+  const limited = limitByIpAndEmail(requestHeaders, "contact", parsed.data.email, "contact");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
   }
 
   const prisma = await tryPrisma();
@@ -39,14 +39,14 @@ export async function submitContact(input: unknown) {
 }
 
 export async function subscribeNotes(email: string) {
-  const requestHeaders = await headers();
-  const ip = getClientIp(requestHeaders);
-  if (!rateLimit(`notes:${ip}`, 5).ok) {
-    return { error: "Please wait before sending another note." };
-  }
-
   const parsed = newsletterSchema.safeParse({ email });
   if (!parsed.success) return { error: "Enter a valid email address." };
+
+  const requestHeaders = await headers();
+  const limited = limitByIpAndEmail(requestHeaders, "notes", parsed.data.email, "notes");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
 
   const prisma = await tryPrisma();
   if (prisma) {

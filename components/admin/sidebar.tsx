@@ -14,11 +14,11 @@ import {
   Package,
   ShoppingBag,
   Truck,
-  Users,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AccountButton } from "@/components/layout/account-button";
+import { BrandWordmark } from "@/components/brand/wordmark";
 import { brand } from "@/lib/brand";
 
 type NavLink = {
@@ -38,7 +38,6 @@ const navGroups: { label: string; links: NavLink[] }[] = [
     links: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
       { href: "/admin/products", label: "Products", icon: Package },
-      { href: "/admin/customers", label: "Customers", icon: Users },
       { href: "/admin/zones", label: "Delivery", icon: Truck },
     ],
   },
@@ -128,6 +127,12 @@ function SidebarFooter({ email }: { email?: string }) {
             →
           </span>
         </Link>
+        <Link
+          href="/"
+          className="mt-2 block px-1 py-2 text-[11px] tracking-[0.16em] text-cream/45 uppercase transition hover:text-cream"
+        >
+          Storefront
+        </Link>
 
         <div className="mt-3.5 border-t border-cream/15 pt-3.5">
           <div className="flex items-center gap-3">
@@ -162,7 +167,7 @@ function SidebarBrand() {
         />
       </span>
       <span className="min-w-0">
-        <span className="block font-display text-lg leading-tight text-cream">The Vitamin Spot</span>
+        <BrandWordmark className="block text-xl leading-tight text-cream" />
         <span className="mt-0.5 block text-[10px] tracking-[0.2em] text-cream/40 uppercase">Admin</span>
       </span>
     </Link>

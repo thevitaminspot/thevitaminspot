@@ -8,6 +8,7 @@
   --color-ink: #08150f;
   --color-champagne: #e6d7b8;
   --font-display: var(--font-display);
+  --font-wordmark: var(--font-wordmark);
   --font-sans: var(--font-sans);
 }
 
@@ -28,6 +29,12 @@ body {
 
 .font-display {
   font-family: var(--font-display), serif;
+}
+
+.font-wordmark {
+  font-family: var(--font-wordmark), Palatino, "Palatino Linotype", Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
 .hairline {
@@ -238,4 +245,17 @@ input:disabled,
 input[disabled],
 [aria-disabled="true"] {
   cursor: not-allowed;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%230b2c21' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7.5 10 12.5 15 7.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 0.85rem;
+  background-clip: padding-box;
+  overflow: hidden;
+  padding-right: 2.25rem;
 }

@@ -17,8 +17,11 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
   const { userId } = await auth();
   if (!userId) return null;
   const user = await currentUser();
-  const email = user?.primaryEmailAddress?.emailAddress;
-  if (!user || !email) return null;
+  if (!user) return null;
+  const email =
+    user.primaryEmailAddress?.emailAddress ??
+    user.emailAddresses[0]?.emailAddress;
+  if (!email) return null;
   return {
     clerkId: user.id,
     email,

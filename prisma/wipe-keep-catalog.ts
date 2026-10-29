@@ -4,12 +4,23 @@
  * blocked dates, and User rows with role ADMIN.
  *
  * Usage: npx tsx prisma/wipe-keep-catalog.ts --confirm
+ *
+ * Optional: keep specific paid orders / appointments by id:
+ *   npx tsx prisma/wipe-keep-catalog.ts --confirm --keep-order=ID --keep-appointment=ID
  */
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client";
 
 const confirm = process.argv.includes("--confirm");
+const keepOrderIds = process.argv
+  .filter((arg) => arg.startsWith("--keep-order="))
+  .map((arg) => arg.slice("--keep-order=".length))
+  .filter(Boolean);
+const keepAppointmentIds = process.argv
+  .filter((arg) => arg.startsWith("--keep-appointment="))
+  .map((arg) => arg.slice("--keep-appointment=".length))
+  .filter(Boolean);
 
 if (!process.env.DATABASE_URL) {
   console.error("Missing DATABASE_URL");
@@ -17,9 +28,14 @@ if (!process.env.DATABASE_URL) {
 }
 
 if (!confirm) {
-  console.error("This deletes orders, payments, appointments, contact messages, testimonials, and customer users.");
+  console.error(
+    "This deletes orders, payments, appointments, contact messages, and customer users.",
+  );
   console.error("Catalogue (products, infusions, zones, availability) is kept.");
   console.error("Re-run with: npx tsx prisma/wipe-keep-catalog.ts --confirm");
+  console.error(
+    "Optional keep flags: --keep-order=ID --keep-appointment=ID (repeatable)",
+  );
   process.exit(1);
 }
 
@@ -28,29 +44,50 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const payments = await prisma.payment.deleteMany();
-  const orders = await prisma.order.deleteMany();
-  const appointments = await prisma.appointment.deleteMany();
+  // Keep payments tied to preserved orders/appointments; delete the rest.
+  // Use OR of positive matches so NULL FKs are not excluded by SQL NOT IN quirks.
+  const payments =
+    keepOrderIds.length > 0 || keepAppointmentIds.length > 0
+      ? await prisma.payment.deleteMany({
+          where: {
+            NOT: {
+              OR: [
+                ...(keepOrderIds.length > 0
+                  ? [{ orderId: { in: keepOrderIds } }]
+                  : []),
+                ...(keepAppointmentIds.length > 0
+                  ? [{ appointmentId: { in: keepAppointmentIds } }]
+                  : []),
+              ],
+            },
+          },
+        })
+      : await prisma.payment.deleteMany();
+
+  const orders = await prisma.order.deleteMany({
+    where: keepOrderIds.length > 0 ? { id: { notIn: keepOrderIds } } : undefined,
+  });
+
+  const appointments = await prisma.appointment.deleteMany({
+    where:
+      keepAppointmentIds.length > 0
+        ? { id: { notIn: keepAppointmentIds } }
+        : undefined,
+  });
+
   const contacts = await prisma.contactMessage.deleteMany();
-  const testimonials = await prisma.testimonial.deleteMany();
   const customers = await prisma.user.deleteMany({ where: { role: "CUSTOMER" } });
 
-  const counts = {
-    payments: payments.count,
-    orders: orders.count,
-    appointments: appointments.count,
-    contacts: contacts.count,
-    testimonials: testimonials.count,
-    customers: customers.count,
-  };
-
   console.info("Wipe complete (catalogue unchanged):");
-  console.info(`  payments:      ${counts.payments}`);
-  console.info(`  orders:        ${counts.orders}`);
-  console.info(`  appointments:  ${counts.appointments}`);
-  console.info(`  contact notes: ${counts.contacts}`);
-  console.info(`  testimonials:  ${counts.testimonials}`);
-  console.info(`  customer users:${counts.customers}`);
+  console.info(`  payments:       ${payments.count}`);
+  console.info(`  orders:         ${orders.count}`);
+  console.info(`  appointments:   ${appointments.count}`);
+  console.info(`  contact notes:  ${contacts.count}`);
+  console.info(`  customer users: ${customers.count}`);
+  if (keepOrderIds.length || keepAppointmentIds.length) {
+    console.info(`  kept orders:        ${keepOrderIds.join(", ") || "(none)"}`);
+    console.info(`  kept appointments:  ${keepAppointmentIds.join(", ") || "(none)"}`);
+  }
 }
 
 main()

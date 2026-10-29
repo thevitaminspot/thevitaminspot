@@ -1,135 +1,108 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { ProductCard } from "@/components/shop/product-card";
-import type { CatalogCategory, CatalogProduct } from "@/lib/catalog";
-import { formSearch, formSubmitInline } from "@/components/ui/form-styles";
-import { surface } from "@/components/ui/layout-styles";
 import { Reveal } from "@/components/ui/reveal";
+import type { CatalogProduct } from "@/lib/catalog";
+import { interactiveControl } from "@/components/ui/form-styles";
 
-export function ShopCatalog({
-  products,
-  categories,
-}: {
-  products: CatalogProduct[];
-  categories: CatalogCategory[];
-}) {
+const sorts = [
+  { id: "featured", label: "Featured" },
+  { id: "price-asc", label: "Price ↑" },
+  { id: "price-desc", label: "Price ↓" },
+] as const;
+
+export function ShopCatalog({ products }: { products: CatalogProduct[] }) {
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
-  const [sort, setSort] = useState("featured");
-  const mounted = useClientMounted();
+  const [sort, setSort] = useState<(typeof sorts)[number]["id"]>("featured");
 
   const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
     return products
       .filter((product) => {
-        const matchCategory = category === "all" || product.categorySlug === category;
-        const matchQuery = `${product.name} ${product.tagline} ${product.description}`
+        if (!needle) return true;
+        return `${product.name} ${product.tagline} ${product.description} ${product.ingredients.join(" ")} ${product.benefits.join(" ")}`
           .toLowerCase()
-          .includes(query.toLowerCase());
-        return matchCategory && matchQuery;
+          .includes(needle);
       })
       .sort((left, right) => {
         if (sort === "price-asc") return left.price - right.price;
         if (sort === "price-desc") return right.price - left.price;
-        return Number(right.featured) - Number(left.featured);
+        return (
+          Number(right.featured) - Number(left.featured) ||
+          left.name.localeCompare(right.name)
+        );
       });
-  }, [products, category, query, sort]);
+  }, [products, query, sort]);
 
   return (
-    <div className="mt-8">
-      {/* Category Pills Bar */}
-      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-2">
-        <button
-          type="button"
-          onClick={() => setCategory("all")}
-          className={`shrink-0 rounded-full px-4 py-2 text-xs font-medium tracking-wide transition ${
-            category === "all"
-              ? "bg-deep text-cream shadow-sm"
-              : "border border-deep/15 bg-white/70 text-deep/75 hover:bg-white hover:text-deep"
-          }`}
-        >
-          {`All packs (${products.length})`}
-        </button>
-        {categories.map((item) => {
-          const count = products.filter((p) => p.categorySlug === item.slug).length;
-          return (
-            <button
-              key={item.slug}
-              type="button"
-              onClick={() => setCategory(item.slug)}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-medium tracking-wide transition ${
-                category === item.slug
-                  ? "bg-deep text-cream shadow-sm"
-                  : "border border-deep/15 bg-white/70 text-deep/75 hover:bg-white hover:text-deep"
-              }`}
-            >
-              {`${item.name}${count > 0 ? ` (${count})` : ""}`}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className={`mt-5 flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between ${surface}`}>
-        <div className="relative flex-1">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search vitamins, ingredients, benefits..."
-            className={formSearch}
-          />
-          {query ? (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-[11px] text-deep/50 hover:text-deep"
-            >
-              Clear
-            </button>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 rounded-xl border border-deep/10 bg-cream/40 px-3 py-1.5">
-            <span className="text-[11px] text-deep/60">Sort:</span>
-            {mounted ? (
-              <select
-                value={sort}
-                onChange={(event) => setSort(event.target.value)}
-                className="bg-transparent text-xs font-medium text-deep focus:outline-none"
+    <div className="mt-10">
+      <div className="flex flex-col gap-6 border-b border-deep/10 pb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
+        <label className="block min-w-0 flex-1">
+          <span className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">Search</span>
+          <div className="relative mt-2">
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Name, ingredient, or benefit"
+              autoComplete="off"
+              className="w-full border-0 border-b border-deep/20 bg-transparent py-2.5 pr-9 text-sm text-deep placeholder:text-deep/35 transition focus:border-deep/50 focus:outline-none"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className={`absolute top-1/2 right-0 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center text-lg leading-none text-deep/40 transition hover:text-deep ${interactiveControl}`}
               >
-                <option value="featured">Featured Curations</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-              </select>
-            ) : (
-              <span className="text-xs font-medium text-deep">Featured Curations</span>
-            )}
+                ×
+              </button>
+            ) : null}
           </div>
+        </label>
 
-          <span className="hidden text-xs text-deep/50 sm:inline">
-            {`${filtered.length} ${filtered.length === 1 ? "item" : "items"}`}
-          </span>
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">Sort</span>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {sorts.map((option) => {
+              const active = sort === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSort(option.id)}
+                  className={`text-sm transition ${interactiveControl} ${
+                    active ? "text-deep" : "text-deep/40 hover:text-deep/70"
+                  }`}
+                  aria-pressed={active}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Product Grid */}
+      <p className="mt-4 text-xs text-deep/45">
+        {filtered.length === products.length
+          ? `${products.length} ${products.length === 1 ? "pack" : "packs"}`
+          : `${filtered.length} of ${products.length} packs`}
+      </p>
+
       {filtered.length === 0 ? (
-        <div className="my-16 rounded-2xl border border-dashed border-deep/20 bg-white/50 p-12 text-center">
-          <p className="font-display text-2xl text-deep">No matching formulas found</p>
-          <p className="mt-2 text-xs text-deep/60">
-            Try adjusting your search keywords or clear category filters.
+        <div className="mt-14 max-w-sm">
+          <p className="font-display text-3xl text-deep">Nothing matched.</p>
+          <p className="mt-3 text-sm leading-relaxed text-deep/60">
+            Try another word, or clear search to see every pack.
           </p>
           <button
             type="button"
-            onClick={() => {
-              setQuery("");
-              setCategory("all");
-            }}
-            className={`mt-5 ${formSubmitInline}`}
+            onClick={() => setQuery("")}
+            className={`mt-6 cursor-pointer text-[11px] font-medium tracking-[0.16em] text-deep uppercase underline decoration-deep/25 underline-offset-4 ${interactiveControl}`}
           >
-            Reset Filters
+            Clear search
           </button>
         </div>
       ) : (

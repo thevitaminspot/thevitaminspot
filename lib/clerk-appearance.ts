@@ -33,7 +33,6 @@ export const siteClerkAppearance = {
       "rounded-2xl border border-deep/10 bg-cream shadow-lg shadow-deep/10",
     userButtonPopoverActionButton: "rounded-lg hover:bg-tint/50",
     userButtonPopoverActionButtonText: "text-sm text-deep",
-    userButtonPopoverActionButton__manageAccount: "hidden",
     userButtonPopoverFooter: "hidden",
     userPreviewMainIdentifier: "font-medium text-deep",
     userPreviewSecondaryIdentifier: "text-deep/55",

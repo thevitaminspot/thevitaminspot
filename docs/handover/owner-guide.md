@@ -104,6 +104,22 @@ For new products or big catalogue changes, your developer can help the first tim
 - Use the Paystack app or website to see settlements, refunds, and disputes.
 - **Never share** Paystack secret keys or passwords in WhatsApp or email.
 
+### Refunds (manual — not in admin)
+
+The website **does not refund money**. Admin can cancel an order (and may restore stock) or cancel a booking, but **Paystack still holds the charge** until you refund there.
+
+**When to refund in Paystack**
+1. Open [Paystack Dashboard → Transactions](https://dashboard.paystack.com/#/transactions).
+2. Find the charge by customer email, amount, or reference from the order/booking email.
+3. Open the transaction → **Refund** (full or partial) and confirm.
+
+**Typical cases**
+- Paid order cancelled before dispatch, or wrong/damaged item you agreed to refund.
+- Customer paid after you already cancelled (you get an admin alert email).
+- IV **booking fee** is **non-refundable** by site policy — only refund that fee if you personally decide an exception.
+
+Keep a short note of why you refunded (WhatsApp or spreadsheet) so disputes are easy to answer.
+
 ---
 
 ## Emails customers receive

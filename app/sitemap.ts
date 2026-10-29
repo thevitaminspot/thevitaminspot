@@ -1,14 +1,29 @@
 import type { MetadataRoute } from "next";
-import { products, infusions } from "@/lib/catalog";
+import { listInfusions, listProducts } from "@/lib/data";
 import { site } from "@/lib/site";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ["", "/shop", "/infusions", "/about", "/contact"].map((path) => ({
-    url: `${site.url}${path}`,
-    lastModified: new Date(),
-    changeFrequency: path === "" ? ("weekly" as const) : ("monthly" as const),
-    priority: path === "" ? 1 : 0.8,
-  }));
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [products, infusions] = await Promise.all([listProducts(), listInfusions()]);
+
+  const staticRoutes = [
+    "",
+    "/shop",
+    "/infusions",
+    "/about",
+    "/contact",
+    "/terms",
+    "/shipping",
+    "/refunds",
+    "/privacy",
+  ].map((path) => {
+    const isPolicy = ["/terms", "/shipping", "/refunds", "/privacy"].includes(path);
+    return {
+      url: `${site.url}${path}`,
+      lastModified: new Date(),
+      changeFrequency: path === "" ? ("weekly" as const) : ("monthly" as const),
+      priority: path === "" ? 1 : isPolicy ? 0.4 : 0.8,
+    };
+  });
 
   return [
     ...staticRoutes,

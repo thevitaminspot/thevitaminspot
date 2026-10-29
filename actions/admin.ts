@@ -532,6 +532,70 @@ export async function blockDate(date: string, reason?: string) {
   return { ok: true as const };
 }
 
+export async function unblockDate(id: string) {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+  await prisma.blockedDate.delete({ where: { id } });
+  revalidatePath("/admin/availability");
+  return { ok: true as const };
+}
+
+export type WeeklyHoursInput = {
+  weekday: number;
+  closed: boolean;
+  startHour: number;
+  endHour: number;
+  slotMin: number;
+  bufferMin: number;
+};
+
+export async function saveWeeklyHours(rules: WeeklyHoursInput[]) {
+  const prisma = await database();
+  if ("error" in prisma) return prisma;
+
+  const next = rules
+    .filter((rule) => !rule.closed)
+    .map((rule) => {
+      const startMin = Math.round(rule.startHour) * 60;
+      const endMin = Math.round(rule.endHour) * 60;
+      const slotMin = Math.max(15, Math.round(rule.slotMin) || 45);
+      const bufferMin = Math.max(0, Math.round(rule.bufferMin) || 0);
+      return {
+        weekday: rule.weekday,
+        startMin,
+        endMin,
+        slotMin,
+        bufferMin,
+        isActive: true,
+      };
+    });
+
+  for (const rule of next) {
+    if (rule.weekday < 0 || rule.weekday > 6) {
+      return { error: "Weekday must be Sunday–Saturday." };
+    }
+    if (rule.endMin <= rule.startMin) {
+      return { error: "End time must be after start time for open days." };
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.availabilityRule.deleteMany(),
+    ...(next.length > 0
+      ? [
+          prisma.availabilityRule.createMany({
+            data: next,
+          }),
+        ]
+      : []),
+  ]);
+
+  revalidatePath("/admin/availability");
+  revalidatePath("/infusions");
+  revalidatePath("/book");
+  return { ok: true as const };
+}
+
 export async function updateZone(input: { id: string; feeNaira: number; eta: string; isActive: boolean }) {
   const prisma = await database();
   if ("error" in prisma) return prisma;

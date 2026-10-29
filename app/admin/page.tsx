@@ -121,7 +121,8 @@ export default async function AdminPage() {
       <AdminQuickActions>
         <AdminQuickAction href="/admin/orders">Review orders</AdminQuickAction>
         <AdminQuickAction href="/admin/appointments">Manage bookings</AdminQuickAction>
-        <AdminQuickAction href="/admin/products">Update stock</AdminQuickAction>
+        <AdminQuickAction href="/admin/availability">Block dates</AdminQuickAction>
+        <AdminQuickAction href="/admin/products">Update products</AdminQuickAction>
         <AdminQuickAction href="/admin/messages">Read messages</AdminQuickAction>
       </AdminQuickActions>
 
@@ -157,7 +158,7 @@ export default async function AdminPage() {
       </div>
 
       <div className="mt-10 grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
-        <AdminSection title="Orders in progress" href="/admin/orders">
+        <AdminSection title="Recent orders" href="/admin/orders">
           <AdminPanel>
             <ul className="divide-y divide-deep/6">
               {orders.map((order) => (
@@ -171,7 +172,7 @@ export default async function AdminPage() {
         </AdminSection>
 
         <div className="space-y-8">
-          <AdminSection title="Upcoming sessions" href="/admin/appointments">
+          <AdminSection title="Clinic bookings" href="/admin/appointments">
             <AdminPanel>
               <ul className="divide-y divide-deep/6">
                 {soon.map((row) => (

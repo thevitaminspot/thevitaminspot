@@ -23,13 +23,23 @@ import {
   verifyAndSettleExistingReference,
 } from "@/lib/payments";
 import { initializePaystack } from "@/lib/paystack";
-import { appointmentPaystackReturnUrl } from "@/lib/paystack-return";
-import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import {
+  appointmentPaystackReturnUrl,
+  appointmentReturnPath,
+  withPaymentCancelled,
+} from "@/lib/paystack-return";
+import { limitByIp, limitByIpAndEmail, rateLimitMessage } from "@/lib/rate-limit";
 import { site, whatsappHref } from "@/lib/site";
 import { BOOKING_FEE_REQUIRED_MESSAGE } from "@/lib/booking-policy";
 import { createToken } from "@/lib/tokens";
 
 export async function sendBookingNotifications(token: string) {
+  const requestHeaders = await headers();
+  const limited = limitByIp(requestHeaders, "book-notify", "bookingMutate");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
+
   const prisma = await tryPrisma();
   if (!prisma) return { error: "Bookings need the database." as const };
 
@@ -62,6 +72,10 @@ export async function sendBookingNotifications(token: string) {
 }
 
 export async function fetchSlots(date: string, slug: string, excludeAppointmentId?: string) {
+  const requestHeaders = await headers();
+  const limited = limitByIp(requestHeaders, "slots", "slots");
+  if (!limited.ok) return [];
+
   const drip = await findInfusion(slug);
   if (!drip) return [];
   return listSlots(date, drip.durationMin, { excludeAppointmentId });
@@ -76,14 +90,14 @@ export async function createBooking(input: {
   notes?: string;
   payDeposit?: boolean;
 }) {
-  const requestHeaders = await headers();
-  const ip = getClientIp(requestHeaders);
-  if (!rateLimit(`book:${ip}`).ok) {
-    return { error: "Please wait a moment before booking again." };
-  }
-
   const details = parseBookingDetails(input);
   if (!details.ok) return { error: details.error };
+
+  const requestHeaders = await headers();
+  const limited = limitByIpAndEmail(requestHeaders, "book", details.data.email, "booking");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
 
   const drip = await findInfusion(input.slug);
   if (!drip) return { error: "That drip isn’t available." };
@@ -172,6 +186,17 @@ export async function createBooking(input: {
     return { error: "That hour has just been taken. Please choose another." };
   }
 
+  const payLimit = limitByIpAndEmail(
+    requestHeaders,
+    "paystack",
+    details.data.email,
+    "paystackInit",
+  );
+  if (!payLimit.ok) {
+    await prisma.appointment.delete({ where: { id: appointment.id } }).catch(() => undefined);
+    return { error: rateLimitMessage(payLimit.retryAfterSec) };
+  }
+
   const manageUrl = appointmentPaystackReturnUrl(token);
   const whenLabel = formatLagosLong(startsAt);
 
@@ -182,6 +207,7 @@ export async function createBooking(input: {
       amount: drip.deposit,
       reference,
       callbackUrl: manageUrl,
+      cancelUrl: withPaymentCancelled(manageUrl),
       metadata: { purpose: "APPOINTMENT_DEPOSIT", appointmentId: appointment.id },
     });
     await prisma.payment.create({
@@ -220,7 +246,10 @@ export async function createBooking(input: {
       whatsapp: whatsappHref(
         `I have booked ${drip.name} at The Vitamin Spot for ${whenLabel}.`,
       ),
-      checkoutUrl: payment.authorization_url,
+      accessCode: payment.access_code,
+      authorizationUrl: payment.authorization_url,
+      reference,
+      returnPath: appointmentReturnPath(token),
     };
   } catch (error) {
     await prisma.appointment.delete({ where: { id: appointment.id } }).catch(() => undefined);
@@ -240,6 +269,17 @@ export async function resumeAppointmentDeposit(token: string) {
     include: { service: true, payment: true },
   });
   if (!appointment) return { error: "Booking not found." };
+
+  const requestHeaders = await headers();
+  const limited = limitByIpAndEmail(
+    requestHeaders,
+    "paystack",
+    appointment.email,
+    "paystackInit",
+  );
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
   if (appointment.status === "CONFIRMED") return { error: "This booking is already confirmed." };
   if (appointment.status === "CANCELLED") {
     return { error: "This booking was cancelled." };
@@ -270,6 +310,7 @@ export async function resumeAppointmentDeposit(token: string) {
       amount: appointment.service.deposit,
       reference,
       callbackUrl: manageUrl,
+      cancelUrl: withPaymentCancelled(manageUrl),
       metadata: { purpose: "APPOINTMENT_DEPOSIT", appointmentId: appointment.id },
     });
 
@@ -295,7 +336,13 @@ export async function resumeAppointmentDeposit(token: string) {
       });
     }
 
-    return { checkoutUrl: payment.authorization_url };
+    return {
+      token,
+      accessCode: payment.access_code,
+      authorizationUrl: payment.authorization_url,
+      reference,
+      returnPath: appointmentReturnPath(token),
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Could not start the deposit payment.",
@@ -319,6 +366,12 @@ export async function cancelAppointment(
   token: string,
   input: { reason: string; details?: string; acknowledged: boolean },
 ) {
+  const requestHeaders = await headers();
+  const limited = limitByIp(requestHeaders, "book-cancel", "bookingMutate");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
+
   if (!input.acknowledged) {
     return { error: "Please confirm you understand the cancellation policy." };
   }
@@ -390,6 +443,12 @@ export async function cancelAppointment(
 }
 
 export async function updateAppointment(token: string, start: string) {
+  const requestHeaders = await headers();
+  const limited = limitByIp(requestHeaders, "book-reschedule", "bookingMutate");
+  if (!limited.ok) {
+    return { error: rateLimitMessage(limited.retryAfterSec) };
+  }
+
   const prisma = await tryPrisma();
   if (!prisma) {
     return { error: "Choose a new time from the booking page." };

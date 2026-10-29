@@ -294,8 +294,6 @@ export function ProductCatalog({
                                     {formatNaira(product.compareAtPrice!)}
                                   </span>
                                 ) : null}
-                                <span>·</span>
-                                <span>{product.categorySlug}</span>
                               </div>
                             </div>
                           </div>

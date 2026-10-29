@@ -89,42 +89,35 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
           >
             {product.name}
           </Link>
-          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-deep/60">
+          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-deep/55">
             {product.tagline}
           </p>
         </div>
 
-        <div className="mt-5 border-t border-deep/5 pt-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <p className="font-display text-lg text-deep md:text-xl">
-                  {formatNaira(product.price)}
-                </p>
-                {hasDiscount ? (
-                  <p className="text-xs text-deep/40 line-through">
-                    {formatNaira(product.compareAtPrice!)}
-                  </p>
-                ) : null}
-              </div>
-              <p className="text-[10px] text-deep/50">30-day sachet box</p>
-            </div>
-
-            <button
-              type="button"
-              disabled={isOutOfStock}
-              onClick={handleAdd}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[11px] font-medium tracking-wider uppercase transition ${
-                isOutOfStock
-                  ? "cursor-not-allowed bg-deep/5 text-deep/30"
-                  : justAdded
-                    ? "bg-sage text-deep"
-                    : "border border-deep/20 bg-cream/50 text-deep hover:bg-deep hover:text-cream"
-              }`}
-            >
-              {justAdded ? <span>Added</span> : isOutOfStock ? <span>Sold out</span> : <span>Add</span>}
-            </button>
+        <div className="mt-5 flex items-end justify-between gap-3 border-t border-deep/8 pt-4">
+          <div className="flex items-baseline gap-2">
+            <p className="font-display text-lg text-deep md:text-xl">{formatNaira(product.price)}</p>
+            {hasDiscount ? (
+              <p className="text-xs text-deep/35 line-through">
+                {formatNaira(product.compareAtPrice!)}
+              </p>
+            ) : null}
           </div>
+
+          <button
+            type="button"
+            disabled={isOutOfStock}
+            onClick={handleAdd}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[11px] font-medium tracking-wider uppercase transition ${
+              isOutOfStock
+                ? "cursor-not-allowed bg-deep/5 text-deep/30"
+                : justAdded
+                  ? "bg-sage text-deep"
+                  : "border border-deep/20 bg-cream/50 text-deep hover:bg-deep hover:text-cream"
+            }`}
+          >
+            {justAdded ? <span>Added</span> : isOutOfStock ? <span>Sold out</span> : <span>Add</span>}
+          </button>
         </div>
       </div>
     </article>

@@ -145,6 +145,8 @@ const palette = {
 };
 
 const fontDisplay = "Georgia,'Times New Roman',Times,serif";
+const fontWordmark =
+  "'Cormorant Garamond',Palatino,'Palatino Linotype',Georgia,'Times New Roman',serif";
 const fontSans =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
 
@@ -216,7 +218,7 @@ function emailLetterhead(variant: "customer" | "admin") {
         </a>
       </td>
       <td style="vertical-align:middle;">
-        <p style="margin:0;font-family:${fontSans};font-size:15px;line-height:1.2;font-weight:750;letter-spacing:0.015em;color:${palette.deep};">${escapeHtml(siteBrand.name)}</p>
+        <p style="margin:0;font-family:${fontWordmark};font-size:22px;line-height:1;font-weight:500;letter-spacing:-0.02em;color:${palette.deep};">${escapeHtml(siteBrand.name)}</p>
         <p style="margin:5px 0 0;font-family:${fontSans};font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${palette.muted};">${meta}</p>
       </td>
     </tr>

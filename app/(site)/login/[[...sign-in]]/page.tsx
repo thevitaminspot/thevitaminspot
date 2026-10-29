@@ -1,10 +1,37 @@
 import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
+import { Suspense } from "react";
+import { ClerkAuthMount } from "@/components/clerk-auth-mount";
 import { siteClerkAppearance } from "@/lib/clerk-appearance";
 import { hasClerk } from "@/lib/env";
 import { pageAuth, pageShell, pageX, pageY } from "@/components/ui/layout-styles";
 
 export const metadata = { title: "Sign in" };
+export const instant = false;
+export const prefetch = "force-disabled";
+
+function SignInFallback() {
+  return (
+    <div
+      className="h-80 w-full max-w-sm animate-pulse rounded-2xl border border-deep/10 bg-white/70"
+      aria-hidden
+    />
+  );
+}
+
+function SignInPanel() {
+  return (
+    <ClerkAuthMount fallback={<SignInFallback />}>
+      <SignIn
+        routing="path"
+        path="/login"
+        forceRedirectUrl="/account/orders"
+        fallbackRedirectUrl="/account/orders"
+        appearance={siteClerkAppearance}
+      />
+    </ClerkAuthMount>
+  );
+}
 
 export default function LoginPage() {
   if (!hasClerk()) {
@@ -30,17 +57,15 @@ export default function LoginPage() {
         </div>
 
         <div className="flex justify-center">
-          <SignIn
-            routing="hash"
-            forceRedirectUrl="/account"
-            appearance={siteClerkAppearance}
-          />
+          <Suspense fallback={<SignInFallback />}>
+            <SignInPanel />
+          </Suspense>
         </div>
 
         <div className="rounded-2xl border border-deep/10 bg-white p-4 text-center text-xs text-deep/70">
           <p className="font-medium text-deep">Shopping or booking as a guest?</p>
           <p className="mt-1 text-deep/60">
-            You don’t need an account to buy a pack or book a drip.
+            You don&apos;t need an account to buy a pack or book a drip.
           </p>
           <div className="mt-3 flex items-center justify-center gap-4 font-medium">
             <Link href="/shop" className="text-deep underline hover:text-sage">

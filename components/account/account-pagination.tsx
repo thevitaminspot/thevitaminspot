@@ -6,34 +6,27 @@ import { pageRange } from "@/lib/pagination";
 const controlClass =
   "inline-flex items-center gap-1 rounded-lg border border-deep/15 bg-white px-3 py-1.5 text-xs font-medium text-deep transition hover:bg-cream/50 aria-disabled:pointer-events-none aria-disabled:opacity-40";
 
-function accountHref(ordersPage: number, bookingsPage: number) {
-  const params = new URLSearchParams();
-  if (ordersPage > 1) params.set("ordersPage", String(ordersPage));
-  if (bookingsPage > 1) params.set("bookingsPage", String(bookingsPage));
-  const query = params.toString();
-  return query ? `/account?${query}` : "/account";
+function pageHref(basePath: string, page: number) {
+  if (page <= 1) return basePath;
+  return `${basePath}?page=${page}`;
 }
 
 export type AccountPaginationProps = {
+  basePath: string;
   page: number;
   totalPages: number;
   totalItems: number;
   pageSize: number;
-  ordersPage: number;
-  bookingsPage: number;
-  pageParam: "ordersPage" | "bookingsPage";
   itemLabel: string;
   edge?: "top" | "bottom";
 };
 
 export function AccountPagination({
+  basePath,
   page,
   totalPages,
   totalItems,
   pageSize,
-  ordersPage,
-  bookingsPage,
-  pageParam,
   itemLabel,
   edge = "bottom",
 }: AccountPaginationProps) {
@@ -43,11 +36,6 @@ export function AccountPagination({
   const prevPage = page - 1;
   const nextPage = page + 1;
   const borderClass = edge === "top" ? "border-b border-deep/10" : "border-t border-deep/10";
-
-  const hrefFor = (target: number) =>
-    pageParam === "ordersPage"
-      ? accountHref(target, bookingsPage)
-      : accountHref(ordersPage, target);
 
   return (
     <div
@@ -63,7 +51,7 @@ export function AccountPagination({
             Previous
           </span>
         ) : (
-          <Link href={hrefFor(prevPage)} className={controlClass}>
+          <Link href={pageHref(basePath, prevPage)} className={controlClass}>
             <ChevronLeft className="size-3.5" aria-hidden />
             Previous
           </Link>
@@ -77,7 +65,7 @@ export function AccountPagination({
             <ChevronRight className="size-3.5" aria-hidden />
           </span>
         ) : (
-          <Link href={hrefFor(nextPage)} className={controlClass}>
+          <Link href={pageHref(basePath, nextPage)} className={controlClass}>
             Next
             <ChevronRight className="size-3.5" aria-hidden />
           </Link>

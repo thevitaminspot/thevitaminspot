@@ -1,21 +1,26 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse, type NextRequest } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 
-const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
-const isPaystackWebhook = createRouteMatcher(["/api/paystack/webhook"]);
+type ProxyHandler = (
+  req: NextRequest,
+  event: NextFetchEvent,
+) => Response | Promise<Response>;
 
-const clerk = clerkMiddleware(async (auth, request) => {
-  if (isPaystackWebhook(request)) return;
-  if (isAdminRoute(request)) {
-    await auth.protect({ unauthenticatedUrl: new URL("/login", request.url).href });
+let clerkHandler: ProxyHandler | null = null;
+
+function getClerkHandler(): ProxyHandler {
+  if (!clerkHandler) {
+    // Bare middleware — route protection lives in layouts/pages/actions.
+    clerkHandler = clerkMiddleware() as ProxyHandler;
   }
-});
+  return clerkHandler;
+}
 
-export function proxy(request: NextRequest, event: Parameters<typeof clerk>[1]) {
+export default function proxy(request: NextRequest, event: NextFetchEvent) {
   if (!process.env.CLERK_SECRET_KEY || !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     return NextResponse.next();
   }
-  return clerk(request, event);
+  return getClerkHandler()(request, event);
 }
 
 export const config = {

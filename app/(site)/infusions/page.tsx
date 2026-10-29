@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { BrandWordmark } from "@/components/brand/wordmark";
 import { InfusionBooking } from "@/components/infusions/infusion-booking";
 import { pageNarrow, pageShell } from "@/components/ui/layout-styles";
 import { listInfusions } from "@/lib/data";
@@ -17,7 +18,10 @@ export default async function InfusionsPage() {
     <main className={pageShell}>
       <div className={`${pageNarrow} text-center`}>
         <h1 className="font-display text-4xl text-deep md:text-5xl">Book an IV drip</h1>
-        <p className="mt-3 text-sm text-deep/65">The Vitamin Spot · Abuja</p>
+        <p className="mt-3 text-deep/65">
+          <BrandWordmark className="text-2xl text-deep" />
+          <span className="text-sm"> · Abuja</span>
+        </p>
         <p className="mt-2 text-sm leading-relaxed text-deep/55">
           Pick your drip, choose a time, and pay the booking fee online. Most sessions take about an hour.
         </p>

@@ -1,12 +1,10 @@
 import { cacheLife, cacheTag } from "next/cache";
-import { cache } from "react";
 import {
   categories,
   deliveryZones,
   infusions,
   products,
   relatedProducts,
-  testimonials,
 } from "@/lib/catalog";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { tryPrisma } from "@/lib/db";
@@ -64,20 +62,16 @@ async function fetchActiveProducts() {
   return rows.map(mapProduct);
 }
 
-export const listProducts = cache(async function listProducts() {
+export async function listProducts() {
   "use cache";
   cacheTag(CACHE_TAGS.products);
   cacheLife("hours");
   return fetchActiveProducts();
-});
+}
 
-export async function getFeaturedFooterPacks() {
-  "use cache";
-  cacheTag(CACHE_TAGS.products);
-  cacheLife("hours");
-  return (await listProducts())
-    .filter((product) => product.featured)
-    .map((product) => ({ href: `/shop/${product.slug}`, label: product.name }));
+/** Derived from listProducts — do not add "use cache" here (nested cache + outer memoization hangs). */
+export async function listFeaturedProducts() {
+  return (await listProducts()).filter((product) => product.featured);
 }
 
 export async function listManagedProducts() {
@@ -118,12 +112,12 @@ async function fetchActiveInfusions() {
   }));
 }
 
-export const listInfusions = cache(async function listInfusions() {
+export async function listInfusions() {
   "use cache";
   cacheTag(CACHE_TAGS.infusions);
   cacheLife("hours");
   return fetchActiveInfusions();
-});
+}
 
 export async function listManagedInfusions() {
   const prisma = await tryPrisma();
@@ -150,22 +144,7 @@ export async function listManagedInfusions() {
   }));
 }
 
-export const listTestimonials = cache(async function listTestimonials() {
-  "use cache";
-  cacheTag(CACHE_TAGS.testimonials);
-  cacheLife("days");
-  const prisma = await tryPrisma();
-  if (!prisma) return testimonials;
-
-  const rows = await prisma.testimonial.findMany({
-    where: { featured: true },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return rows.length === 0 ? testimonials : rows;
-});
-
-export const listZones = cache(async function listZones() {
+export async function listZones() {
   "use cache";
   cacheTag(CACHE_TAGS.zones);
   cacheLife("hours");
@@ -178,9 +157,9 @@ export const listZones = cache(async function listZones() {
   });
 
   return rows.length === 0 ? deliveryZones : rows;
-});
+}
 
-export const listCategories = cache(async function listCategories() {
+export async function listCategories() {
   "use cache";
   cacheTag(CACHE_TAGS.categories);
   cacheLife("hours");
@@ -199,7 +178,7 @@ export const listCategories = cache(async function listCategories() {
         slug: row.slug,
         description: row.description ?? "",
       }));
-});
+}
 
 export async function findProduct(slug: string) {
   const all = await listProducts();

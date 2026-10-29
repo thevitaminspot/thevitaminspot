@@ -4,16 +4,7 @@ import { useMemo, useState } from "react";
 import { updateAppointmentStatus } from "@/actions/admin";
 import { AppointmentCancelConfirm } from "@/components/admin/appointment-cancel-confirm";
 import { AdminListSearch, filterByQuery } from "@/components/admin/list-search";
-import {
-  AdminEmptyState,
-  AdminFilterTabs,
-  AdminStatusBadge,
-  AdminTable,
-  AdminTableCell,
-  AdminTableHead,
-  AdminTableHeaderCell,
-  AdminTableRow,
-} from "@/components/admin/ui";
+import { AdminEmptyState, AdminFilterTabs, AdminStatusBadge } from "@/components/admin/ui";
 import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { adminButtonPrimary, adminButtonSecondary, interactiveControl } from "@/components/ui/form-styles";
 import { bookingQueue, isOverdueBooking, type BookingQueue } from "@/lib/admin-bookings";
@@ -164,58 +155,42 @@ export function AdminBookings({ rows }: { rows: BookingRow[] }) {
           {rows.length === 0 ? "Bookings will show up here." : "No bookings in this view."}
         </AdminEmptyState>
       ) : (
-        <PaginatedTableWrap pagination={pagination.tablePaginationProps("bookings")}>
-          <AdminTable>
-            <AdminTableHead>
-              <tr>
-                <AdminTableHeaderCell>When</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Guest</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Session</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Deposit</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Action</AdminTableHeaderCell>
-              </tr>
-            </AdminTableHead>
-            <tbody>
+        <PaginatedTableWrap pagination={pagination.tablePaginationProps("bookings")} scroll={false}>
+            <ul className="divide-y divide-deep/8">
               {pagination.visible.map((row) => {
                 const overdue = isOverdueBooking(row.status, row.startsAt);
                 return (
-                  <AdminTableRow key={row.id}>
-                    <AdminTableCell className="whitespace-nowrap">
-                      <span className="text-deep/80">{when(row.startsAt)}</span>
-                      {overdue ? (
-                        <span className="mt-1 block text-[11px] text-amber-800">Overdue</span>
-                      ) : null}
-                    </AdminTableCell>
-                    <AdminTableCell>
-                      <span className="font-medium text-deep">{row.name}</span>
-                      <span className="mt-1 block text-deep/50">
-                        {row.email}
-                        {row.phone ? ` · ${row.phone}` : ""}
-                      </span>
-                    </AdminTableCell>
-                    <AdminTableCell>
-                      <span className="text-deep">{row.serviceName}</span>
-                      <span className="mt-1 block text-[11px] text-deep/45">
-                        {formatNaira(row.sessionPrice)}
-                      </span>
-                    </AdminTableCell>
-                    <AdminTableCell>
-                      {row.deposit <= 0 ? (
-                        <span className="text-deep/35">None</span>
-                      ) : row.depositPaid != null ? (
-                        <AdminStatusBadge status="PAID" label="Paid" />
-                      ) : (
-                        <AdminStatusBadge status="PENDING" label="Due" />
-                      )}
-                    </AdminTableCell>
-                    <AdminTableCell>
+                  <li key={row.id} className="px-5 py-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-deep">{row.serviceName}</p>
+                        <p className="mt-1 text-sm text-deep/60">
+                          {row.name}
+                          {row.phone ? ` · ${row.phone}` : ""}
+                          {row.email ? ` · ${row.email}` : ""}
+                        </p>
+                        <p className="mt-1 text-sm text-deep/50">
+                          {when(row.startsAt)}
+                          {overdue ? <span className="ml-2 text-amber-800">Overdue</span> : null}
+                        </p>
+                        {row.deposit > 0 ? (
+                          <p className="mt-2 text-sm text-deep/60">
+                            Deposit {formatNaira(row.deposit)} ·{" "}
+                            {row.depositPaid != null ? "Paid" : "Unpaid"}
+                            <span className="text-deep/40"> · Session {formatNaira(row.sessionPrice)}</span>
+                          </p>
+                        ) : (
+                          <p className="mt-2 text-sm text-deep/45">
+                            No deposit · Session {formatNaira(row.sessionPrice)}
+                          </p>
+                        )}
+                      </div>
                       <BookingActions row={row} />
-                    </AdminTableCell>
-                  </AdminTableRow>
+                    </div>
+                  </li>
                 );
               })}
-            </tbody>
-          </AdminTable>
+            </ul>
         </PaginatedTableWrap>
       )}
     </div>

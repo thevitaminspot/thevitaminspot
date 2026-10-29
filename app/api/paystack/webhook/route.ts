@@ -1,5 +1,6 @@
 import { handlePaystackWebhookCharge } from "@/lib/payments";
 import { verifyPaystackSignature } from "@/lib/paystack";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 type PaystackEvent = {
   event: string;
@@ -13,11 +14,34 @@ type PaystackEvent = {
 };
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request.headers);
+
+  const volume = rateLimit(`webhook:ip:${ip}`, "webhook");
+  if (!volume.ok) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(volume.retryAfterSec) },
+      },
+    );
+  }
+
   const raw = await request.text();
   const signature = request.headers.get("x-paystack-signature");
 
   try {
     if (!verifyPaystackSignature(raw, signature)) {
+      const rejects = rateLimit(`webhook:bad:${ip}`, "webhookReject");
+      if (!rejects.ok) {
+        return Response.json(
+          { error: "Too many invalid attempts" },
+          {
+            status: 429,
+            headers: { "Retry-After": String(rejects.retryAfterSec) },
+          },
+        );
+      }
       return Response.json({ error: "Invalid signature" }, { status: 401 });
     }
   } catch {
@@ -34,6 +58,12 @@ export async function POST(request: Request) {
   const data = event.data;
   if (!data?.reference || !data.status || typeof data.amount !== "number") {
     return Response.json({ received: true, ignored: true });
+  }
+
+  // One active settlement path per reference — blocks replay floods of the same charge.
+  const refHit = rateLimit(`webhook:ref:${data.reference}`, "paymentConfirm");
+  if (!refHit.ok) {
+    return Response.json({ received: true, throttled: true });
   }
 
   if (event.event === "charge.success" || event.event === "charge.failed") {

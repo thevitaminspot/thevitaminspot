@@ -1,20 +1,11 @@
 import { AdminBlockedDatesList } from "@/components/admin/blocked-dates-list";
 import { BlockDateForm } from "@/components/admin/block-date-form";
 import { DatabaseSetup } from "@/components/admin/setup";
-import {
-  AdminPageHeader,
-  AdminSection,
-  AdminTableCell,
-  AdminTableHead,
-  AdminTableHeaderCell,
-  AdminTableRow,
-  AdminTableWrap,
-} from "@/components/admin/ui";
+import { WeeklyHoursForm } from "@/components/admin/weekly-hours-form";
+import { AdminPageHeader, AdminSection } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin";
 import { getRules } from "@/lib/availability";
 import { tryPrisma } from "@/lib/db";
-
-const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export const instant = false;
 
@@ -30,34 +21,19 @@ export default async function AdminAvailabilityPage() {
       <AdminPageHeader
         eyebrow="Clinic"
         title="Hours"
-        description="Weekly chair availability and dates blocked from online booking."
+        description="Edit weekly chair hours and block or unblock dates for online booking."
       />
 
       <AdminSection title="Weekly schedule">
-        <AdminTableWrap>
-          <table className="w-full text-left text-sm">
-            <AdminTableHead>
-              <tr>
-                <AdminTableHeaderCell>Day</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Hours</AdminTableHeaderCell>
-                <AdminTableHeaderCell>Slots</AdminTableHeaderCell>
-              </tr>
-            </AdminTableHead>
-            <tbody>
-              {rules.map((rule) => (
-                <AdminTableRow key={`${rule.weekday}-${rule.startMin}`}>
-                  <AdminTableCell className="font-medium">{days[rule.weekday]}</AdminTableCell>
-                  <AdminTableCell>
-                    {Math.floor(rule.startMin / 60)}:00–{Math.floor(rule.endMin / 60)}:00
-                  </AdminTableCell>
-                  <AdminTableCell className="text-deep/60">
-                    {rule.slotMin} min · {rule.bufferMin} min buffer
-                  </AdminTableCell>
-                </AdminTableRow>
-              ))}
-            </tbody>
-          </table>
-        </AdminTableWrap>
+        <WeeklyHoursForm
+          initialRules={rules.map((rule) => ({
+            weekday: rule.weekday,
+            startMin: rule.startMin,
+            endMin: rule.endMin,
+            slotMin: rule.slotMin,
+            bufferMin: rule.bufferMin,
+          }))}
+        />
       </AdminSection>
 
       <div className="mt-10">
