@@ -60,24 +60,31 @@ On **Today**, if there are zero products, use **Load starter catalogue** to seed
 
 ## How the admin is laid out
 
-The left sidebar (or **Menu** on mobile) groups pages like this:
+The left sidebar (or **Menu** on mobile) is organised like this:
 
-| Group | Page | Path |
-|--------|------|------|
-| **Overview** | **Today** | `/admin` |
-| **Shop** | **Orders** | `/admin/orders` |
-| **Shop** | **Products** | `/admin/products` |
-| **Shop** | **Customers** | `/admin/customers` |
-| **Shop** | **Delivery** | `/admin/zones` |
-| **Clinic** | **Bookings** | `/admin/appointments` |
-| **Clinic** | **Infusions** | `/admin/infusions` |
-| **Clinic** | **Hours** | `/admin/availability` |
-| **Inbox** | **Messages** | `/admin/messages` |
+**Always visible**
+
+| Page | Path |
+|------|------|
+| **Today** | `/admin` |
+| **Orders** | `/admin/orders` |
+| **Bookings** | `/admin/appointments` |
+| **Customers** | `/admin/customers` |
+| **Products** | `/admin/products` |
+| **Messages** | `/admin/messages` |
+
+**Settings** (expandable)
+
+| Page | Path |
+|------|------|
+| **Infusions** | `/admin/infusions` |
+| **Hours** | `/admin/availability` |
+| **Delivery** | `/admin/zones` |
 
 Footer actions:
 
+- **Help & guide** — short in-admin how-to (same topics as this document, condensed).
 - **View shop** — opens the public storefront.
-- **Account** — Clerk profile / sign out.
 
 All times in admin are shown in **Lagos** time unless noted otherwise.
 

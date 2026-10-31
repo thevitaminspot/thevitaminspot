@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminToaster } from "@/components/admin/admin-toaster";
 import {
@@ -19,6 +20,7 @@ export function AdminShell({
   const pathname = usePathname();
   const mobile = useAdminMobileNav();
   const page = currentAdminPage(pathname);
+  const onHelp = pathname === "/admin/help";
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8f5ef_0%,#f4efe4_100%)] md:flex">
@@ -36,15 +38,25 @@ export function AdminShell({
           pageLabel={page?.label}
         />
 
-        {page ? (
-          <div className="hidden border-b border-deep/6 bg-white/60 px-10 py-3.5 backdrop-blur-sm md:block">
+        <div className="hidden items-center justify-between gap-4 border-b border-deep/6 bg-white/60 px-10 py-3.5 backdrop-blur-sm md:flex">
+          {page ? (
             <p className="text-[10px] tracking-[0.18em] text-deep/40 uppercase">
               {page.group}
               <span className="mx-2 text-deep/20">/</span>
               <span className="text-deep/65">{page.label}</span>
             </p>
-          </div>
-        ) : null}
+          ) : (
+            <span />
+          )}
+          {!onHelp ? (
+            <Link
+              href="/admin/help"
+              className="inline-flex items-center rounded-lg border border-deep/15 bg-white px-3 py-1.5 text-[11px] tracking-[0.14em] text-deep/70 uppercase transition hover:border-deep/35 hover:text-deep"
+            >
+              Help
+            </Link>
+          ) : null}
+        </div>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 md:px-8 md:py-10">
           {children}

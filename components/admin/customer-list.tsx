@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   AdminEmptyState,
@@ -13,7 +12,7 @@ import {
 } from "@/components/admin/ui";
 import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
-import { adminFormSearch } from "@/components/ui/form-styles";
+import { SearchField } from "@/components/ui/search-field";
 import { formatNaira } from "@/lib/money";
 
 export type CustomerRow = {
@@ -52,15 +51,13 @@ export function AdminCustomerList({ rows }: { rows: CustomerRow[] }) {
         <p className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">
           {filtered.length} of {rows.length} customers
         </p>
-        <div className="relative min-w-[220px] sm:max-w-xs">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-deep/40" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by name, email, or phone…"
-            className={adminFormSearch}
-          />
-        </div>
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Search by name, email, or phone…"
+          variant="admin"
+          className="w-full sm:max-w-xs"
+        />
       </div>
 
       <div className="mt-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { AlertTriangle, Eye, EyeOff, Minus, Plus, Search, Sparkles } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Minus, Plus, Sparkles } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteProduct, toggleProductActive, updateProductStock } from "@/actions/admin";
@@ -11,7 +11,8 @@ import { TablePagination } from "@/components/ui/table-pagination";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { AdminEmptyState, AdminFormPanel, AdminPageHeader } from "@/components/admin/ui";
 import { useScrollIntoView } from "@/components/admin/use-scroll-into-view";
-import { adminButtonPrimary, adminButtonTab, adminFormSearch } from "@/components/ui/form-styles";
+import { adminButtonPrimary, adminButtonTab } from "@/components/ui/form-styles";
+import { SearchField } from "@/components/ui/search-field";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 import { formatNaira } from "@/lib/money";
 import type { CatalogProduct } from "@/lib/catalog";
@@ -220,15 +221,13 @@ export function ProductCatalog({
                   </button>
                 </div>
 
-                <div className="relative min-w-[220px]">
-                  <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-deep/40" />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search catalogue..."
-                    className={adminFormSearch}
-                  />
-                </div>
+                <SearchField
+                  value={query}
+                  onChange={setQuery}
+                  placeholder="Search catalogue…"
+                  variant="admin"
+                  className="min-w-[220px]"
+                />
               </div>
 
               {filtered.length === 0 ? (
