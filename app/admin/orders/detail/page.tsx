@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { formatLagos } from "@/lib/datetime";
 import { notFound } from "next/navigation";
 import {
@@ -17,7 +18,6 @@ import {
   AdminStatusBadge,
 } from "@/components/admin/ui";
 import { fulfillmentLabel } from "@/lib/admin-orders";
-import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatNaira } from "@/lib/money";
@@ -36,9 +36,39 @@ function cleanWaPhone(phone: string): string {
   return digits;
 }
 
-export default async function AdminOrderPage({ params }: PageProps<"/admin/orders/[id]">) {
-  await requireAdmin();
-  const { id } = await params;
+export default function AdminOrderDetailPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-8 animate-pulse">
+          <div className="h-3 w-24 rounded bg-deep/10" />
+          <div className="h-9 w-48 rounded bg-deep/10" />
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="h-64 rounded-2xl bg-deep/5" />
+            <div className="h-64 rounded-2xl bg-deep/5" />
+          </div>
+        </div>
+      }
+    >
+      <AdminOrderDetail searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function AdminOrderDetail({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const query = await searchParams;
+  const raw = query.id;
+  const id = typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : "";
+  if (!id) notFound();
+
   const prisma = await tryPrisma();
   if (!prisma) return <p>Connect Neon to open orders.</p>;
 
@@ -92,10 +122,8 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
       </header>
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        {/* Left Column: Order Items */}
         <div className="min-w-0 space-y-6">
           <AdminDetailCard title="Items in order" icon={<Package className="size-4" />}>
-
             <ul className="mt-4 divide-y divide-deep/10">
               {order.items.map((item) => (
                 <li key={item.id} className="flex items-center justify-between gap-4 py-3 text-sm">
@@ -146,9 +174,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           </section>
         </div>
 
-        {/* Right Column: Fulfillment, Contact, & Status Controls */}
         <div className="min-w-0 space-y-6">
-          {/* Status Pipeline & Controls */}
           <AdminDetailCard title="Fulfillment">
             <OrderActions
               id={order.id}
@@ -159,14 +185,12 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           </AdminDetailCard>
 
           <AdminDetailCard title="Customer" icon={<User className="size-4" />}>
-
             <div className="mt-4 space-y-2 text-xs leading-relaxed text-deep/80">
               <p className="text-sm font-semibold text-deep">{order.name}</p>
               <p className="break-all text-deep/70">{order.email}</p>
               <p className="break-all text-deep/70">{order.phone}</p>
             </div>
 
-            {/* Quick Contact Buttons */}
             <div className="mt-4 grid grid-cols-3 gap-2 border-t border-deep/10 pt-4">
               <a
                 href={waUrl}
@@ -195,7 +219,6 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
               </a>
             </div>
 
-            {/* Address */}
             <div className="mt-5 border-t border-deep/10 pt-4">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-deep">
                 <MapPin className="size-3.5 text-sage" />

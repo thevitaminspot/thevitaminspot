@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteZone, updateZone } from "@/actions/admin";
@@ -8,7 +7,8 @@ import { AdminActionMenu } from "@/components/admin/action-menu";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { Modal } from "@/components/ui/modal";
-import { adminFormField, adminFormLabel, adminFormSearch } from "@/components/ui/form-styles";
+import { adminFormField, adminFormLabel } from "@/components/ui/form-styles";
+import { SearchField } from "@/components/ui/search-field";
 import { formatNaira } from "@/lib/money";
 
 type Zone = {
@@ -79,15 +79,13 @@ export function DeliveryZoneList({
         <p className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">
           {filtered.length} of {zones.length} locations
         </p>
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-deep/40" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by location…"
-            className={adminFormSearch}
-          />
-        </div>
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Search by location…"
+          variant="admin"
+          className="w-full sm:max-w-xs"
+        />
       </div>
 
       {message && !onMessage ? (

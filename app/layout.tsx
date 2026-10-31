@@ -1,36 +1,49 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { Suspense } from "react";
 import { StripCursorRefs } from "@/components/dev/strip-cursor-refs";
 import { Providers } from "@/components/providers";
 import { brand } from "@/lib/brand";
 import { infusions } from "@/lib/catalog";
-import { site } from "@/lib/site";
+import { PRODUCTION_URL, resolveSiteUrl, site } from "@/lib/site";
 import "./globals.css";
 
-const display = Fraunces({
-  subsets: ["latin"],
-  weight: ["400", "600"],
+/** Stable for OG/metadata; JSON-LD below can still use the request host. */
+const metadataOrigin = PRODUCTION_URL;
+const siteUrl = resolveSiteUrl();
+
+
+/** Self-hosted latin files — avoids next/font/google kit-URL build flake. */
+const display = localFont({
+  src: [
+    { path: "./fonts/fraunces-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/fraunces-600.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-display",
   display: "swap",
 });
 
-const wordmark = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["500", "600"],
+const wordmark = localFont({
+  src: [
+    { path: "./fonts/cormorant-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/cormorant-600.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-wordmark",
   display: "swap",
 });
 
-const sans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const sans = localFont({
+  src: [
+    { path: "./fonts/jakarta-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/jakarta-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/jakarta-600.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-sans",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
+  metadataBase: new URL(metadataOrigin),
   title: {
     default: `${site.name} · Abuja`,
     template: `%s · ${site.name}`,
@@ -53,10 +66,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const organizationId = `${site.url}/#organization`;
-const websiteId = `${site.url}/#website`;
-const businessId = `${site.url}/#business`;
-const logoUrl = `${site.url}${brand.mark.src}`;
+const organizationId = `${siteUrl}/#organization`;
+const websiteId = `${siteUrl}/#website`;
+const businessId = `${siteUrl}/#business`;
+const logoUrl = `${siteUrl}${brand.mark.src}`;
 
 const jsonLd = {
   "@context": "https://schema.org",

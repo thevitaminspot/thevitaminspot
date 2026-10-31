@@ -1,7 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
-import { adminFormSearch } from "@/components/ui/form-styles";
+import { SearchField } from "@/components/ui/search-field";
 
 export function filterByQuery<T>(
   items: T[],
@@ -35,15 +34,13 @@ export function AdminListSearch({
       ) : (
         <span className="hidden sm:block sm:flex-1" aria-hidden />
       )}
-      <div className="relative w-full sm:max-w-xs">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-deep/40" />
-        <input
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          className={adminFormSearch}
-        />
-      </div>
+      <SearchField
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        variant="admin"
+        className="w-full sm:max-w-xs"
+      />
     </div>
   );
 }

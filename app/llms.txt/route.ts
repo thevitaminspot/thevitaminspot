@@ -37,7 +37,6 @@ export function GET() {
     `- Shop: ${site.url}/shop`,
     `- Book an IV: ${site.url}/infusions`,
     `- Contact: ${site.url}/contact`,
-    `- About: ${site.url}/about`,
   ];
 
   return new Response(lines.join("\n"), {

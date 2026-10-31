@@ -111,7 +111,7 @@ export function AdminOrders({ rows }: { rows: AdminOrderRow[] }) {
                   <li key={row.id} className="px-5 py-5">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <Link
-                        href={`/admin/orders/${row.id}`}
+                        href={`/admin/orders/detail?id=${row.id}`}
                         className="font-medium text-deep underline decoration-deep/20 underline-offset-2 hover:decoration-deep"
                       >
                         {row.orderNumber}
@@ -187,7 +187,7 @@ export function AdminOrderListItem({ order }: { order: AdminOrderRow }) {
 
   return (
     <Link
-      href={`/admin/orders/${order.id}`}
+      href={`/admin/orders/detail?id=${order.id}`}
       className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-cream/30"
     >
       <span className="min-w-0">

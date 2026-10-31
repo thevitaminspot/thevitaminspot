@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/shop/product-card";
 import { Reveal } from "@/components/ui/reveal";
+import { SearchField } from "@/components/ui/search-field";
 import type { CatalogProduct } from "@/lib/catalog";
 import { interactiveControl } from "@/components/ui/form-styles";
 
@@ -37,59 +38,57 @@ export function ShopCatalog({ products }: { products: CatalogProduct[] }) {
 
   return (
     <div className="mt-10">
-      <div className="flex flex-col gap-6 border-b border-deep/10 pb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
-        <label className="block min-w-0 flex-1">
-          <span className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">Search</span>
-          <div className="relative mt-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Name, ingredient, or benefit"
-              autoComplete="off"
-              className="w-full border-0 border-b border-deep/20 bg-transparent py-2.5 pr-9 text-sm text-deep placeholder:text-deep/35 transition focus:border-deep/50 focus:outline-none"
-            />
-            {query ? (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label="Clear search"
-                className={`absolute top-1/2 right-0 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center text-lg leading-none text-deep/40 transition hover:text-deep ${interactiveControl}`}
-              >
-                ×
-              </button>
-            ) : null}
-          </div>
-        </label>
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-deep/10 bg-gradient-to-br from-white via-cream/50 to-tint/40 p-4 sm:p-5">
+        <div
+          className="pointer-events-none absolute -top-16 -right-10 size-40 rounded-full bg-sage/10 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-20 left-8 size-44 rounded-full bg-deep/[0.04] blur-3xl"
+          aria-hidden
+        />
 
-        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">Sort</span>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {sorts.map((option) => {
-              const active = sort === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setSort(option.id)}
-                  className={`text-sm transition ${interactiveControl} ${
-                    active ? "text-deep" : "text-deep/40 hover:text-deep/70"
-                  }`}
-                  aria-pressed={active}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+          <SearchField
+            value={query}
+            onChange={setQuery}
+            placeholder="Name, ingredient, or benefit"
+            label="Find a pack"
+            variant="storefront"
+            className="min-w-0 flex-1"
+          />
+
+          <div className="flex shrink-0 flex-col gap-2">
+            <span className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">Sort</span>
+            <div className="flex flex-wrap gap-1.5">
+              {sorts.map((option) => {
+                const active = sort === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setSort(option.id)}
+                    className={`rounded-full px-3.5 py-1.5 text-xs transition ${interactiveControl} ${
+                      active
+                        ? "bg-deep text-cream shadow-sm shadow-deep/15"
+                        : "bg-white/75 text-deep/55 ring-1 ring-deep/10 hover:text-deep"
+                    }`}
+                    aria-pressed={active}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      <p className="mt-4 text-xs text-deep/45">
-        {filtered.length === products.length
-          ? `${products.length} ${products.length === 1 ? "pack" : "packs"}`
-          : `${filtered.length} of ${products.length} packs`}
-      </p>
+        <p className="relative mt-4 text-xs text-deep/45">
+          {filtered.length === products.length
+            ? `${products.length} ${products.length === 1 ? "pack" : "packs"}`
+            : `${filtered.length} of ${products.length} packs`}
+        </p>
+      </div>
 
       {filtered.length === 0 ? (
         <div className="mt-14 max-w-sm">

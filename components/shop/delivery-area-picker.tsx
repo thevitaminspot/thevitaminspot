@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import type { CatalogZone } from "@/lib/catalog";
 import { formatNaira } from "@/lib/money";
-import { formControl, formLabel } from "@/components/ui/form-styles";
+import { formLabel, interactiveControl } from "@/components/ui/form-styles";
+import { SearchField } from "@/components/ui/search-field";
 
 export function DeliveryAreaPicker({
   zones,
@@ -28,18 +29,16 @@ export function DeliveryAreaPicker({
       <label className={formLabel} htmlFor="abuja-area-search">
         Abuja area *
       </label>
-      <input
-        id="abuja-area-search"
-        type="search"
+      <SearchField
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={setQuery}
         placeholder="Search area — e.g. Jabi, Gwarinpa"
-        className={formControl}
-        aria-label="Search Abuja areas"
-        autoComplete="off"
+        variant="checkout"
+        className="mt-1.5"
+        id="abuja-area-search"
       />
       <div
-        className="mt-2 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-deep/15 p-2"
+        className="mt-2 max-h-56 space-y-1 overflow-y-auto rounded-xl border border-deep/12 bg-white/60 p-2"
         role="listbox"
         aria-label="Abuja areas"
       >
@@ -55,7 +54,7 @@ export function DeliveryAreaPicker({
                 role="option"
                 aria-selected={active}
                 onClick={() => onChange(zone.slug)}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${interactiveControl} ${
                   active ? "bg-deep text-cream" : "text-deep hover:bg-tint/50"
                 }`}
               >

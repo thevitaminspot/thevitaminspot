@@ -15,7 +15,6 @@ const links = [
   { href: "/shop", label: "Shop", description: "Vitamins & packs" },
   { href: "/infusions", label: "Infusions", description: "Book an IV drip" },
   { href: "/contact", label: "Contact", description: "Message the shop" },
-  { href: "/about", label: "About", description: "Our story" },
 ];
 
 function isCurrent(href: string, pathname: string) {

@@ -426,7 +426,8 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     fulfillment: order.fulfillment,
   }).catch(() => undefined);
   revalidatePath("/admin/orders");
-  revalidatePath(`/admin/orders/${id}`);
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/detail?id=${id}`);
   return { ok: true as const };
 }
 

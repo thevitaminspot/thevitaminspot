@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toggleInfusionActive } from "@/actions/admin";
@@ -11,7 +10,8 @@ import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { AdminEmptyState, AdminFormPanel, AdminPageHeader } from "@/components/admin/ui";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 import { useScrollIntoView } from "@/components/admin/use-scroll-into-view";
-import { adminButtonPrimary, adminButtonTab, adminFormSearch } from "@/components/ui/form-styles";
+import { adminButtonPrimary, adminButtonTab } from "@/components/ui/form-styles";
+import { SearchField } from "@/components/ui/search-field";
 import { nairaLabel } from "@/lib/money";
 import type { CatalogInfusion } from "@/lib/catalog";
 
@@ -179,15 +179,13 @@ export function InfusionCatalog({
                   </button>
                 </div>
 
-                <div className="relative min-w-[220px]">
-                  <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-deep/40" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search sessions…"
-                    className={adminFormSearch}
-                  />
-                </div>
+                <SearchField
+                  value={query}
+                  onChange={setQuery}
+                  placeholder="Search sessions…"
+                  variant="admin"
+                  className="min-w-[220px]"
+                />
               </div>
 
               {filtered.length === 0 ? (

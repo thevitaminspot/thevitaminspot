@@ -18,9 +18,6 @@ export const formSelect = `${formControl} cursor-pointer`;
 
 export const formTextarea = `${formControl} min-h-36 resize-y`;
 
-export const formSearch =
-  "w-full rounded-xl border border-deep/15 bg-cream/30 py-2.5 pr-16 pl-4 text-xs text-deep placeholder:text-deep/40 transition focus:border-deep/40 focus:bg-white focus:outline-none";
-
 export const formError = "text-sm text-deep";
 
 export const formErrorBox =
@@ -53,6 +50,3 @@ export const adminFormField = `${adminFormControl} mt-1.5`;
 export const adminFormTextarea = `${adminFormControl} min-h-24 resize-y`;
 
 export const adminFormSelect = `${adminFormControl} cursor-pointer`;
-
-export const adminFormSearch =
-  "w-full rounded-xl border border-deep/10 bg-white py-2 pr-4 pl-9 text-xs text-deep placeholder:text-deep/40 transition focus:border-deep/30 focus:outline-none";
