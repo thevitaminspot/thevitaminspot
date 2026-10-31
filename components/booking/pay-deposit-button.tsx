@@ -25,6 +25,7 @@ export function PayDepositButton({
         open={paystack.overlay !== null}
         title={paystack.overlay?.title}
         detail={paystack.overlay?.detail}
+        onForceClose={paystack.reset}
       />
       <button
         type="button"
@@ -41,7 +42,6 @@ export function PayDepositButton({
           idle={`Pay booking fee (${nairaLabel(deposit)})`}
         />
       </button>
-      {paystack.error ? <p className="mt-2 text-sm text-deep">{paystack.error}</p> : null}
     </div>
   );
 }

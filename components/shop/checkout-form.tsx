@@ -18,7 +18,6 @@ import type { CatalogZone } from "@/lib/catalog";
 import {
   formButtonSecondary,
   formControl,
-  formErrorBox,
   formLabel,
   formSubmitInline,
   formTextarea,
@@ -101,6 +100,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
       open={paystack.overlay !== null}
       title={paystack.overlay?.title}
       detail={paystack.overlay?.detail}
+      onForceClose={paystack.reset}
     />
     <form
       id={formId}
@@ -378,12 +378,6 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
             </div>
             <span className="font-display text-3xl text-deep">{formatNaira(grandTotal)}</span>
           </div>
-
-          {paystack.error ? (
-            <p className={`mt-5 ${formErrorBox}`}>
-              {paystack.error}
-            </p>
-          ) : null}
 
           <button
             type="submit"

@@ -75,7 +75,10 @@ export function Hero({
           <ul className="mx-auto grid max-w-6xl sm:grid-cols-2 lg:grid-cols-3">
             {packs.slice(0, 3).map((pack) => (
               <li key={pack.href} className="border-cream/10 sm:border-l first:sm:border-l-0">
-                <Link href={pack.href} className="flex items-center gap-4 px-5 py-4 transition hover:bg-white/5 md:px-8">
+                <Link
+                  href={pack.href}
+                  className="flex items-center gap-4 px-5 py-4 transition hover:bg-white/5 md:px-8"
+                >
                   {pack.image ? (
                     <Image
                       src={pack.image}

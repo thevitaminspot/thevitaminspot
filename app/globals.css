@@ -55,7 +55,18 @@ body {
 }
 
 .glass-panel {
-  background: var(--color-cream);
+  background: color-mix(in srgb, var(--color-cream) 86%, white);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/** Soft inset highlight — same language as the search field. */
+.surface-gloss {
+  background: color-mix(in srgb, white 72%, var(--color-cream));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 1px 2px rgba(11, 44, 33, 0.04);
 }
 
 .hero-wash {
@@ -72,9 +83,10 @@ body {
 }
 
 .panel {
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfaf7 100%);
   border: 1px solid color-mix(in srgb, var(--color-deep) 10%, transparent);
   border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 :root {
@@ -138,10 +150,37 @@ body {
   }
 }
 
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes slide-in-right {
   from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes menu-item-in {
+  from {
     opacity: 0;
-    transform: translateX(1.25rem);
+    transform: translateX(0.75rem);
   }
   to {
     opacity: 1;
@@ -192,11 +231,48 @@ body {
 }
 
 .animate-backdrop-in {
-  animation: fade-in 0.25s ease-out both;
+  animation: fade-in 0.28s ease-out both;
+}
+
+.animate-backdrop-out {
+  animation: fade-out 0.24s ease-in both;
 }
 
 .animate-drawer-in {
-  animation: slide-in-right 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: slide-in-right 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-drawer-out {
+  animation: slide-out-right 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-menu-item {
+  animation: menu-item-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.site-header {
+  background: color-mix(in srgb, var(--color-cream) 88%, white);
+  box-shadow:
+    inset 0 -1px 0 color-mix(in srgb, var(--color-deep) 8%, transparent),
+    0 1px 0 rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+}
+
+.nav-icon {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.nav-icon:hover {
+  background: color-mix(in srgb, var(--color-deep) 7%, transparent);
+}
+
+.nav-icon:active {
+  transform: scale(0.96);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -208,7 +284,10 @@ body {
   .page-enter,
   .animate-hero-in,
   .animate-backdrop-in,
-  .animate-drawer-in {
+  .animate-backdrop-out,
+  .animate-drawer-in,
+  .animate-drawer-out,
+  .animate-menu-item {
     animation: none;
   }
 
@@ -216,6 +295,10 @@ body {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .nav-icon:active {
+    transform: none;
   }
 }
 
@@ -258,4 +341,79 @@ select {
   background-clip: padding-box;
   overflow: hidden;
   padding-right: 2.25rem;
+}
+
+/* Sonner — Vitamin Spot brand */
+.tvs-toaster [data-sonner-toast].tvs-toast {
+  --normal-bg: color-mix(in srgb, var(--color-cream) 88%, white);
+  --normal-border: color-mix(in srgb, var(--color-deep) 12%, transparent);
+  --normal-text: var(--color-deep);
+  font-family: var(--font-sans), sans-serif;
+  background: var(--normal-bg) !important;
+  border: 1px solid var(--normal-border) !important;
+  color: var(--normal-text) !important;
+  border-radius: 0.9rem !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 10px 28px rgba(8, 21, 15, 0.1) !important;
+  padding: 0.85rem 1rem !important;
+  gap: 0.65rem !important;
+}
+
+.tvs-toaster [data-sonner-toast].tvs-toast [data-icon] {
+  color: var(--color-sage);
+}
+
+.tvs-toaster [data-sonner-toast].tvs-toast-success {
+  background: color-mix(in srgb, var(--color-tint) 55%, white) !important;
+  border-color: color-mix(in srgb, var(--color-sage) 45%, transparent) !important;
+}
+
+.tvs-toaster [data-sonner-toast].tvs-toast-success [data-icon] {
+  color: var(--color-deep);
+}
+
+.tvs-toaster [data-sonner-toast].tvs-toast-error {
+  background: color-mix(in srgb, #f8e8e4 70%, white) !important;
+  border-color: color-mix(in srgb, #b45a4a 28%, transparent) !important;
+}
+
+.tvs-toaster [data-sonner-toast].tvs-toast-error [data-icon] {
+  color: #8f3f34;
+}
+
+.tvs-toaster [data-sonner-toast].tvs-toast-info,
+.tvs-toaster [data-sonner-toast].tvs-toast-warning {
+  background: color-mix(in srgb, var(--color-cream) 70%, white) !important;
+  border-color: color-mix(in srgb, var(--color-deep) 14%, transparent) !important;
+}
+
+.tvs-toaster [data-sonner-toast] .tvs-toast-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-deep);
+}
+
+.tvs-toaster [data-sonner-toast] .tvs-toast-description {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--color-deep) 60%, transparent);
+}
+
+.tvs-toaster [data-sonner-toast] .tvs-toast-close {
+  background: white !important;
+  border: 1px solid color-mix(in srgb, var(--color-deep) 12%, transparent) !important;
+  color: var(--color-deep) !important;
+  left: auto !important;
+  right: 0 !important;
+  top: 0 !important;
+  transform: translate(35%, -35%) !important;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tvs-toaster [data-sonner-toast] .tvs-toast-close:hover {
+  background: var(--color-cream) !important;
+  border-color: color-mix(in srgb, var(--color-deep) 22%, transparent) !important;
 }

@@ -32,7 +32,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
   }
 
   return (
-    <article className={`group ${surface} flex h-full flex-col overflow-hidden transition-colors duration-300 hover:border-deep/20`}>
+    <article className={`group ${surface} flex h-full flex-col overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition duration-300 hover:border-deep/20 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_24px_rgba(11,44,33,0.06)]`}>
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-tint/30">
         <Link href={`/shop/${product.slug}`} className="block size-full">
           {photo ? (

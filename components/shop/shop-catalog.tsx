@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, X } from "lucide-react";
 import { ProductCard } from "@/components/shop/product-card";
 import { Reveal } from "@/components/ui/reveal";
-import { SearchField } from "@/components/ui/search-field";
 import type { CatalogProduct } from "@/lib/catalog";
 import { interactiveControl } from "@/components/ui/form-styles";
 
@@ -16,6 +16,15 @@ const sorts = [
 export function ShopCatalog({ products }: { products: CatalogProduct[] }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<(typeof sorts)[number]["id"]>("featured");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#shop-search") return;
+    const input = document.getElementById("shop-search");
+    if (input instanceof HTMLInputElement) {
+      window.requestAnimationFrame(() => input.focus());
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -37,30 +46,56 @@ export function ShopCatalog({ products }: { products: CatalogProduct[] }) {
   }, [products, query, sort]);
 
   return (
-    <div className="mt-10">
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-deep/10 bg-gradient-to-br from-white via-cream/50 to-tint/40 p-4 sm:p-5">
-        <div
-          className="pointer-events-none absolute -top-16 -right-10 size-40 rounded-full bg-sage/10 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -bottom-20 left-8 size-44 rounded-full bg-deep/[0.04] blur-3xl"
-          aria-hidden
-        />
+    <div className="mt-12">
+      <div className="border-y border-deep/10 py-6 md:py-7">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+          <div className="min-w-0 flex-1 lg:max-w-lg">
+            <label
+              htmlFor="shop-search"
+              className="block text-[11px] tracking-[0.22em] text-deep/45 uppercase"
+            >
+              Find a pack
+            </label>
+            <div className="group mt-3 flex items-center gap-3 border-b border-deep/20 transition focus-within:border-deep">
+              <Search
+                className="size-4 shrink-0 text-deep/35 transition group-focus-within:text-deep/65"
+                strokeWidth={1.35}
+                aria-hidden
+              />
+              <input
+                id="shop-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Name, ingredient, or benefit"
+                autoComplete="off"
+                spellCheck={false}
+                enterKeyHint="search"
+                className="w-full appearance-none bg-transparent py-3 text-base text-deep placeholder:text-deep/35 outline-none scroll-mt-28 [&::-webkit-search-cancel-button]:appearance-none"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                  className={`shrink-0 text-[11px] font-medium tracking-[0.14em] text-deep/45 uppercase transition hover:text-deep ${interactiveControl}`}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <X className="size-3.5" strokeWidth={1.5} aria-hidden />
+                    Clear
+                  </span>
+                </button>
+              ) : null}
+            </div>
+          </div>
 
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
-          <SearchField
-            value={query}
-            onChange={setQuery}
-            placeholder="Name, ingredient, or benefit"
-            label="Find a pack"
-            variant="storefront"
-            className="min-w-0 flex-1"
-          />
-
-          <div className="flex shrink-0 flex-col gap-2">
-            <span className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">Sort</span>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="shrink-0">
+            <p className="text-[11px] tracking-[0.22em] text-deep/45 uppercase">Sort</p>
+            <div
+              className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2"
+              role="group"
+              aria-label="Sort packs"
+            >
               {sorts.map((option) => {
                 const active = sort === option.id;
                 return (
@@ -68,14 +103,18 @@ export function ShopCatalog({ products }: { products: CatalogProduct[] }) {
                     key={option.id}
                     type="button"
                     onClick={() => setSort(option.id)}
-                    className={`rounded-full px-3.5 py-1.5 text-xs transition ${interactiveControl} ${
-                      active
-                        ? "bg-deep text-cream shadow-sm shadow-deep/15"
-                        : "bg-white/75 text-deep/55 ring-1 ring-deep/10 hover:text-deep"
-                    }`}
                     aria-pressed={active}
+                    className={`relative pb-1 text-sm transition ${interactiveControl} ${
+                      active ? "font-medium text-deep" : "text-deep/45 hover:text-deep"
+                    }`}
                   >
                     {option.label}
+                    {active ? (
+                      <span
+                        className="absolute inset-x-0 -bottom-px h-px bg-deep/70"
+                        aria-hidden
+                      />
+                    ) : null}
                   </button>
                 );
               })}
@@ -83,7 +122,7 @@ export function ShopCatalog({ products }: { products: CatalogProduct[] }) {
           </div>
         </div>
 
-        <p className="relative mt-4 text-xs text-deep/45">
+        <p className="mt-5 text-xs tracking-wide text-deep/45">
           {filtered.length === products.length
             ? `${products.length} ${products.length === 1 ? "pack" : "packs"}`
             : `${filtered.length} of ${products.length} packs`}
@@ -105,7 +144,7 @@ export function ShopCatalog({ products }: { products: CatalogProduct[] }) {
           </button>
         </div>
       ) : (
-        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:gap-8">
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:gap-8">
           {filtered.map((product, index) => (
             <Reveal key={product.id} delay={(index % 6) * 60}>
               <ProductCard product={product} />

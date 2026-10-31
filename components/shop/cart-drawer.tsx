@@ -17,21 +17,22 @@ export function CartDrawer() {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
       <button
         type="button"
-        className="animate-backdrop-in absolute inset-0 bg-ink/60"
+        className="animate-backdrop-in absolute inset-0 bg-ink/50 backdrop-blur-[3px]"
         aria-label="Close cart"
         onClick={close}
       />
 
-      {/* Drawer */}
-      <aside className="animate-drawer-in relative z-10 flex h-full w-full max-w-md flex-col bg-cream shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-deep/10 px-5 py-5">
+      <aside className="animate-drawer-in relative z-10 flex h-full w-full max-w-md flex-col border-l border-deep/10 bg-gradient-to-b from-white via-cream to-cream shadow-[-12px_0_40px_rgba(8,21,15,0.12)]">
+        <div className="relative flex items-center justify-between border-b border-deep/8 px-5 py-5">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent"
+            aria-hidden
+          />
           <div className="flex items-center gap-2.5">
             <h2 className="font-display text-2xl text-deep">Your bag</h2>
-            <span className="rounded-full bg-deep/10 px-2.5 py-0.5 text-xs font-semibold text-deep">
+            <span className="rounded-full bg-deep/8 px-2.5 py-0.5 text-xs font-semibold text-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
               {itemCount}
             </span>
           </div>
@@ -39,7 +40,7 @@ export function CartDrawer() {
             type="button"
             onClick={close}
             aria-label="Close cart"
-            className="rounded-full p-2 text-deep/60 transition hover:bg-deep/10 hover:text-deep"
+            className="nav-icon rounded-full px-3 py-2 text-xs tracking-[0.12em] text-deep/60 uppercase hover:text-deep"
           >
             Close
           </button>
@@ -137,7 +138,7 @@ export function CartDrawer() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-deep/10 bg-white p-5">
+        <div className="border-t border-deep/8 bg-white/70 p-5 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
           {items.length > 0 ? (
             <>
               <div className="space-y-2 text-xs">
