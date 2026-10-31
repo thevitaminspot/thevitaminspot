@@ -5,8 +5,11 @@ import { StripCursorRefs } from "@/components/dev/strip-cursor-refs";
 import { Providers } from "@/components/providers";
 import { brand } from "@/lib/brand";
 import { infusions } from "@/lib/catalog";
-import { site } from "@/lib/site";
+import { resolveSiteUrl, site } from "@/lib/site";
 import "./globals.css";
+
+const siteUrl = resolveSiteUrl();
+
 
 /** Self-hosted latin files — avoids next/font/google kit-URL build flake. */
 const display = localFont({
@@ -38,7 +41,7 @@ const sans = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
+  metadataBase: new URL(siteUrl),
   title: {
     default: `${site.name} · Abuja`,
     template: `%s · ${site.name}`,
@@ -61,10 +64,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const organizationId = `${site.url}/#organization`;
-const websiteId = `${site.url}/#website`;
-const businessId = `${site.url}/#business`;
-const logoUrl = `${site.url}${brand.mark.src}`;
+const organizationId = `${siteUrl}/#organization`;
+const websiteId = `${siteUrl}/#website`;
+const businessId = `${siteUrl}/#business`;
+const logoUrl = `${siteUrl}${brand.mark.src}`;
 
 const jsonLd = {
   "@context": "https://schema.org",

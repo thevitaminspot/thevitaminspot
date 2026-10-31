@@ -19,6 +19,7 @@ import {
 } from "@/components/admin/ui";
 import { fulfillmentLabel } from "@/lib/admin-orders";
 import { tryPrisma } from "@/lib/db";
+import { DynamicMarker } from "@/components/ui/dynamic-marker";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatNaira } from "@/lib/money";
 import AdminOrderLoading from "./loading";
@@ -39,9 +40,12 @@ function cleanWaPhone(phone: string): string {
 
 export default function AdminOrderPage({ params }: PageProps<"/admin/orders/[id]">) {
   return (
-    <Suspense fallback={<AdminOrderLoading />}>
-      <AdminOrderDetail params={params} />
-    </Suspense>
+    <>
+      <DynamicMarker />
+      <Suspense fallback={<AdminOrderLoading />}>
+        <AdminOrderDetail params={params} />
+      </Suspense>
+    </>
   );
 }
 
