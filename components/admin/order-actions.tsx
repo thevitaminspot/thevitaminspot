@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrderStatus } from "@/actions/admin";
 import { OrderStatusSelect } from "@/components/admin/order-status-select";
@@ -13,6 +13,7 @@ import {
   type AdminFulfillment,
   type AdminOrderStatus,
 } from "@/lib/admin-orders";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 export function OrderActions({
   id,
@@ -26,7 +27,6 @@ export function OrderActions({
   paymentStatus?: string | null;
 }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
   const next = nextOrderStep(status, fulfillment);
   const steps = orderSteps(fulfillment);
@@ -36,8 +36,14 @@ export function OrderActions({
   function apply(nextStatus: AdminOrderStatus) {
     start(async () => {
       const result = await updateOrderStatus(id, nextStatus);
-      setMessage("error" in result && result.error ? result.error : "");
-      if ("ok" in result) router.refresh();
+      if ("error" in result && result.error) {
+        adminNotifyError(result.error);
+        return;
+      }
+      adminNotifySuccess(
+        nextStatus === "CANCELLED" ? "Order cancelled." : "Order updated.",
+      );
+      router.refresh();
     });
   }
 
@@ -104,7 +110,6 @@ export function OrderActions({
         </button>
       ) : null}
 
-      {message ? <p className="text-xs text-red-700">{message}</p> : null}
     </div>
   );
 }

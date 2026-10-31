@@ -12,13 +12,13 @@ import {
   formButtonGhost,
   formButtonSecondary,
   formDateControl,
-  formErrorBox,
   formLabel,
   formSubmitInline,
   formTextarea,
 } from "@/components/ui/form-styles";
 import { surfaceCard, surfaceMuted } from "@/components/ui/layout-styles";
 import { BOOKING_CANCEL_FEE_ACK, BOOKING_CANCELLATION_NOT_FREE } from "@/lib/booking-policy";
+import { notifyError, notifySuccess } from "@/lib/notify";
 
 function formatWhen(date: Date) {
   return formatLagosLong(date);
@@ -44,13 +44,11 @@ export function AppointmentManager({
   const router = useRouter();
   const [date, setDate] = useState("");
   const minDate = useClientDateInputMin();
-  const [rescheduleMessage, setRescheduleMessage] = useState("");
   const [reschedulePending, setReschedulePending] = useState(false);
   const [cancelStep, setCancelStep] = useState<"idle" | "review" | "form">("idle");
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
-  const [cancelError, setCancelError] = useState("");
   const [cancelPending, setCancelPending] = useState(false);
 
   const when = formatWhen(startsAt);
@@ -59,20 +57,19 @@ export function AppointmentManager({
 
   async function rescheduleToFirstSlot() {
     setReschedulePending(true);
-    setRescheduleMessage("");
     try {
       const slots = await fetchSlots(date, slug);
       const first = slots[0];
       if (!first) {
-        setRescheduleMessage("No chairs open that day. Try another date.");
+        notifyError("No chairs open that day. Try another date.");
         return;
       }
       const result = await updateAppointment(token, first.start);
       if ("error" in result && result.error) {
-        setRescheduleMessage(result.error);
+        notifyError(result.error);
         return;
       }
-      setRescheduleMessage(`Moved to ${first.label}. We emailed you an updated booking email.`);
+      notifySuccess(`Moved to ${first.label}. We emailed you an updated booking.`);
       router.refresh();
     } finally {
       setReschedulePending(false);
@@ -80,7 +77,6 @@ export function AppointmentManager({
   }
 
   async function submitCancellation() {
-    setCancelError("");
     setCancelPending(true);
     try {
       const result = await cancelAppointment(token, {
@@ -89,12 +85,13 @@ export function AppointmentManager({
         acknowledged,
       });
       if ("error" in result && result.error) {
-        setCancelError(result.error);
+        notifyError(result.error);
         return;
       }
+      notifySuccess("Booking cancelled. Check your email for confirmation.");
       router.refresh();
     } catch {
-      setCancelError("Something went wrong. Please try again or WhatsApp us.");
+      notifyError("Something went wrong. Please try again or WhatsApp us.");
     } finally {
       setCancelPending(false);
     }
@@ -150,9 +147,6 @@ export function AppointmentManager({
             {reschedulePending ? "Updating…" : "Move to first open hour"}
           </button>
         </div>
-        {rescheduleMessage ? (
-          <p className="mt-3 text-sm text-deep/70">{rescheduleMessage}</p>
-        ) : null}
       </section>
 
       <section className={surfaceCard}>
@@ -168,7 +162,6 @@ export function AppointmentManager({
               type="button"
               onClick={() => {
                 setCancelStep("review");
-                setCancelError("");
               }}
               className={`${formButtonGhost} mt-4 border-red-200/80 text-red-800 hover:bg-red-50`}
             >
@@ -286,8 +279,6 @@ export function AppointmentManager({
               </span>
             </label>
 
-            {cancelError ? <p className={formErrorBox}>{cancelError}</p> : null}
-
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -302,7 +293,6 @@ export function AppointmentManager({
                 disabled={cancelPending}
                 onClick={() => {
                   setCancelStep("review");
-                  setCancelError("");
                 }}
                 className={formButtonSecondary}
               >
@@ -316,7 +306,6 @@ export function AppointmentManager({
                   setReason("");
                   setDetails("");
                   setAcknowledged(false);
-                  setCancelError("");
                 }}
                 className={formButtonGhost}
               >

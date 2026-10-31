@@ -7,6 +7,7 @@ import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { AdminEmptyState } from "@/components/admin/ui";
 import { adminButtonDanger } from "@/components/ui/form-styles";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 export type BlockedDateRow = {
   id: string;
@@ -30,7 +31,6 @@ function blockedDateSearchText(row: BlockedDateRow) {
 export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
   const [query, setQuery] = useState("");
   const [localRows, setLocalRows] = useState(rows);
-  const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -49,8 +49,6 @@ export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
         countLabel={`${pagination.total} matching · ${localRows.length} total`}
         className="mb-4"
       />
-
-      {error ? <p className="mb-3 text-sm text-red-700">{error}</p> : null}
 
       {filtered.length === 0 ? (
         <AdminEmptyState>
@@ -76,15 +74,15 @@ export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
                   disabled={pending && pendingId === row.id}
                   className={adminButtonDanger}
                   onClick={() => {
-                    setError(null);
                     setPendingId(row.id);
                     startTransition(async () => {
                       const result = await unblockDate(row.id);
                       setPendingId(null);
                       if ("error" in result) {
-                        setError(result.error);
+                        adminNotifyError(result.error ?? "Could not unblock date.");
                         return;
                       }
+                      adminNotifySuccess("Date unblocked.");
                       setLocalRows((prev) => prev.filter((item) => item.id !== row.id));
                     });
                   }}

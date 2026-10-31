@@ -4,22 +4,20 @@ import { useState, useTransition, type FormEvent } from "react";
 import { submitContact } from "@/actions/contact";
 import {
   formControl,
-  formError,
   formLabel,
   formSubmit,
   formTextarea,
 } from "@/components/ui/form-styles";
+import { notifyError, notifySuccess } from "@/lib/notify";
 
 export function ContactForm() {
   const [pending, startTransition] = useTransition();
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    setError("");
 
     startTransition(async () => {
       const result = await submitContact({
@@ -30,12 +28,13 @@ export function ContactForm() {
       });
 
       if (result.error) {
-        setError(result.error);
+        notifyError(result.error);
         return;
       }
 
       form.reset();
       setSent(true);
+      notifySuccess("Message sent — we’ll reply by email.");
     });
   }
 
@@ -99,12 +98,6 @@ export function ContactForm() {
               className={formTextarea}
             />
           </label>
-
-          {error ? (
-            <p role="alert" className={formError}>
-              {error}
-            </p>
-          ) : null}
 
           <button type="submit" disabled={pending} className={formSubmit}>
             {pending ? "Sending" : "Send the note"}

@@ -6,6 +6,7 @@ import { updateAppointmentStatus } from "@/actions/admin";
 import { Modal } from "@/components/ui/modal";
 import { interactiveControl } from "@/components/ui/form-styles";
 import { adminFormTextarea } from "@/components/ui/form-styles";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 export function AppointmentCancelConfirm({
   open,
@@ -24,13 +25,11 @@ export function AppointmentCancelConfirm({
 }) {
   const router = useRouter();
   const [note, setNote] = useState("");
-  const [error, setError] = useState("");
   const [pending, start] = useTransition();
 
   function close() {
     if (pending) return;
     setNote("");
-    setError("");
     onClose();
   }
 
@@ -61,12 +60,6 @@ export function AppointmentCancelConfirm({
           />
         </label>
 
-        {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
-            {error}
-          </p>
-        ) : null}
-
         <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
           <button
             type="button"
@@ -83,9 +76,10 @@ export function AppointmentCancelConfirm({
               start(async () => {
                 const result = await updateAppointmentStatus(id, "CANCELLED");
                 if ("error" in result && result.error) {
-                  setError(result.error);
+                  adminNotifyError(result.error);
                   return;
                 }
+                adminNotifySuccess("Booking cancelled.");
                 router.refresh();
                 close();
               });

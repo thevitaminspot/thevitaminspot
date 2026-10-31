@@ -6,10 +6,13 @@ export function PaystackHandoff({
   open,
   title = "Opening secure checkout",
   detail = "Stay on this page. Paystack opens in a moment.",
+  onForceClose,
 }: {
   open: boolean;
   title?: string;
   detail?: string;
+  /** Optional escape hatch if the parent never clears the overlay. */
+  onForceClose?: () => void;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -34,6 +37,15 @@ export function PaystackHandoff({
         <p className="mt-5 font-display text-2xl text-deep">{title}</p>
         <p className="mt-2 text-sm leading-relaxed text-deep/65">{detail}</p>
         <p className="mt-5 text-[11px] tracking-[0.16em] text-deep/40 uppercase">Secured by Paystack</p>
+        {onForceClose ? (
+          <button
+            type="button"
+            onClick={onForceClose}
+            className="mt-6 text-[11px] font-medium tracking-[0.14em] text-deep/55 uppercase underline decoration-deep/20 underline-offset-4 transition hover:text-deep"
+          >
+            Close and try again
+          </button>
+        ) : null}
       </div>
     </div>
   );

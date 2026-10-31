@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { BrandWordmark } from "@/components/brand/wordmark";
+import { ContactIconRow } from "@/components/contact/contact-icons";
 import { FooterTrackOrder } from "@/components/layout/footer-track-order";
 import { brand } from "@/lib/brand";
 import { site, whatsappHref } from "@/lib/site";
@@ -42,11 +43,18 @@ export function Footer() {
             </div>
             <p className="mt-5 text-sm leading-7 text-cream/65">{site.tagline}</p>
             <p className="mt-3 text-sm leading-relaxed text-cream/45">{site.address.label}</p>
+            <ContactIconRow tone="onDark" className="mt-7" />
+            <a
+              href={whatsappHref("Hello The Vitamin Spot", site.whatsappUs)}
+              className="mt-4 inline-block text-xs tracking-[0.04em] text-cream/45 transition hover:text-cream/75"
+            >
+              WhatsApp US · +1 312 998-0147
+            </a>
           </div>
 
           <Link
             href="/shop"
-            className="inline-flex w-fit items-center justify-center rounded-xl border border-cream/25 px-5 py-3 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:border-cream/50 hover:bg-cream/5"
+            className="inline-flex w-fit items-center justify-center rounded-xl border border-cream/25 bg-cream/[0.04] px-5 py-3 text-[11px] font-medium tracking-[0.16em] text-cream uppercase shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-cream/50 hover:bg-cream/10 active:scale-[0.99]"
           >
             Shop packs
           </Link>
@@ -70,8 +78,16 @@ export function Footer() {
           </div>
 
           <div>
-            <p className={headingClass}>Contact</p>
-            <ul className="mt-5 space-y-3 text-sm">
+            <p className={headingClass}>Visit</p>
+            <ul className="mt-5 space-y-3 text-sm text-cream/70">
+              <li>
+                <a href={site.address.mapUrl} className={linkClass}>
+                  {site.address.line1}
+                </a>
+              </li>
+              <li>
+                {site.address.area}, {site.address.city}
+              </li>
               <li>
                 <a href={`tel:${site.phoneHref}`} className={linkClass}>
                   {site.phone}
@@ -80,29 +96,6 @@ export function Footer() {
               <li>
                 <a href={`mailto:${site.email}`} className={`break-all ${linkClass}`}>
                   {site.email}
-                </a>
-              </li>
-              <li>
-                <a href={whatsappHref()} className={linkClass}>
-                  WhatsApp NG
-                </a>
-              </li>
-              <li>
-                <a
-                  href={whatsappHref("Hello The Vitamin Spot", site.whatsappUs)}
-                  className={linkClass}
-                >
-                  WhatsApp US
-                </a>
-              </li>
-              <li>
-                <a
-                  href={site.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={linkClass}
-                >
-                  {site.instagramHandle}
                 </a>
               </li>
             </ul>

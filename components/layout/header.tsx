@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingBag, X } from "lucide-react";
+import { Menu, Search, ShoppingBag, X } from "lucide-react";
 import { AccountButton } from "@/components/layout/account-button";
+import { MobileAccountBar } from "@/components/layout/mobile-account-bar";
 import { BrandWordmark } from "@/components/brand/wordmark";
 import { brand } from "@/lib/brand";
 import { useCartStore } from "@/stores/cart-store";
@@ -25,13 +26,35 @@ function MobileNav({
   open,
   pathname,
   onClose,
+  bagCount,
+  onOpenBag,
 }: {
   open: boolean;
   pathname: string;
   onClose: () => void;
+  bagCount: number;
+  onOpenBag: () => void;
 }) {
+  const [mounted, setMounted] = useState(open);
+  const [leaving, setLeaving] = useState(false);
+
   useEffect(() => {
-    if (!open) return;
+    if (open) {
+      setMounted(true);
+      setLeaving(false);
+      return;
+    }
+    if (!mounted) return;
+    setLeaving(true);
+    const timer = window.setTimeout(() => {
+      setMounted(false);
+      setLeaving(false);
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [open, mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -44,62 +67,107 @@ function MobileNav({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, onClose]);
+  }, [mounted, onClose]);
 
-  if (!open) return null;
+  if (!mounted) return null;
+
+  const animOut = leaving || !open;
 
   return (
     <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
       <button
         type="button"
-        className="absolute inset-0 bg-ink/55 backdrop-blur-[2px]"
+        className={`absolute inset-0 bg-ink/50 backdrop-blur-[3px] ${
+          animOut ? "animate-backdrop-out" : "animate-backdrop-in"
+        }`}
         aria-label="Close menu"
         onClick={onClose}
       />
 
       <nav
-        className="absolute top-0 right-0 flex h-full w-full max-w-xs flex-col bg-cream shadow-2xl"
+        className={`absolute top-0 right-0 flex h-full w-[min(100%,22rem)] flex-col border-l border-deep/10 bg-gradient-to-b from-white via-cream to-cream shadow-[-12px_0_40px_rgba(8,21,15,0.12)] ${
+          animOut ? "animate-drawer-out" : "animate-drawer-in"
+        }`}
         aria-label="Mobile"
       >
-        <div className="flex items-center justify-between border-b border-deep/10 px-5 py-5">
-          <div className="flex items-center gap-2.5">
+        <div className="relative flex min-h-[4.25rem] items-center justify-between border-b border-deep/8 px-5 py-4">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent"
+            aria-hidden
+          />
+          <div className="flex min-w-0 items-center gap-2.5">
             <Image
               src={brand.mark.src}
               alt=""
-              width={36}
-              height={36}
-              className="size-9 object-contain"
+              width={40}
+              height={40}
+              className="size-10 object-contain"
               aria-hidden
             />
-            <BrandWordmark className="text-xl leading-none text-deep" />
+            <BrandWordmark className="truncate text-[1.35rem] leading-none text-deep" />
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="grid size-10 place-items-center rounded-full text-deep/70 transition hover:bg-deep/10 hover:text-deep"
+            className="nav-icon grid size-11 place-items-center rounded-full text-deep/70 hover:text-deep"
           >
-            <X className="size-5" />
+            <X className="size-5" strokeWidth={1.35} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5">
-          <ul className="space-y-1">
-            {links.map((link) => {
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5">
+          <div className="mb-5 grid grid-cols-2 gap-2.5">
+            <Link
+              href="/shop#shop-search"
+              onClick={onClose}
+              className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl border border-deep/10 bg-white/80 px-3 text-[11px] font-medium tracking-[0.14em] text-deep uppercase shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition hover:border-deep/20 hover:bg-white"
+            >
+              <Search className="size-4" strokeWidth={1.35} aria-hidden />
+              Search
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenBag();
+              }}
+              className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl border border-deep/10 bg-white/80 px-3 text-[11px] font-medium tracking-[0.14em] text-deep uppercase shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition hover:border-deep/20 hover:bg-white"
+            >
+              <ShoppingBag className="size-4" strokeWidth={1.35} aria-hidden />
+              Bag
+              {bagCount > 0 ? (
+                <span className="rounded-full bg-sage/90 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-deep">
+                  {bagCount > 9 ? "9+" : bagCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
+
+          <ul className="space-y-2">
+            {links.map((link, index) => {
               const current = isCurrent(link.href, pathname);
               return (
-                <li key={link.href}>
+                <li
+                  key={link.href}
+                  className={animOut ? undefined : "animate-menu-item"}
+                  style={animOut ? undefined : { animationDelay: `${80 + index * 55}ms` }}
+                >
                   <Link
                     href={link.href}
                     onClick={onClose}
                     aria-current={current ? "page" : undefined}
-                    className={`flex flex-col rounded-xl px-4 py-3.5 transition ${
-                      current ? "bg-deep text-cream" : "text-deep hover:bg-deep/5"
+                    className={`group flex flex-col rounded-2xl px-4 py-4 transition duration-200 ${
+                      current
+                        ? "bg-deep text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                        : "text-deep hover:bg-white/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
                     }`}
                   >
-                    <span className="text-sm font-medium tracking-wide">{link.label}</span>
+                    <span className="text-[0.95rem] font-medium tracking-wide">{link.label}</span>
                     <span
-                      className={`mt-0.5 text-xs ${current ? "text-cream/70" : "text-deep/50"}`}
+                      className={`mt-1 text-xs transition ${
+                        current ? "text-cream/70" : "text-deep/45 group-hover:text-deep/60"
+                      }`}
                     >
                       {link.description}
                     </span>
@@ -110,8 +178,8 @@ function MobileNav({
           </ul>
         </div>
 
-        <div className="border-t border-deep/10 px-5 py-4">
-          <AccountButton className="text-deep" onNavigate={onClose} />
+        <div className="border-t border-deep/8 bg-white/50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+          <MobileAccountBar onNavigate={onClose} />
         </div>
       </nav>
     </div>
@@ -137,42 +205,58 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-deep/10 bg-cream/95 backdrop-blur-md transition-[background-color,box-shadow] duration-300">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-2.5 md:px-8 md:py-3">
-          <Link href="/" className="flex min-w-0 items-center gap-2.5" onClick={closeNav}>
+      <header className="site-header sticky top-0 z-40">
+        <div className="mx-auto flex min-h-14 max-w-6xl items-center justify-between gap-2 px-3.5 py-3 sm:min-h-[3.75rem] sm:gap-3 sm:px-5 md:min-h-0 md:px-8 md:py-3.5">
+          <Link
+            href="/"
+            className="flex min-w-0 flex-1 items-center gap-2 transition active:scale-[0.99] sm:gap-2.5 md:flex-none"
+            onClick={closeNav}
+          >
             <Image
               src={brand.mark.src}
               alt=""
               width={44}
               height={44}
               sizes="44px"
-              className="size-10 shrink-0 object-contain md:size-11"
+              className="size-9 shrink-0 object-contain sm:size-10 md:size-11"
               aria-hidden
             />
-            <BrandWordmark className="truncate text-[1.35rem] leading-none sm:text-[1.65rem]" />
+            <BrandWordmark className="min-w-0 truncate text-[1.05rem] leading-none tracking-[-0.03em] sm:text-[1.4rem] sm:tracking-[-0.02em] md:text-[1.65rem]" />
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
-            {links.slice(0, 3).map((link) => {
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
+            {links.map((link) => {
               const current = isCurrent(link.href, pathname);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   aria-current={current ? "page" : undefined}
-                  className={`text-[12px] tracking-[0.12em] uppercase ${
-                    current
-                      ? "font-medium text-deep underline decoration-2 underline-offset-[10px]"
-                      : "text-deep/55 hover:text-deep"
+                  className={`relative px-3.5 py-2 text-[11px] tracking-[0.16em] uppercase transition duration-200 ${
+                    current ? "font-medium text-deep" : "text-deep/50 hover:text-deep"
                   }`}
                 >
                   {link.label}
+                  {current ? (
+                    <span
+                      className="absolute inset-x-3.5 -bottom-0.5 h-px bg-deep/70"
+                      aria-hidden
+                    />
+                  ) : null}
                 </Link>
               );
             })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Link
+              href="/shop#shop-search"
+              className="nav-icon grid size-10 place-items-center rounded-full text-deep focus-visible:outline focus-visible:outline-offset-4 sm:size-11"
+              aria-label="Search packs"
+              onClick={closeNav}
+            >
+              <Search className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={1.35} />
+            </Link>
             <AccountButton className="text-deep" />
             <button
               type="button"
@@ -180,30 +264,40 @@ export function Header() {
                 closeNav();
                 openCart();
               }}
-              className="relative grid size-10 place-items-center rounded-full text-deep transition hover:bg-deep/10 focus-visible:outline focus-visible:outline-offset-4"
-              aria-label={mounted && count > 0 ? `Open cart, ${count} items` : "Open cart"}
+              className="nav-icon relative grid size-10 place-items-center rounded-full text-deep focus-visible:outline focus-visible:outline-offset-4 sm:size-11"
+              aria-label={mounted && count > 0 ? `Open bag, ${count} items` : "Open bag"}
             >
-              <ShoppingBag className="size-5" />
+              <ShoppingBag className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={1.35} />
               {mounted && count > 0 ? (
-                <span className="absolute top-1 right-1 grid min-w-4 place-items-center rounded-full bg-sage px-1 text-[10px] font-semibold leading-none text-deep">
+                <span className="absolute top-0 right-0 flex h-4 min-w-4 translate-x-0.5 -translate-y-0.5 items-center justify-center rounded-full bg-sage px-1 text-[9px] font-semibold leading-none text-deep ring-2 ring-cream">
                   {count > 9 ? "9+" : count}
                 </span>
               ) : null}
             </button>
             <button
               type="button"
-              className="grid size-10 place-items-center rounded-full text-deep transition hover:bg-deep/10 md:hidden"
+              className="nav-icon grid size-10 place-items-center rounded-full text-deep sm:size-11 md:hidden"
               onClick={isNavOpen ? closeNav : openNav}
               aria-label={isNavOpen ? "Close menu" : "Open menu"}
               aria-expanded={isNavOpen}
             >
-              {isNavOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+              {isNavOpen ? (
+                <X className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={1.35} />
+              ) : (
+                <Menu className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={1.35} />
+              )}
             </button>
           </div>
         </div>
       </header>
 
-      <MobileNav open={isNavOpen} pathname={pathname} onClose={closeNav} />
+      <MobileNav
+        open={isNavOpen}
+        pathname={pathname}
+        onClose={closeNav}
+        bagCount={mounted ? count : 0}
+        onOpenBag={openCart}
+      />
     </>
   );
 }

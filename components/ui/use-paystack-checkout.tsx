@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { notifyError } from "@/lib/notify";
 
 export type PaystackPhase = "idle" | "preparing" | "open" | "confirming";
 
@@ -21,6 +22,9 @@ const preparingOverlay: Overlay = {
   title: "Preparing payment",
   detail: "Creating a secure Paystack session. Don’t close this tab.",
 };
+
+/** Hard cap so a stuck handoff never blocks the page until refresh. */
+const OVERLAY_MAX_MS = 45_000;
 
 function withQuery(path: string, key: string, value: string) {
   const url = new URL(path, window.location.origin);
@@ -74,15 +78,46 @@ export function usePaystackCheckout() {
   const router = useRouter();
   const [phase, setPhase] = useState<PaystackPhase>("idle");
   const [overlay, setOverlay] = useState<Overlay | null>(null);
-  const [error, setError] = useState("");
   const lock = useRef(false);
   const openTimer = useRef<number | null>(null);
+  const safetyTimer = useRef<number | null>(null);
+  const phaseRef = useRef<PaystackPhase>("idle");
+
+  const clearTimers = useCallback(() => {
+    if (openTimer.current) {
+      window.clearTimeout(openTimer.current);
+      openTimer.current = null;
+    }
+    if (safetyTimer.current) {
+      window.clearTimeout(safetyTimer.current);
+      safetyTimer.current = null;
+    }
+  }, []);
 
   const idle = useCallback(() => {
     lock.current = false;
+    phaseRef.current = "idle";
     setPhase("idle");
     setOverlay(null);
-  }, []);
+    clearTimers();
+  }, [clearTimers]);
+
+  const fail = useCallback(
+    (message: string) => {
+      notifyError(message);
+      idle();
+    },
+    [idle],
+  );
+
+  const armSafety = useCallback(() => {
+    if (safetyTimer.current) window.clearTimeout(safetyTimer.current);
+    safetyTimer.current = window.setTimeout(() => {
+      if (phaseRef.current === "idle") return;
+      notifyError("Payment timed out. You can try again when you’re ready.");
+      idle();
+    }, OVERLAY_MAX_MS);
+  }, [idle]);
 
   useEffect(() => {
     const handlePageShow = (event: PageTransitionEvent) => {
@@ -91,9 +126,9 @@ export function usePaystackCheckout() {
     window.addEventListener("pageshow", handlePageShow);
     return () => {
       window.removeEventListener("pageshow", handlePageShow);
-      if (openTimer.current) window.clearTimeout(openTimer.current);
+      clearTimers();
     };
-  }, [idle]);
+  }, [idle, clearTimers]);
 
   const start = useCallback(
     async (
@@ -102,9 +137,10 @@ export function usePaystackCheckout() {
     ) => {
       if (lock.current) return undefined;
       lock.current = true;
-      setError("");
+      phaseRef.current = "preparing";
       setPhase("preparing");
       setOverlay(preparingOverlay);
+      armSafety();
       const cancelMode = options?.cancel ?? "leave";
       const cancelMessage =
         options?.cancelMessage ?? "Payment cancelled. You can try again when you’re ready.";
@@ -113,14 +149,12 @@ export function usePaystackCheckout() {
       try {
         result = await request();
       } catch {
-        setError("Something went wrong. Please try again.");
-        idle();
+        fail("Something went wrong. Please try again.");
         return undefined;
       }
 
       if (result.error) {
-        setError(result.error);
-        idle();
+        fail(result.error);
         return result;
       }
 
@@ -133,8 +167,7 @@ export function usePaystackCheckout() {
           router.push(result.returnPath);
           return result;
         }
-        setError("Could not open Paystack. Please try again.");
-        idle();
+        fail("Could not open Paystack. Please try again.");
         return result;
       }
 
@@ -146,9 +179,11 @@ export function usePaystackCheckout() {
       const confirm = (nextOverlay: Overlay, path: string) => {
         if (settled) return;
         settled = true;
-        if (openTimer.current) window.clearTimeout(openTimer.current);
+        clearTimers();
+        phaseRef.current = "confirming";
         setPhase("confirming");
         setOverlay(nextOverlay);
+        armSafety();
         router.push(path);
       };
 
@@ -159,6 +194,7 @@ export function usePaystackCheckout() {
         const markOpen = () => {
           if (settled || opened) return;
           opened = true;
+          phaseRef.current = "open";
           setPhase("open");
           setOverlay(null);
         };
@@ -170,8 +206,9 @@ export function usePaystackCheckout() {
             const reference = readReference(response, fallbackReference);
             if (!reference) {
               settled = true;
-              setError("Paystack confirmed the payment, but the reference was missing. Open your order from the email we sent.");
-              idle();
+              fail(
+                "Paystack confirmed the payment, but the reference was missing. Open your order from the email we sent.",
+              );
               return;
             }
             confirm(
@@ -198,30 +235,31 @@ export function usePaystackCheckout() {
             queueMicrotask(() => {
               if (settled) return;
               settled = true;
-              if (openTimer.current) window.clearTimeout(openTimer.current);
+              clearTimers();
               if (cancelMode === "stay") {
-                setError(cancelMessage);
+                notifyError(cancelMessage);
                 idle();
                 return;
               }
+              phaseRef.current = "confirming";
               setPhase("confirming");
               setOverlay({
                 title: "Payment cancelled",
                 detail: "Taking you back so you can try again.",
               });
+              armSafety();
               router.push(withQuery(returnPath, "payment", "cancelled"));
             });
           },
           onError: (paystackError) => {
             if (settled) return;
             settled = true;
-            if (openTimer.current) window.clearTimeout(openTimer.current);
+            clearTimers();
             if (!opened && authorizationUrl) {
               window.location.assign(authorizationUrl);
               return;
             }
-            setError(readError(paystackError));
-            idle();
+            fail(readError(paystackError));
           },
         });
 
@@ -232,19 +270,19 @@ export function usePaystackCheckout() {
           window.location.assign(authorizationUrl);
           return result;
         }
-        setError("Could not open Paystack. Please try again.");
-        idle();
+        fail("Could not open Paystack. Please try again.");
       }
 
       return result;
     },
-    [idle, router],
+    [armSafety, clearTimers, fail, idle, router],
   );
 
   return {
     phase,
     overlay,
-    error,
+    /** @deprecated Prefer toast via fail(); kept empty for call-site cleanup. */
+    error: "",
     busy: phase !== "idle",
     start,
     reset: idle,

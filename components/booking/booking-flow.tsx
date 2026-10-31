@@ -13,7 +13,6 @@ import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import {
   formControl,
   formDateControl,
-  formError,
   formLabel,
   formSubmit,
   formTextarea,
@@ -26,6 +25,7 @@ import {
   BOOKING_FEE_REQUIRED_MESSAGE,
 } from "@/lib/booking-policy";
 import { surfaceCard } from "@/components/ui/layout-styles";
+import { notifyError } from "@/lib/notify";
 
 type Slot = { start: string; end: string; label: string };
 
@@ -223,7 +223,6 @@ export function BookingFlow({
     phone: "",
     notes: "",
   });
-  const [error, setError] = useState("");
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const paystack = usePaystackCheckout();
   const drip = useMemo(() => drips.find((item) => item.slug === slug), [drips, slug]);
@@ -245,7 +244,6 @@ export function BookingFlow({
   async function choose(nextSlug: string) {
     setSlug(nextSlug);
     setSlot(null);
-    setError("");
     if (date) setSlots(await fetchSlots(date, nextSlug));
     scrollToFormTop();
   }
@@ -263,18 +261,16 @@ export function BookingFlow({
   }
 
   function back() {
-    setError("");
     setStep((current) => Math.max(0, current - 1));
   }
 
   function next() {
-    setError("");
     if (step === 0 && !drip) {
-      setError("Choose a drip to continue.");
+      notifyError("Choose a drip to continue.");
       return;
     }
     if (step === 1 && !slot) {
-      setError("Select a time to continue.");
+      notifyError("Select a time to continue.");
       return;
     }
     if (step === 1) {
@@ -291,7 +287,7 @@ export function BookingFlow({
     if (step === 2) {
       const parsed = parseBookingDetails(details);
       if (!parsed.ok) {
-        setError(parsed.error);
+        notifyError(parsed.error);
         return;
       }
     }
@@ -301,21 +297,20 @@ export function BookingFlow({
   async function confirm() {
     if (!drip || !slot) return;
     if (!policyAcknowledged) {
-      setError("Please confirm you understand the booking fee and cancellation policy.");
+      notifyError("Please confirm you understand the booking fee and cancellation policy.");
       return;
     }
     const parsed = parseBookingDetails(details);
     if (!parsed.ok) {
-      setError(parsed.error);
+      notifyError(parsed.error);
       setStep(2);
       return;
     }
     if (drip.deposit <= 0) {
-      setError("This session is not available for online booking. Please contact us.");
+      notifyError("This session is not available for online booking. Please contact us.");
       return;
     }
     if (paystack.busy) return;
-    setError("");
     const storageKey = `tvs-booking:${drip.slug}:${slot.start}`;
     const savedToken = readBookingToken(storageKey);
     const result = await paystack.start(
@@ -345,6 +340,7 @@ export function BookingFlow({
         open={paystack.overlay !== null}
         title={paystack.overlay?.title}
         detail={paystack.overlay?.detail}
+        onForceClose={paystack.reset}
       />
       <form
         onSubmit={(event) => {
@@ -532,11 +528,6 @@ export function BookingFlow({
             </dl>
           ) : null}
 
-          {error || paystack.error ? (
-            <p role="alert" className={`mt-4 ${formError}`}>
-              {error || paystack.error}
-            </p>
-          ) : null}
         </div>
 
         <footer className="mt-8 space-y-2">

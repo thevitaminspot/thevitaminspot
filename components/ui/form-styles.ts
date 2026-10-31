@@ -9,7 +9,7 @@ const controlBase =
 /** Customer-facing labels (checkout, contact, booking). */
 export const formLabel = "block text-xs font-medium text-deep/70";
 
-export const formControl = `mt-1.5 rounded-xl bg-cream/30 px-4 py-3 ${controlBase} focus:bg-white`;
+export const formControl = `mt-1.5 rounded-xl border-deep/12 bg-white/70 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] ${controlBase} focus:border-deep/35 focus:bg-white focus:shadow-[0_0_0_3px_rgba(11,44,33,0.06)]`;
 
 /** Date/time inputs — keep within mobile viewports (iOS date picker is wide). */
 export const formDateControl = `${formControl} box-border max-w-full min-w-0 appearance-none`;
@@ -23,7 +23,7 @@ export const formError = "text-sm text-deep";
 export const formErrorBox =
   "rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700";
 
-export const formSubmit = `inline-flex w-full items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a] disabled:opacity-60 ${interactiveControl}`;
+export const formSubmit = `inline-flex w-full items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-[#14382a] active:scale-[0.99] disabled:opacity-60 ${interactiveControl}`;
 
 export const formSubmitInline = `inline-flex items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a] disabled:opacity-50 ${interactiveControl}`;
 

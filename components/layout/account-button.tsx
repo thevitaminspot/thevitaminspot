@@ -13,7 +13,7 @@ function AccountIcon({ className = "size-5" }: { className?: string }) {
       className={className}
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
+      strokeWidth="1.35"
       aria-hidden
     >
       <circle cx="12" cy="8" r="3.25" />
@@ -37,7 +37,7 @@ export function AccountButton({
 }) {
   const mounted = useClientMounted();
   const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-  const controlClass = `grid size-10 place-items-center rounded-full transition hover:bg-deep/5 ${className}`;
+  const controlClass = `nav-icon grid size-10 place-items-center rounded-full sm:size-11 ${className}`;
 
   if (!clerkEnabled || !mounted) {
     return (
@@ -64,7 +64,7 @@ export function AccountButton({
                 ...userButtonAppearance?.elements,
                 userButtonAvatarBox:
                   userButtonAppearance?.elements?.userButtonAvatarBox ??
-                  "size-7 ring-1 ring-deep/20",
+                  "size-8 ring-1 ring-deep/20",
               },
             }}
           >

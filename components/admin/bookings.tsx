@@ -13,6 +13,7 @@ import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { formatNaira } from "@/lib/money";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 export type BookingRow = {
   id: string;
@@ -45,15 +46,17 @@ function BookingActions({ row }: { row: BookingRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [error, setError] = useState("");
   const overdue = isOverdueBooking(row.status, row.startsAt);
 
   function setStatus(status: "CONFIRMED" | "COMPLETED") {
-    setError("");
     start(async () => {
       const result = await updateAppointmentStatus(row.id, status);
-      if ("error" in result && result.error) setError(result.error);
-      else router.refresh();
+      if ("error" in result && result.error) {
+        adminNotifyError(result.error);
+        return;
+      }
+      adminNotifySuccess(status === "CONFIRMED" ? "Booking confirmed." : "Session marked done.");
+      router.refresh();
     });
   }
 
@@ -90,7 +93,6 @@ function BookingActions({ row }: { row: BookingRow }) {
       >
         Cancel
       </button>
-      {error ? <span className="text-xs text-red-700">{error}</span> : null}
       <AppointmentCancelConfirm
         open={cancelOpen}
         id={row.id}

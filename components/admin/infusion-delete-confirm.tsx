@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { deleteInfusion } from "@/actions/admin";
 import { Modal } from "@/components/ui/modal";
 import { interactiveControl } from "@/components/ui/form-styles";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 import { nairaLabel } from "@/lib/money";
 import type { CatalogInfusion } from "@/lib/catalog";
 
@@ -16,7 +17,6 @@ export function InfusionDeleteConfirm({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [error, setError] = useState("");
   const [pending, start] = useTransition();
 
   if (!infusion) return null;
@@ -26,7 +26,6 @@ export function InfusionDeleteConfirm({
 
   function close() {
     if (pending) return;
-    setError("");
     onClose();
   }
 
@@ -60,12 +59,6 @@ export function InfusionDeleteConfirm({
           )}
         </p>
 
-        {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
-            {error}
-          </p>
-        ) : null}
-
         <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
           <button
             type="button"
@@ -82,9 +75,10 @@ export function InfusionDeleteConfirm({
               start(async () => {
                 const result = await deleteInfusion(infusion.id);
                 if ("error" in result && result.error) {
-                  setError(result.error);
+                  adminNotifyError(result.error);
                   return;
                 }
+                adminNotifySuccess(willHide ? "Session hidden." : "Session deleted.");
                 router.refresh();
                 close();
               });

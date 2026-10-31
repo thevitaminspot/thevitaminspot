@@ -2,6 +2,7 @@
 
 import { ClerkProvider } from "@clerk/nextjs";
 import { useEffect, type ReactNode } from "react";
+import { SiteToaster } from "@/components/ui/site-toaster";
 import { siteClerkAppearance } from "@/lib/clerk-appearance";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -13,7 +14,14 @@ export function Providers({ children }: { children: ReactNode }) {
     void useCartStore.persist.rehydrate();
   }, []);
 
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return children;
+  const tree = (
+    <>
+      {children}
+      <SiteToaster />
+    </>
+  );
+
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return tree;
 
   return (
     <ClerkProvider
@@ -22,7 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
       afterSignOutUrl="/"
       appearance={siteClerkAppearance}
     >
-      {children}
+      {tree}
     </ClerkProvider>
   );
 }

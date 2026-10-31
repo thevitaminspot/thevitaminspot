@@ -29,6 +29,7 @@ export function OrderPaymentActions({
         open={paystack.overlay !== null}
         title={paystack.overlay?.title}
         detail={paystack.overlay?.detail}
+        onForceClose={paystack.reset}
       />
       <p className="text-sm text-deep/75">
         {confirming
@@ -37,7 +38,6 @@ export function OrderPaymentActions({
             ? "Payment did not go through. Try again."
             : "Pay now to complete this order. Checkout stays on this page."}
       </p>
-      {paystack.error ? <p className="mt-2 text-sm text-red-700">{paystack.error}</p> : null}
       <button
         type="button"
         disabled={paystack.busy || confirming}
