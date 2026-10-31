@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { connection } from "next/server";
+import { Suspense } from "react";
 import { formatLagos } from "@/lib/datetime";
 import { notFound } from "next/navigation";
 import {
@@ -36,13 +36,39 @@ function cleanWaPhone(phone: string): string {
   return digits;
 }
 
-export default async function AdminOrderPage({
-  params,
-}: PageProps<"/admin/orders/[id]">) {
-  // Request-bound admin detail — do not wrap in loading.tsx/Suspense shell
-  // or Cache Components treats the route as prerenderable and fails metadata on Vercel.
-  await connection();
-  const { id } = await params;
+export default function AdminOrderDetailPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-8 animate-pulse">
+          <div className="h-3 w-24 rounded bg-deep/10" />
+          <div className="h-9 w-48 rounded bg-deep/10" />
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="h-64 rounded-2xl bg-deep/5" />
+            <div className="h-64 rounded-2xl bg-deep/5" />
+          </div>
+        </div>
+      }
+    >
+      <AdminOrderDetail searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function AdminOrderDetail({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const query = await searchParams;
+  const raw = query.id;
+  const id = typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : "";
+  if (!id) notFound();
+
   const prisma = await tryPrisma();
   if (!prisma) return <p>Connect Neon to open orders.</p>;
 

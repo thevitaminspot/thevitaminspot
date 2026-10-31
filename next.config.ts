@@ -5,7 +5,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   async redirects() {
-    return [{ source: "/book", destination: "/infusions", permanent: false }];
+    return [
+      { source: "/book", destination: "/infusions", permanent: false },
+      // Old deep links / emails used /admin/orders/:id
+      {
+        source: "/admin/orders/:id((?!detail$).*)",
+        destination: "/admin/orders/detail?id=:id",
+        permanent: false,
+      },
+    ];
   },
   async headers() {
     return [

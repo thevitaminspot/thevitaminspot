@@ -195,7 +195,7 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
       ])}`,
       cta: {
         label: "Open in admin",
-        href: `${site.url}/admin/orders/${payment.order.id}`,
+        href: `${site.url}/admin/orders/detail?id=${payment.order.id}`,
       },
     });
     return true;
@@ -243,7 +243,7 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
         ])}`,
         cta: {
           label: "Open order",
-          href: `${site.url}/admin/orders/${payment.order.id}`,
+          href: `${site.url}/admin/orders/detail?id=${payment.order.id}`,
         },
       });
       if (!adminMail.ok) {
@@ -261,7 +261,7 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
             `Order <strong>${escapeHtml(order.orderNumber)}</strong> was paid, but inventory ran short during settlement. Check stock and contact the guest.`,
             { last: true },
           ),
-          cta: { label: "Open order", href: `${site.url}/admin/orders/${order.id}` },
+          cta: { label: "Open order", href: `${site.url}/admin/orders/detail?id=${order.id}` },
         }).catch(() => undefined);
       }
     }
