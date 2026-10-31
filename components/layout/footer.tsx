@@ -9,7 +9,6 @@ import { site, whatsappHref } from "@/lib/site";
 const explore = [
   { href: "/shop", label: "Shop" },
   { href: "/infusions", label: "Infusions" },
-  { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
