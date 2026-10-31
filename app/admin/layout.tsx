@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/shell";
 import { pageAuth, pageShell } from "@/components/ui/layout-styles";
 import { requireAdmin } from "@/lib/admin";
@@ -6,7 +7,7 @@ import { hasClerk } from "@/lib/auth";
 export const metadata = { robots: { index: false, follow: false } };
 export const instant = false;
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   if (!hasClerk()) {
     return (
       <main className={`${pageAuth} ${pageShell}`}>
@@ -20,6 +21,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     );
   }
 
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-cream px-5 py-10 text-sm text-deep/50 md:px-8">
+          Loading admin…
+        </div>
+      }
+    >
+      <AuthedAdminShell>{children}</AuthedAdminShell>
+    </Suspense>
+  );
+}
+
+async function AuthedAdminShell({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
   return <AdminShell email={admin.email}>{children}</AdminShell>;
 }

@@ -19,7 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState, useSyncExternalStore, type ComponentType } from "react";
 import { BrandWordmark } from "@/components/brand/wordmark";
 import { brand } from "@/lib/brand";
 
@@ -51,6 +51,36 @@ const settingsLinks: NavLink[] = [
 export const adminNavLinks = [...primaryLinks, ...settingsLinks];
 
 const SETTINGS_OPEN_KEY = "tvs-admin-settings-open";
+const settingsOpenListeners = new Set<() => void>();
+
+function subscribeSettingsOpen(onStoreChange: () => void) {
+  settingsOpenListeners.add(onStoreChange);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === SETTINGS_OPEN_KEY || event.key === null) onStoreChange();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    settingsOpenListeners.delete(onStoreChange);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function readSettingsOpen() {
+  try {
+    return window.localStorage.getItem(SETTINGS_OPEN_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+function writeSettingsOpen(open: boolean) {
+  try {
+    window.localStorage.setItem(SETTINGS_OPEN_KEY, open ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+  settingsOpenListeners.forEach((listener) => listener());
+}
 
 function isActive(pathname: string, href: string, exact?: boolean) {
   if (exact) return pathname === href;
@@ -106,32 +136,12 @@ function SidebarNav({
   onNavigate?: () => void;
 }) {
   const onSettings = settingsRouteActive(pathname);
-  const [settingsOpen, setSettingsOpen] = useState(onSettings);
-
-  useEffect(() => {
-    if (onSettings) {
-      setSettingsOpen(true);
-      return;
-    }
-    try {
-      const stored = window.localStorage.getItem(SETTINGS_OPEN_KEY);
-      if (stored === "1") setSettingsOpen(true);
-      if (stored === "0") setSettingsOpen(false);
-    } catch {
-      /* ignore */
-    }
-  }, [onSettings]);
+  const storedOpen = useSyncExternalStore(subscribeSettingsOpen, readSettingsOpen, () => true);
+  const settingsOpen = onSettings || storedOpen;
 
   function toggleSettings() {
-    setSettingsOpen((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem(SETTINGS_OPEN_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
+    if (onSettings) return;
+    writeSettingsOpen(!storedOpen);
   }
 
   return (
