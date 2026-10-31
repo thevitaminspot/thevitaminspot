@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { Suspense } from "react";
 import { StripCursorRefs } from "@/components/dev/strip-cursor-refs";
 import { Providers } from "@/components/providers";
@@ -8,23 +8,31 @@ import { infusions } from "@/lib/catalog";
 import { site } from "@/lib/site";
 import "./globals.css";
 
-const display = Fraunces({
-  subsets: ["latin"],
-  weight: ["400", "600"],
+/** Self-hosted latin files — avoids next/font/google kit-URL build flake. */
+const display = localFont({
+  src: [
+    { path: "./fonts/fraunces-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/fraunces-600.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-display",
   display: "swap",
 });
 
-const wordmark = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["500", "600"],
+const wordmark = localFont({
+  src: [
+    { path: "./fonts/cormorant-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/cormorant-600.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-wordmark",
   display: "swap",
 });
 
-const sans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const sans = localFont({
+  src: [
+    { path: "./fonts/jakarta-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/jakarta-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/jakarta-600.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-sans",
   display: "swap",
 });
