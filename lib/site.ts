@@ -1,4 +1,5 @@
-const PRODUCTION_URL = "https://www.thevitaminspotltd.com";
+/** Canonical production origin — use for metadataBase (avoid VERCEL_URL at build). */
+export const PRODUCTION_URL = "https://www.thevitaminspotltd.com";
 
 /** Resolve the public site URL at runtime (important on Vercel server). */
 export function resolveSiteUrl() {

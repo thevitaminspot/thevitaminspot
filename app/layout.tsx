@@ -5,9 +5,11 @@ import { StripCursorRefs } from "@/components/dev/strip-cursor-refs";
 import { Providers } from "@/components/providers";
 import { brand } from "@/lib/brand";
 import { infusions } from "@/lib/catalog";
-import { resolveSiteUrl, site } from "@/lib/site";
+import { PRODUCTION_URL, resolveSiteUrl, site } from "@/lib/site";
 import "./globals.css";
 
+/** Stable for OG/metadata; JSON-LD below can still use the request host. */
+const metadataOrigin = PRODUCTION_URL;
 const siteUrl = resolveSiteUrl();
 
 
@@ -41,7 +43,7 @@ const sans = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(metadataOrigin),
   title: {
     default: `${site.name} · Abuja`,
     template: `%s · ${site.name}`,

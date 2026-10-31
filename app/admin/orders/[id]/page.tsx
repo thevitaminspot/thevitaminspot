@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Suspense } from "react";
+import { connection } from "next/server";
 import { formatLagos } from "@/lib/datetime";
 import { notFound } from "next/navigation";
 import {
@@ -19,10 +19,8 @@ import {
 } from "@/components/admin/ui";
 import { fulfillmentLabel } from "@/lib/admin-orders";
 import { tryPrisma } from "@/lib/db";
-import { DynamicMarker } from "@/components/ui/dynamic-marker";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatNaira } from "@/lib/money";
-import AdminOrderLoading from "./loading";
 
 export const metadata = { title: "Order Details · Admin" };
 export const instant = false;
@@ -38,22 +36,12 @@ function cleanWaPhone(phone: string): string {
   return digits;
 }
 
-export default function AdminOrderPage({ params }: PageProps<"/admin/orders/[id]">) {
-  return (
-    <>
-      <DynamicMarker />
-      <Suspense fallback={<AdminOrderLoading />}>
-        <AdminOrderDetail params={params} />
-      </Suspense>
-    </>
-  );
-}
-
-async function AdminOrderDetail({
+export default async function AdminOrderPage({
   params,
-}: {
-  params: PageProps<"/admin/orders/[id]">["params"];
-}) {
+}: PageProps<"/admin/orders/[id]">) {
+  // Request-bound admin detail — do not wrap in loading.tsx/Suspense shell
+  // or Cache Components treats the route as prerenderable and fails metadata on Vercel.
+  await connection();
   const { id } = await params;
   const prisma = await tryPrisma();
   if (!prisma) return <p>Connect Neon to open orders.</p>;
