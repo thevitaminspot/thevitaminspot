@@ -16,24 +16,23 @@ export default function ShippingPage() {
     >
       <PolicySection title="Where we deliver">
         <p>
-          We deliver within Abuja and nearby areas listed at checkout. Choose your area to see the
-          delivery fee for that zone. Fees typically range from a few thousand naira depending on
-          distance from our lounge in the Central Business District.
+          At checkout, choose <strong>Abuja</strong> and pick your area for local courier rates,{" "}
+          <strong>Elsewhere in Nigeria</strong> for other cities, or <strong>International</strong>{" "}
+          for delivery outside Nigeria. Each option shows its fee before you pay.
         </p>
         <p>
-          We do not currently offer courier shipping outside the areas shown in checkout. If your
-          location is missing,{" "}
+          If your Abuja area is missing from the list, choose “Other Abuja area”,{" "}
           <Link href="/contact" className="text-deep underline decoration-deep/20">
             message us
-          </Link>{" "}
-          or use shop pickup.
+          </Link>
+          , or use shop pickup.
         </p>
       </PolicySection>
 
       <PolicySection title="Timing">
         <p>
           Same-day delivery in Abuja is often possible when you order early and we have stock ready.
-          Exact timing depends on your zone, traffic, and order volume. After payment you receive an
+          Orders outside Abuja follow the ETA shown for that destination. After payment you receive an
           order link so you can follow packing and delivery status.
         </p>
         <p>

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition, type ReactNode } from "react";
 import {
   acceptAppointment,
   createInfusion,
@@ -21,6 +21,7 @@ import {
   adminButtonDanger,
   adminButtonPrimary,
   adminFormControl,
+  adminFormLabel,
   adminFormTextarea,
   interactiveControl,
 } from "@/components/ui/form-styles";
@@ -29,6 +30,7 @@ import {
   SERVER_ACTION_SOFT_LIMIT_BYTES,
   serverActionErrorMessage,
 } from "@/lib/server-action-error";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 function naira(kobo: number) {
   return Math.round(kobo / 100);
@@ -37,10 +39,35 @@ function naira(kobo: number) {
 const field = adminFormControl;
 const area = adminFormTextarea;
 
-function CategoryField({ value }: { value?: string }) {
-  // Categories are no longer shown in the shop; keep a stable default for the DB row.
+function Field({
+  label,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
-    <input type="hidden" name="categorySlug" value={value ?? categories[0]?.slug ?? "daily-rituals"} />
+    <div>
+      <label htmlFor={htmlFor} className={adminFormLabel}>
+        {label}
+        {hint ? <span className="font-normal text-deep/40"> · {hint}</span> : null}
+      </label>
+      <div className="mt-1.5">{children}</div>
+    </div>
+  );
+}
+
+function CategoryField({ value }: { value?: string }) {
+  return (
+    <input
+      type="hidden"
+      name="categorySlug"
+      value={value ?? categories[0]?.slug ?? "daily-rituals"}
+    />
   );
 }
 
@@ -98,6 +125,32 @@ function validateProductPayloadSize(payload: unknown, onError?: (message: string
   return true;
 }
 
+function productPayloadFromForm(
+  data: FormData,
+  images: { url: string; alt: string }[],
+) {
+  return {
+    name: String(data.get("name") ?? ""),
+    priceNaira: Number(data.get("price")),
+    compareAtPriceNaira: data.get("compareAtPrice")
+      ? Number(data.get("compareAtPrice"))
+      : undefined,
+    stock: Number(data.get("stock")),
+    tagline: String(data.get("tagline") ?? ""),
+    description: String(data.get("description") ?? ""),
+    benefits: String(data.get("benefits") ?? ""),
+    ingredients: String(data.get("ingredients") ?? ""),
+    usage: String(data.get("usage") ?? ""),
+    featured: data.get("featured") === "on",
+    isActive: data.get("active") === "on",
+    categorySlug: String(data.get("categorySlug") ?? ""),
+    images: images.map((image, index) => ({
+      url: image.url,
+      alt: String(data.get(`imageAlt-${index}`) ?? image.alt ?? ""),
+    })),
+  };
+}
+
 export function AddProductForm({
   library,
   onSuccess,
@@ -120,28 +173,14 @@ export function AddProductForm({
 
   return (
     <form
-      className="grid gap-5 rounded-lg bg-white/60 p-1 sm:p-2"
+      className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         const form = event.currentTarget;
         start(async () => {
           if (!validateProductImagesForSave(images, onError)) return;
-          const payload = {
-            name: String(data.get("name") ?? ""),
-            priceNaira: Number(data.get("price")),
-            compareAtPriceNaira: data.get("compareAtPrice") ? Number(data.get("compareAtPrice")) : undefined,
-            stock: Number(data.get("stock")),
-            tagline: String(data.get("tagline") ?? ""),
-            description: String(data.get("description") ?? ""),
-            benefits: String(data.get("benefits") ?? ""),
-            ingredients: String(data.get("ingredients") ?? ""),
-            usage: String(data.get("usage") ?? ""),
-            featured: data.get("featured") === "on",
-            isActive: data.get("active") === "on",
-            categorySlug: String(data.get("categorySlug") ?? ""),
-            images,
-          };
+          const payload = productPayloadFromForm(data, images);
           if (!validateProductPayloadSize(payload, onError)) return;
           const result = await runServerAction(() => createProduct(payload), onError);
           if (!result) return;
@@ -156,46 +195,146 @@ export function AddProductForm({
         });
       }}
     >
-      <input name="name" required placeholder="Name" aria-label="Name" className={field} />
-      <input name="tagline" placeholder="Tagline" aria-label="Tagline" className={field} />
-      <div className="grid gap-3 md:grid-cols-3">
-        <input name="price" required type="number" min={1} placeholder="Price (₦)" aria-label="Price in naira" className={field} />
-        <input name="compareAtPrice" type="number" min={0} placeholder="Compare-at Price (₦) optional" aria-label="Original price" className={field} />
-        <input name="stock" required type="number" min={0} placeholder="Stock quantity" aria-label="Stock" className={field} />
-      </div>
-      <CategoryField />
-      <div className="flex flex-wrap gap-4">
-        <FeaturedField />
-        <ActiveField />
-      </div>
-      <label className="text-sm text-deep">
-        Description
-        <textarea name="description" className={`${area} mt-1`} />
-      </label>
-      <label className="text-sm text-deep">
-        Benefits, one per line
-        <textarea name="benefits" className={`${area} mt-1`} />
-      </label>
-      <label className="text-sm text-deep">
-        Ingredients, one per line
-        <textarea name="ingredients" className={`${area} mt-1`} />
-      </label>
-      <label className="text-sm text-deep">
-        How to take it
-        <textarea name="usage" className={`${area} mt-1`} />
-      </label>
-      <PicturePicker
-        images={images}
+      <ProductFields
         library={library}
+        images={images}
         onAdd={addImage}
         onChange={setImages}
-        onUpload={start}
-        onError={(error) => onError?.(error)}
+        onError={onError}
+        onUpload={(work) => start(async () => work())}
       />
-      <button disabled={pending} className={`md:w-fit ${adminButtonPrimary}`}>
+      <button type="submit" disabled={pending} className={`md:w-fit ${adminButtonPrimary}`}>
         {pending ? "Adding…" : "Add product"}
       </button>
     </form>
+  );
+}
+
+function ProductFields({
+  product,
+  library,
+  images,
+  onAdd,
+  onChange,
+  onError,
+  onUpload,
+}: {
+  product?: CatalogProduct;
+  library: string[];
+  images: { url: string; alt: string }[];
+  onAdd: (url: string) => void;
+  onChange: (images: { url: string; alt: string }[]) => void;
+  onError?: (message: string) => void;
+  onUpload?: (work: () => Promise<void>) => void;
+}) {
+  return (
+    <>
+      <Field label="Product name" htmlFor="product-name">
+        <input
+          id="product-name"
+          name="name"
+          required
+          defaultValue={product?.name}
+          placeholder="e.g. Collagen Atelier"
+          className={field}
+        />
+      </Field>
+      <Field label="Tagline" htmlFor="product-tagline" hint="short line under the name">
+        <input
+          id="product-tagline"
+          name="tagline"
+          defaultValue={product?.tagline}
+          placeholder="One short sentence"
+          className={field}
+        />
+      </Field>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Field label="Price (₦)" htmlFor="product-price">
+          <input
+            id="product-price"
+            name="price"
+            required
+            type="number"
+            min={0}
+            defaultValue={product ? naira(product.price) : undefined}
+            placeholder="e.g. 40000"
+            className={field}
+          />
+        </Field>
+        <Field label="Compare-at price (₦)" htmlFor="product-compareAtPrice" hint="optional">
+          <input
+            id="product-compareAtPrice"
+            name="compareAtPrice"
+            type="number"
+            min={0}
+            defaultValue={product?.compareAtPrice ? naira(product.compareAtPrice) : ""}
+            placeholder="Strike-through price"
+            className={field}
+          />
+        </Field>
+        <Field label="Stock" htmlFor="product-stock">
+          <input
+            id="product-stock"
+            name="stock"
+            required
+            type="number"
+            min={0}
+            defaultValue={product?.stock ?? 0}
+            placeholder="Units on hand"
+            className={field}
+          />
+        </Field>
+      </div>
+      <CategoryField value={product?.categorySlug} />
+      <div className="flex flex-wrap gap-4">
+        <FeaturedField checked={product?.featured} />
+        <ActiveField checked={product ? product.isActive !== false : true} />
+      </div>
+      <Field label="Description" htmlFor="product-description">
+        <textarea
+          id="product-description"
+          name="description"
+          defaultValue={product?.description}
+          rows={4}
+          className={area}
+        />
+      </Field>
+      <Field label="Benefits" htmlFor="product-benefits" hint="one per line">
+        <textarea
+          id="product-benefits"
+          name="benefits"
+          defaultValue={product?.benefits.join("\n")}
+          rows={4}
+          className={area}
+        />
+      </Field>
+      <Field label="Ingredients" htmlFor="product-ingredients" hint="one per line">
+        <textarea
+          id="product-ingredients"
+          name="ingredients"
+          defaultValue={product?.ingredients.join("\n")}
+          rows={4}
+          className={area}
+        />
+      </Field>
+      <Field label="How to take it" htmlFor="product-usage">
+        <textarea
+          id="product-usage"
+          name="usage"
+          defaultValue={product?.usage}
+          rows={3}
+          className={area}
+        />
+      </Field>
+      <PicturePicker
+        images={images}
+        library={library}
+        onAdd={onAdd}
+        onChange={onChange}
+        onUpload={onUpload ?? ((work) => void work())}
+        onError={(error) => onError?.(error)}
+      />
+    </>
   );
 }
 
@@ -215,74 +354,100 @@ function PicturePicker({
   onError: (message: string) => void;
 }) {
   const atLimit = images.length >= PRODUCT_MAX_IMAGES;
+  const libraryId = useId();
+  const fileId = useId();
 
   return (
-    <div>
-      <p className="text-sm text-deep">
+    <fieldset className="space-y-3">
+      <legend className={adminFormLabel}>
         Pictures{" "}
-        <span className="text-deep/50">
+        <span className="font-normal text-deep/45">
           ({images.length}/{PRODUCT_MAX_IMAGES})
         </span>
-      </p>
-      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {images.map((image, index) => (
-          <div key={`${image.url}-${index}`} className="space-y-2">
-            <Image
-              src={image.url}
-              alt={image.alt}
-              width={240}
-              height={180}
-              className="aspect-[4/3] w-full rounded-lg object-cover"
-            />
-            <input
-              value={image.alt}
-              aria-label="Picture description"
-              onChange={(event) =>
-                onChange(
-                  images.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, alt: event.target.value } : item,
-                  ),
-                )
-              }
-              className={field}
-            />
-            <button
-              type="button"
-              className={`text-[11px] tracking-[0.14em] uppercase ${interactiveControl}`}
-              onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))}
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <select
-          aria-label="Add a picture from the library"
-          defaultValue=""
-          disabled={atLimit}
-          className={`${field} disabled:cursor-not-allowed disabled:opacity-50`}
-          onChange={(event) => {
-            onAdd(event.target.value);
-            event.target.value = "";
-          }}
-        >
-          <option value="">
-            {atLimit ? "Maximum pictures added" : "Add a saved picture"}
-          </option>
-          {library.map((url) => (
-            <option key={url} value={url}>
-              {url.replace("/images/", "")}
+      </legend>
+
+      {images.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {images.map((image, index) => {
+            const altName = `imageAlt-${index}`;
+            return (
+              <div key={`${image.url}-${index}`} className="space-y-2">
+                <Image
+                  src={image.url}
+                  alt={image.alt || `Product picture ${index + 1}`}
+                  width={240}
+                  height={180}
+                  className="aspect-[4/3] w-full rounded-lg object-cover"
+                />
+                <input type="hidden" name={`imageUrl-${index}`} value={image.url} />
+                <label className="block text-[11px] tracking-[0.12em] text-deep/45 uppercase" htmlFor={altName}>
+                  Alt text
+                </label>
+                <input
+                  id={altName}
+                  name={altName}
+                  value={image.alt}
+                  onChange={(event) =>
+                    onChange(
+                      images.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, alt: event.target.value } : item,
+                      ),
+                    )
+                  }
+                  placeholder="Describe this picture"
+                  className={field}
+                />
+                <button
+                  type="button"
+                  className={`text-[11px] tracking-[0.14em] uppercase ${interactiveControl}`}
+                  onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))}
+                >
+                  Remove
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-deep/50">Add at least one picture for the shop listing.</p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <div className="min-w-[12rem] flex-1">
+          <label htmlFor={libraryId} className="sr-only">
+            Add a saved picture
+          </label>
+          <select
+            id={libraryId}
+            name="libraryImage"
+            defaultValue=""
+            disabled={atLimit}
+            className={`${field} disabled:cursor-not-allowed disabled:opacity-50`}
+            onChange={(event) => {
+              onAdd(event.target.value);
+              event.target.value = "";
+            }}
+          >
+            <option value="">
+              {atLimit ? "Maximum pictures added" : "Add a saved picture"}
             </option>
-          ))}
-        </select>
+            {library.map((url) => (
+              <option key={url} value={url}>
+                {url.replace("/images/", "")}
+              </option>
+            ))}
+          </select>
+        </div>
         <label
-          className={`rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
+          htmlFor={fileId}
+          className={`inline-flex items-center rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
             atLimit ? "cursor-not-allowed opacity-50" : interactiveControl
           }`}
         >
           Upload picture
           <input
+            id={fileId}
+            name="uploadFile"
             type="file"
             accept="image/*"
             disabled={atLimit}
@@ -311,9 +476,9 @@ function PicturePicker({
         </label>
       </div>
       {atLimit ? (
-        <p className="mt-2 text-xs text-deep/55">Remove a picture to add another.</p>
+        <p className="text-xs text-deep/55">Remove a picture to add another.</p>
       ) : null}
-    </div>
+    </fieldset>
   );
 }
 
@@ -344,7 +509,7 @@ export function ProductEditor({
 
   return (
     <form
-      className="grid gap-5 rounded-lg bg-white/50 p-1 sm:p-2"
+      className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -352,19 +517,7 @@ export function ProductEditor({
           if (!validateProductImagesForSave(images, onError)) return;
           const payload = {
             id: product.id,
-            name: String(data.get("name") ?? ""),
-            priceNaira: Number(data.get("price")),
-            compareAtPriceNaira: data.get("compareAtPrice") ? Number(data.get("compareAtPrice")) : undefined,
-            stock: Number(data.get("stock")),
-            tagline: String(data.get("tagline") ?? ""),
-            description: String(data.get("description") ?? ""),
-            benefits: String(data.get("benefits") ?? ""),
-            ingredients: String(data.get("ingredients") ?? ""),
-            usage: String(data.get("usage") ?? ""),
-            featured: data.get("featured") === "on",
-            isActive: data.get("active") === "on",
-            categorySlug: String(data.get("categorySlug") ?? ""),
-            images,
+            ...productPayloadFromForm(data, images),
           };
           if (!validateProductPayloadSize(payload, onError)) return;
           const result = await runServerAction(() => updateProduct(payload), onError);
@@ -378,104 +531,17 @@ export function ProductEditor({
         });
       }}
     >
-      <p className="text-[11px] tracking-[0.18em] text-sage uppercase">Shop listing</p>
-      <input name="name" required defaultValue={product.name} aria-label="Name" className={field} />
-      <input
-        name="tagline"
-        defaultValue={product.tagline}
-        aria-label="Tagline"
-        placeholder="Tagline"
-        className={field}
-      />
-      <div className="grid gap-3 md:grid-cols-3">
-        <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-deep/60">
-            Price in Naira (₦)
-          </label>
-          <input
-            name="price"
-            required
-            type="number"
-            min={0}
-            defaultValue={naira(product.price)}
-            className={`${field} mt-1`}
-            aria-label="Price in naira"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-deep/60">
-            Compare-at / Strike Price (₦)
-          </label>
-          <input
-            name="compareAtPrice"
-            type="number"
-            min={0}
-            defaultValue={product.compareAtPrice ? naira(product.compareAtPrice) : ""}
-            placeholder="e.g. 50000 (optional)"
-            className={`${field} mt-1`}
-            aria-label="Compare-at price in naira"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-deep/60">
-            Current Stock Level
-          </label>
-          <input
-            name="stock"
-            required
-            type="number"
-            min={0}
-            defaultValue={product.stock}
-            className={`${field} mt-1`}
-            aria-label="Stock"
-          />
-        </div>
-      </div>
-      <CategoryField value={product.categorySlug} />
-      <div className="flex flex-wrap gap-4">
-        <FeaturedField checked={product.featured} />
-        <ActiveField checked={product.isActive !== false} />
-      </div>
-      <label className="text-sm text-deep">
-        Description
-        <textarea
-          name="description"
-          defaultValue={product.description}
-          className={`${area} mt-1`}
-        />
-      </label>
-      <label className="text-sm text-deep">
-        Benefits, one per line
-        <textarea
-          name="benefits"
-          defaultValue={product.benefits.join("\n")}
-          className={`${area} mt-1`}
-        />
-      </label>
-      <label className="text-sm text-deep">
-        Ingredients, one per line
-        <textarea
-          name="ingredients"
-          defaultValue={product.ingredients.join("\n")}
-          className={`${area} mt-1`}
-        />
-      </label>
-      <label className="text-sm text-deep">
-        Usage
-        <textarea name="usage" defaultValue={product.usage} className={`${area} mt-1`} />
-      </label>
-
-      <PicturePicker
-        images={images}
+      <ProductFields
+        product={product}
         library={library}
+        images={images}
         onAdd={addImage}
         onChange={setImages}
+        onError={onError}
         onUpload={(work) => start(async () => work())}
-        onError={(error) => onError?.(error)}
       />
-
       <div className="flex flex-wrap gap-3">
-        <button disabled={pending} className={adminButtonPrimary}>
+        <button type="submit" disabled={pending} className={adminButtonPrimary}>
           {pending ? "Saving…" : "Save changes"}
         </button>
         {onDelete ? (
@@ -488,7 +554,7 @@ export function ProductEditor({
   );
 }
 
-function infusionPayload(data: FormData, image: string) {
+function infusionPayload(data: FormData) {
   return {
     name: String(data.get("name") ?? ""),
     tagline: String(data.get("tagline") ?? ""),
@@ -498,7 +564,7 @@ function infusionPayload(data: FormData, image: string) {
     priceNaira: Number(data.get("price")),
     depositNaira: Number(data.get("deposit")),
     durationMin: Number(data.get("duration")),
-    image,
+    image: String(data.get("image") ?? ""),
   };
 }
 
@@ -515,13 +581,13 @@ export function AddInfusionForm({
 
   return (
     <form
-      className="grid gap-5 rounded-lg bg-white/60 p-1 sm:p-2"
+      className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         const form = event.currentTarget;
         start(async () => {
-          const result = await createInfusion(infusionPayload(data, image));
+          const result = await createInfusion(infusionPayload(data));
           if ("ok" in result) {
             form.reset();
             setImage("");
@@ -534,7 +600,7 @@ export function AddInfusionForm({
       }}
     >
       <InfusionFields library={library} image={image} onImage={setImage} />
-      <button disabled={pending} className={`md:w-fit ${adminButtonPrimary}`}>
+      <button type="submit" disabled={pending} className={`md:w-fit ${adminButtonPrimary}`}>
         {pending ? "Adding…" : "Add session"}
       </button>
     </form>
@@ -559,14 +625,14 @@ export function InfusionEditor({
 
   return (
     <form
-      className="grid gap-5 rounded-lg bg-white/50 p-1 sm:p-2"
+      className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         start(async () => {
           const result = await updateInfusion({
             id: infusion.id,
-            ...infusionPayload(data, image),
+            ...infusionPayload(data),
           });
           if ("ok" in result) {
             router.refresh();
@@ -579,7 +645,7 @@ export function InfusionEditor({
     >
       <InfusionFields infusion={infusion} library={library} image={image} onImage={setImage} />
       <div className="flex flex-wrap gap-3">
-        <button disabled={pending} className={adminButtonPrimary}>
+        <button type="submit" disabled={pending} className={adminButtonPrimary}>
           {pending ? "Saving…" : "Save changes"}
         </button>
         {onDelete ? (
@@ -603,82 +669,102 @@ function InfusionFields({
   image: string;
   onImage: (url: string) => void;
 }) {
+  const fileId = useId();
+
   return (
     <>
-      <input
-        name="name"
-        required
-        defaultValue={infusion?.name}
-        placeholder="Name"
-        aria-label="Name"
-        className={field}
-      />
-      <input
-        name="tagline"
-        defaultValue={infusion?.tagline}
-        placeholder="Tagline"
-        aria-label="Tagline"
-        className={field}
-      />
-      <label className="text-sm text-deep">
-        Description
-        <textarea name="description" defaultValue={infusion?.description} className={`${area} mt-1`} />
-      </label>
-      <label className="text-sm text-deep">
-        What it does, one per line
+      <input type="hidden" name="image" value={image} />
+      <Field label="Session name" htmlFor="infusion-name">
+        <input
+          id="infusion-name"
+          name="name"
+          required
+          defaultValue={infusion?.name}
+          placeholder="e.g. Myers Cocktail"
+          className={field}
+        />
+      </Field>
+      <Field label="Tagline" htmlFor="infusion-tagline" hint="short line under the name">
+        <input
+          id="infusion-tagline"
+          name="tagline"
+          defaultValue={infusion?.tagline}
+          placeholder="One short sentence"
+          className={field}
+        />
+      </Field>
+      <Field label="Description" htmlFor="infusion-description">
         <textarea
+          id="infusion-description"
+          name="description"
+          defaultValue={infusion?.description}
+          rows={4}
+          className={area}
+        />
+      </Field>
+      <Field label="What it does" htmlFor="infusion-benefits" hint="one per line">
+        <textarea
+          id="infusion-benefits"
           name="benefits"
           defaultValue={infusion?.benefits.join("\n")}
-          className={`${area} mt-1`}
+          rows={4}
+          className={area}
         />
-      </label>
-      <label className="text-sm text-deep">
-        What’s in it, one per line
+      </Field>
+      <Field label="What’s in it" htmlFor="infusion-ingredients" hint="one per line">
         <textarea
+          id="infusion-ingredients"
           name="ingredients"
           defaultValue={infusion?.ingredients.join("\n")}
-          className={`${area} mt-1`}
+          rows={4}
+          className={area}
         />
-      </label>
-      <div className="grid gap-3 md:grid-cols-3">
-        <input
-          name="price"
-          required
-          type="number"
-          min={0}
-          defaultValue={infusion ? naira(infusion.price) : undefined}
-          placeholder="Price (₦)"
-          aria-label="Price in naira"
-          className={field}
-        />
-        <input
-          name="deposit"
-          required
-          type="number"
-          min={0}
-          defaultValue={infusion ? naira(infusion.deposit) : undefined}
-          placeholder="Deposit (₦)"
-          aria-label="Deposit in naira"
-          className={field}
-        />
-        <input
-          name="duration"
-          required
-          type="number"
-          min={15}
-          defaultValue={infusion?.durationMin}
-          placeholder="Minutes"
-          aria-label="Duration in minutes"
-          className={field}
-        />
+      </Field>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Field label="Price (₦)" htmlFor="infusion-price">
+          <input
+            id="infusion-price"
+            name="price"
+            required
+            type="number"
+            min={0}
+            defaultValue={infusion ? naira(infusion.price) : undefined}
+            placeholder="Full price"
+            className={field}
+          />
+        </Field>
+        <Field label="Booking fee (₦)" htmlFor="infusion-deposit">
+          <input
+            id="infusion-deposit"
+            name="deposit"
+            required
+            type="number"
+            min={0}
+            defaultValue={infusion ? naira(infusion.deposit) : undefined}
+            placeholder="Deposit to hold the chair"
+            className={field}
+          />
+        </Field>
+        <Field label="Duration (minutes)" htmlFor="infusion-duration">
+          <input
+            id="infusion-duration"
+            name="duration"
+            required
+            type="number"
+            min={15}
+            defaultValue={infusion?.durationMin}
+            placeholder="e.g. 60"
+            className={field}
+          />
+        </Field>
       </div>
-      <div className="text-sm text-deep">
-        Picture
+      <Field label="Session picture" htmlFor="infusion-imageSelect">
         <select
-          aria-label="Session picture"
+          id="infusion-imageSelect"
+          name="imageSelect"
           value={image}
           onChange={(event) => onImage(event.target.value)}
-          className={`${field} mt-1`}
+          className={field}
         >
           <option value="">Choose a picture</option>
           {image && !library.includes(image) ? <option value={image}>{image}</option> : null}
@@ -688,9 +774,14 @@ function InfusionFields({
             </option>
           ))}
         </select>
-        <label className="mt-2 inline-flex rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase">
+        <label
+          htmlFor={fileId}
+          className={`mt-2 inline-flex rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${interactiveControl}`}
+        >
           Upload picture
           <input
+            id={fileId}
+            name="uploadFile"
             type="file"
             accept="image/*"
             className="sr-only"
@@ -702,13 +793,21 @@ function InfusionFields({
               body.set("file", file);
               void uploadProductImage(body).then((result) => {
                 if ("url" in result && result.url) onImage(result.url);
+                else if ("error" in result && result.error) adminNotifyError(result.error);
+                else adminNotifyError("Upload failed.");
               });
             }}
           />
         </label>
-      </div>
+      </Field>
       {image ? (
-        <Image src={image} alt="" width={320} height={200} className="aspect-[8/5] w-48 rounded-lg object-cover" />
+        <Image
+          src={image}
+          alt=""
+          width={320}
+          height={200}
+          className="aspect-[8/5] w-48 rounded-lg object-cover"
+        />
       ) : null}
     </>
   );
@@ -716,7 +815,6 @@ function InfusionFields({
 
 export function AcceptAppointmentButton({ id, status }: { id: string; status: string }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
   if (status === "CONFIRMED") return <span className="text-sage">Accepted</span>;
 
@@ -728,12 +826,16 @@ export function AcceptAppointmentButton({ id, status }: { id: string; status: st
       onClick={() => {
         start(async () => {
           const result = await acceptAppointment(id);
-          setMessage("error" in result && result.error ? result.error : "Accepted.");
-          if ("ok" in result) router.refresh();
+          if ("error" in result && result.error) {
+            adminNotifyError(result.error);
+            return;
+          }
+          adminNotifySuccess("Booking accepted.");
+          router.refresh();
         });
       }}
     >
-      {message || "Accept"}
+      {pending ? "Saving…" : "Accept"}
     </button>
   );
 }

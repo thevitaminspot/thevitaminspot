@@ -23,12 +23,12 @@ export default async function AdminZonesPage() {
         <AdminPageHeader
           eyebrow="Shop"
           title="Delivery"
-          description="Abuja courier rates and delivery timelines."
+          description="Abuja areas, other Nigerian cities, and international rates."
         />
         <AdminPanel className="p-6">
           <p className="text-sm text-deep/70">No delivery zones configured in Neon yet.</p>
           <div className="mt-4">
-            <SeedCatalogueButton label="Load Abuja Starter Zones" />
+            <SeedCatalogueButton label="Load starter delivery zones" />
           </div>
         </AdminPanel>
       </div>

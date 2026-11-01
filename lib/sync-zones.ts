@@ -3,7 +3,7 @@ import { tryPrisma } from "@/lib/db";
 
 const retiredZoneSlugs = ["abuja-central", "abuja-extended", "nationwide"];
 
-/** Create any missing Abuja areas and retire the old three-zone list. */
+/** Create any missing Abuja / remote zones and retire the old three-zone list. */
 export async function listCheckoutZones(): Promise<CatalogZone[]> {
   const prisma = await tryPrisma();
   if (!prisma) return deliveryZones;

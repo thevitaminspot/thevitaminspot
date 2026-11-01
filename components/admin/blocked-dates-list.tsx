@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { unblockDate } from "@/actions/admin";
 import { AdminListSearch, filterByQuery } from "@/components/admin/list-search";
 import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
@@ -34,11 +34,19 @@ export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  useEffect(() => {
+    setLocalRows(rows);
+  }, [rows]);
+
   const filtered = useMemo(
     () => filterByQuery(localRows, query, blockedDateSearchText),
     [localRows, query],
   );
   const pagination = usePaginatedList(filtered, query);
+
+  if (localRows.length === 0) {
+    return <AdminEmptyState>No blocked dates.</AdminEmptyState>;
+  }
 
   return (
     <div>
@@ -47,19 +55,16 @@ export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
         onChange={setQuery}
         placeholder="Search by date or reason…"
         countLabel={`${pagination.total} matching · ${localRows.length} total`}
-        className="mb-4"
       />
 
       {filtered.length === 0 ? (
-        <AdminEmptyState>
-          {query.trim() ? "No blocked dates match your search." : "No blocked dates."}
-        </AdminEmptyState>
+        <AdminEmptyState>No blocked dates match your search.</AdminEmptyState>
       ) : (
         <PaginatedTableWrap
           pagination={pagination.tablePaginationProps("blocked dates")}
           scroll={false}
         >
-          <ul className="divide-y divide-deep/6">
+          <ul className="divide-y divide-deep/8">
             {pagination.visible.map((row) => (
               <li
                 key={row.id}

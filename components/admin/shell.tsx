@@ -13,7 +13,7 @@ export function AdminShell({
   children,
   email,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   email?: string;
 }) {
   const pathname = usePathname();

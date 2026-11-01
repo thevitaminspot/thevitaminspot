@@ -336,13 +336,33 @@ export const infusions: CatalogInfusion[] = [
   },
 ];
 
-export const deliveryZones: CatalogZone[] = majorAbujaAreas.map((area) => ({
-  id: `zone-${area.slug}`,
-  name: area.name,
-  slug: area.slug,
-  fee: nairaToKobo(area.price),
-  eta: "Abuja delivery",
-}));
+export const remoteDeliveryZones: CatalogZone[] = [
+  {
+    id: "zone-outside-abuja",
+    name: "Elsewhere in Nigeria",
+    slug: "outside-abuja",
+    fee: nairaToKobo(6500),
+    eta: "2–5 business days",
+  },
+  {
+    id: "zone-international",
+    name: "International",
+    slug: "international",
+    fee: nairaToKobo(45000),
+    eta: "5–14 business days",
+  },
+];
+
+export const deliveryZones: CatalogZone[] = [
+  ...majorAbujaAreas.map((area) => ({
+    id: `zone-${area.slug}`,
+    name: area.name,
+    slug: area.slug,
+    fee: nairaToKobo(area.price),
+    eta: "Abuja delivery",
+  })),
+  ...remoteDeliveryZones,
+];
 
 export const gallery = [
   {

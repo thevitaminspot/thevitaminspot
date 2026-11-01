@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { seedCatalogue } from "@/actions/admin";
 import { adminButtonPrimary } from "@/components/ui/form-styles";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 export function DatabaseSetup() {
   return (
@@ -20,7 +21,6 @@ export function DatabaseSetup() {
 
 export function SeedCatalogueButton({ label = "Load starter catalogue" }: { label?: string }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
 
   return (
@@ -31,15 +31,18 @@ export function SeedCatalogueButton({ label = "Load starter catalogue" }: { labe
         onClick={() => {
           start(async () => {
             const result = await seedCatalogue();
-            setMessage("error" in result && result.error ? result.error : "Catalogue loaded.");
-            if ("ok" in result) router.refresh();
+            if ("error" in result && result.error) {
+              adminNotifyError(result.error);
+              return;
+            }
+            adminNotifySuccess("Catalogue loaded.");
+            router.refresh();
           });
         }}
         className={adminButtonPrimary}
       >
         {pending ? "Loading" : label}
       </button>
-      {message ? <p className="mt-3 text-sm text-deep/70">{message}</p> : null}
     </div>
   );
 }

@@ -113,6 +113,14 @@ body {
     );
 }
 
+.faq-wash {
+  background-color: #f3eee4;
+  background-image:
+    radial-gradient(ellipse 48% 36% at 0% 100%, rgba(207, 225, 175, 0.22), transparent 72%),
+    radial-gradient(ellipse 36% 28% at 100% 0%, rgba(230, 215, 184, 0.18), transparent 70%),
+    linear-gradient(180deg, #f7f3ea 0%, #f3eee4 48%, #efe8da 100%);
+}
+
 .footer-field {
   background-color: #0b2c21;
 }

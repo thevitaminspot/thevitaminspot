@@ -26,6 +26,12 @@ import { DeliveryAreaPicker } from "@/components/shop/delivery-area-picker";
 import { PaystackHandoff } from "@/components/ui/paystack-handoff";
 import { PaystackButtonContent, usePaystackCheckout } from "@/components/ui/use-paystack-checkout";
 import { surfaceCard } from "@/components/ui/layout-styles";
+import {
+  type DeliveryRegion,
+  deliveryRegionForSlug,
+  isAbujaAreaZone,
+  zoneSlugForRegion,
+} from "@/lib/delivery-regions";
 import { useClientMounted } from "@/lib/hooks/use-client-mounted";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -41,10 +47,15 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
   const clear = useCartStore((state) => state.clear);
   const updatePrices = useCartStore((state) => state.updatePrices);
 
+  const defaultAbujaSlug =
+    zones.find((zone) => zone.slug === "cbd")?.slug ??
+    zones.find((zone) => isAbujaAreaZone(zone.slug))?.slug ??
+    "cbd";
+
   const [fulfillment, setFulfillment] = useState<"DELIVERY" | "PICKUP">("DELIVERY");
-  const [selectedZoneSlug, setSelectedZoneSlug] = useState<string>(
-    zones.find((zone) => zone.slug === "cbd")?.slug ?? zones[0]?.slug ?? "cbd",
-  );
+  const [region, setRegion] = useState<DeliveryRegion>("abuja");
+  const [abujaSlug, setAbujaSlug] = useState(defaultAbujaSlug);
+  const [selectedZoneSlug, setSelectedZoneSlug] = useState(defaultAbujaSlug);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -117,7 +128,13 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
           fulfillment,
           zoneSlug: fulfillment === "DELIVERY" ? selectedZoneSlug : undefined,
           addressLine1: fulfillment === "DELIVERY" ? String(form.get("addressLine1") ?? "").trim() : undefined,
-          city: fulfillment === "DELIVERY" ? String(form.get("city") ?? "Abuja").trim() : undefined,
+          city:
+            fulfillment === "DELIVERY"
+              ? String(
+                  form.get("city") ??
+                    (region === "abuja" ? "Abuja" : region === "nigeria" ? "Nigeria" : ""),
+                ).trim()
+              : undefined,
           notes: String(form.get("notes") ?? "").trim(),
         };
         const fingerprint = checkoutFingerprint({
@@ -233,70 +250,101 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
             <h2 className="font-display text-xl text-deep">Fulfillment Method</h2>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setFulfillment("DELIVERY")}
-              className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-4 text-center transition ${
-                fulfillment === "DELIVERY"
-                  ? "border-deep bg-deep text-cream shadow-sm"
-                  : "border-deep/15 bg-cream/30 text-deep hover:bg-cream"
-              }`}
-            >
-              <span className="text-xs font-medium tracking-wide">Abuja Delivery</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setFulfillment("PICKUP")}
-              className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-4 text-center transition ${
-                fulfillment === "PICKUP"
-                  ? "border-deep bg-deep text-cream shadow-sm"
-                  : "border-deep/15 bg-cream/30 text-deep hover:bg-cream"
-              }`}
-            >
-              <span className="text-xs font-medium tracking-wide">Shop pickup</span>
-            </button>
+          <div
+            className="mt-5 flex rounded-xl border border-deep/12 bg-cream/40 p-1"
+            role="radiogroup"
+            aria-label="Fulfillment method"
+          >
+            {(
+              [
+                { id: "DELIVERY" as const, label: "Delivery" },
+                { id: "PICKUP" as const, label: "Shop pickup" },
+              ]
+            ).map((option) => {
+              const active = fulfillment === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setFulfillment(option.id)}
+                  className={`flex-1 rounded-lg px-3 py-2.5 text-center text-[11px] font-medium tracking-[0.12em] uppercase transition ${
+                    active
+                      ? "bg-white text-deep shadow-[0_1px_2px_rgba(11,44,33,0.08)] ring-1 ring-deep/10"
+                      : "text-deep/55 hover:text-deep"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
 
           {fulfillment === "DELIVERY" ? (
-            <div className="mt-6 space-y-4 border-t border-deep/10 pt-6">
+            <div className="mt-6 space-y-5 border-t border-deep/10 pt-6">
               <DeliveryAreaPicker
                 zones={zones}
+                region={region}
                 value={selectedZoneSlug}
-                onChange={setSelectedZoneSlug}
+                onRegionChange={(next) => {
+                  setRegion(next);
+                  const nextSlug = zoneSlugForRegion(next, abujaSlug);
+                  setSelectedZoneSlug(nextSlug);
+                }}
+                onChange={(slug) => {
+                  setAbujaSlug(slug);
+                  setSelectedZoneSlug(slug);
+                  setRegion(deliveryRegionForSlug(slug));
+                }}
               />
 
               <div>
-                <label className={formLabel}>
-                  Street Address & Landmark *
+                <label className={formLabel} htmlFor="checkout-address">
+                  Street address & landmark *
                 </label>
                 <input
+                  id="checkout-address"
                   name="addressLine1"
                   required
-                  placeholder="e.g. 14 Danube Street, off IBB Way"
+                  placeholder={
+                    region === "abuja"
+                      ? "e.g. 14 Danube Street, off IBB Way"
+                      : "Full street address for the courier"
+                  }
                   className={formControl}
                 />
               </div>
 
-              <div>
-                <label className={formLabel}>City / District</label>
-                <input
-                  name="city"
-                  defaultValue="Abuja"
-                  className={formControl}
-                />
-              </div>
+              {region === "abuja" ? (
+                <input type="hidden" name="city" value="Abuja" />
+              ) : (
+                <div>
+                  <label className={formLabel} htmlFor="checkout-city">
+                    {region === "international" ? "City / country *" : "City *"}
+                  </label>
+                  <input
+                    id="checkout-city"
+                    name="city"
+                    required
+                    key={region}
+                    placeholder={
+                      region === "nigeria"
+                        ? "e.g. Lagos, Port Harcourt"
+                        : "e.g. Accra, Ghana"
+                    }
+                    className={formControl}
+                  />
+                </div>
+              )}
             </div>
           ) : (
-            <div className="mt-6 rounded-2xl border border-deep/10 bg-cream/40 p-5">
-              <div className="text-xs leading-relaxed text-deep/80">
-                  <p className="font-semibold text-deep">Pick up at the shop</p>
-                  <p className="mt-0.5">{site.address.label}</p>
-                  <p className="mt-2 text-deep/70">
-                    We’ll pack it and tell you when it’s ready to collect.
-                  </p>
-              </div>
+            <div className="mt-6 border-t border-deep/10 pt-6">
+              <p className="text-sm font-medium text-deep">Pick up at the shop</p>
+              <p className="mt-1 text-sm text-deep/65">{site.address.label}</p>
+              <p className="mt-2 text-xs leading-relaxed text-deep/55">
+                We’ll pack it and tell you when it’s ready to collect.
+              </p>
             </div>
           )}
         </section>

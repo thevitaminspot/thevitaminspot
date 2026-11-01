@@ -356,7 +356,7 @@ export function AdminFilterTabs({
   value,
   onChange,
 }: {
-  tabs: { id: string; label: string; count: number }[];
+  tabs: { id: string; label: string; count: number; tone?: "default" | "attention" }[];
   value: string;
   onChange: (id: string) => void;
 }) {
@@ -364,6 +364,7 @@ export function AdminFilterTabs({
     <div className="mb-4 flex gap-1 overflow-x-auto border-b border-deep/10">
       {tabs.map((tab) => {
         const active = tab.id === value;
+        const attention = tab.tone === "attention" && tab.count > 0;
         return (
           <button
             key={tab.id}
@@ -371,12 +372,26 @@ export function AdminFilterTabs({
             onClick={() => onChange(tab.id)}
             className={`shrink-0 border-b-2 px-3 py-2.5 text-sm transition ${interactiveControl} ${
               active
-                ? "border-deep font-medium text-deep"
-                : "border-transparent text-deep/50 hover:text-deep"
+                ? attention
+                  ? "border-amber-600 font-medium text-amber-900"
+                  : "border-deep font-medium text-deep"
+                : attention
+                  ? "border-transparent text-amber-800/80 hover:text-amber-900"
+                  : "border-transparent text-deep/50 hover:text-deep"
             }`}
           >
             {tab.label}
-            <span className={`ml-1.5 tabular-nums ${active ? "text-deep/55" : "text-deep/35"}`}>
+            <span
+              className={`ml-1.5 tabular-nums ${
+                active
+                  ? attention
+                    ? "text-amber-800/70"
+                    : "text-deep/55"
+                  : attention
+                    ? "text-amber-700/55"
+                    : "text-deep/35"
+              }`}
+            >
               {tab.count}
             </span>
           </button>

@@ -2,18 +2,18 @@
 
 import { Toaster } from "sonner";
 
-/** Brand-matched toasts — top-right clears the cookie bar and mobile CTAs. */
+/** Brand-matched toasts — bottom-right for storefront and admin. */
 export function SiteToaster() {
   return (
     <Toaster
       theme="light"
-      position="top-right"
+      position="bottom-right"
       closeButton
       duration={4500}
       visibleToasts={3}
       gap={10}
-      offset={{ top: "5.5rem", right: "1rem" }}
-      mobileOffset={{ top: "5rem", right: "0.75rem" }}
+      offset={{ bottom: "1.25rem", right: "1rem" }}
+      mobileOffset={{ bottom: "1rem", right: "0.75rem" }}
       className="tvs-toaster"
       toastOptions={{
         classNames: {

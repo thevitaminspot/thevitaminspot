@@ -12,12 +12,13 @@ export function filterByQuery<T>(
   return items.filter((item) => getSearchText(item).toLowerCase().includes(q));
 }
 
+/** Shared list toolbar: count on the left, search on the right — always above the table panel. */
 export function AdminListSearch({
   value,
   onChange,
   placeholder,
   countLabel,
-  className = "",
+  className = "mb-4",
 }: {
   value: string;
   onChange: (value: string) => void;

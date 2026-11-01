@@ -1,193 +1,218 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { saveWeeklyHours, type WeeklyHoursInput } from "@/actions/admin";
+import { AdminPanel } from "@/components/admin/ui";
 import {
   adminButtonPrimary,
   adminFormControl,
   adminFormLabel,
 } from "@/components/ui/form-styles";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const dayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-type DayState = {
+const HOUR_OPTIONS = Array.from({ length: 17 }, (_, i) => i + 7); // 7 → 23
+
+type RuleInput = {
   weekday: number;
-  closed: boolean;
-  startHour: number;
-  endHour: number;
+  startMin: number;
+  endMin: number;
   slotMin: number;
   bufferMin: number;
 };
 
-function toDayState(
-  weekday: number,
-  rules: { weekday: number; startMin: number; endMin: number; slotMin: number; bufferMin: number }[],
-): DayState {
-  const match = rules.find((rule) => rule.weekday === weekday);
-  if (!match) {
-    return {
-      weekday,
-      closed: true,
-      startHour: 10,
-      endHour: 18,
-      slotMin: 45,
-      bufferMin: 15,
-    };
+function formatHour(hour: number) {
+  const h = ((hour % 24) + 24) % 24;
+  const suffix = h >= 12 ? "pm" : "am";
+  const twelve = h % 12 === 0 ? 12 : h % 12;
+  return `${twelve}:00 ${suffix}`;
+}
+
+function sharedDefaults(rules: RuleInput[]) {
+  if (rules.length === 0) {
+    return { startHour: 10, endHour: 18, slotMin: 45, bufferMin: 15 };
   }
+  const first = rules[0];
   return {
-    weekday,
-    closed: false,
-    startHour: Math.floor(match.startMin / 60),
-    endHour: Math.floor(match.endMin / 60),
-    slotMin: match.slotMin,
-    bufferMin: match.bufferMin,
+    startHour: Math.floor(first.startMin / 60),
+    endHour: Math.floor(first.endMin / 60),
+    slotMin: first.slotMin,
+    bufferMin: first.bufferMin,
   };
 }
 
-export function WeeklyHoursForm({
-  initialRules,
-}: {
-  initialRules: {
-    weekday: number;
-    startMin: number;
-    endMin: number;
-    slotMin: number;
-    bufferMin: number;
-  }[];
-}) {
-  const [days, setDays] = useState<DayState[]>(() =>
-    dayNames.map((_, weekday) => toDayState(weekday, initialRules)),
-  );
-  const [message, setMessage] = useState<string | null>(null);
+export function WeeklyHoursForm({ initialRules }: { initialRules: RuleInput[] }) {
+  const defaults = useMemo(() => sharedDefaults(initialRules), [initialRules]);
+  const [openDays, setOpenDays] = useState<boolean[]>(() => {
+    const open = new Set(initialRules.map((rule) => rule.weekday));
+    return dayNames.map((_, weekday) => open.has(weekday));
+  });
+  const [startHour, setStartHour] = useState(defaults.startHour);
+  const [endHour, setEndHour] = useState(defaults.endHour);
+  const [slotMin, setSlotMin] = useState(defaults.slotMin);
+  const [bufferMin, setBufferMin] = useState(defaults.bufferMin);
   const [pending, startTransition] = useTransition();
 
-  function updateDay(weekday: number, patch: Partial<DayState>) {
-    setDays((prev) => prev.map((day) => (day.weekday === weekday ? { ...day, ...patch } : day)));
+  const openCount = openDays.filter(Boolean).length;
+
+  function toggleDay(weekday: number) {
+    setOpenDays((prev) => prev.map((open, index) => (index === weekday ? !open : open)));
   }
 
   return (
     <form
-      className="space-y-4"
+      className="space-y-5"
       onSubmit={(event) => {
         event.preventDefault();
-        setMessage(null);
-        const payload: WeeklyHoursInput[] = days.map((day) => ({
-          weekday: day.weekday,
-          closed: day.closed,
-          startHour: day.startHour,
-          endHour: day.endHour,
-          slotMin: day.slotMin,
-          bufferMin: day.bufferMin,
+        if (endHour <= startHour) {
+          adminNotifyError("Closing time must be after opening time.");
+          return;
+        }
+        const payload: WeeklyHoursInput[] = dayNames.map((_, weekday) => ({
+          weekday,
+          closed: !openDays[weekday],
+          startHour,
+          endHour,
+          slotMin,
+          bufferMin,
         }));
         startTransition(async () => {
           const result = await saveWeeklyHours(payload);
           if ("error" in result) {
-            setMessage(result.error ?? "Could not save hours.");
+            adminNotifyError(result.error ?? "Could not save hours.");
             return;
           }
-          setMessage("Hours saved.");
+          adminNotifySuccess("Hours saved.");
         });
       }}
     >
-      <div className="overflow-x-auto rounded-xl border border-deep/10">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-deep/10 bg-tint/40 text-[11px] tracking-[0.12em] text-deep/50 uppercase">
-            <tr>
-              <th className="px-4 py-3 font-medium">Day</th>
-              <th className="px-4 py-3 font-medium">Open</th>
-              <th className="px-4 py-3 font-medium">Start</th>
-              <th className="px-4 py-3 font-medium">End</th>
-              <th className="px-4 py-3 font-medium">Slot (min)</th>
-              <th className="px-4 py-3 font-medium">Buffer (min)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {days.map((day) => (
-              <tr key={day.weekday} className="border-b border-deep/6 last:border-0">
-                <td className="px-4 py-3 font-medium text-deep">{dayNames[day.weekday]}</td>
-                <td className="px-4 py-3">
-                  <label className="inline-flex items-center gap-2 text-deep/70">
-                    <input
-                      type="checkbox"
-                      checked={!day.closed}
-                      onChange={(event) => updateDay(day.weekday, { closed: !event.target.checked })}
-                    />
-                    <span className="text-xs">{day.closed ? "Closed" : "Open"}</span>
-                  </label>
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    type="number"
-                    min={0}
-                    max={23}
-                    disabled={day.closed}
-                    value={day.startHour}
-                    onChange={(event) =>
-                      updateDay(day.weekday, { startHour: Number(event.target.value) })
-                    }
-                    className={`${adminFormControl} w-20 disabled:opacity-40`}
-                    aria-label={`${dayNames[day.weekday]} start hour`}
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    type="number"
-                    min={1}
-                    max={24}
-                    disabled={day.closed}
-                    value={day.endHour}
-                    onChange={(event) =>
-                      updateDay(day.weekday, { endHour: Number(event.target.value) })
-                    }
-                    className={`${adminFormControl} w-20 disabled:opacity-40`}
-                    aria-label={`${dayNames[day.weekday]} end hour`}
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    type="number"
-                    min={15}
-                    step={5}
-                    disabled={day.closed}
-                    value={day.slotMin}
-                    onChange={(event) =>
-                      updateDay(day.weekday, { slotMin: Number(event.target.value) })
-                    }
-                    className={`${adminFormControl} w-24 disabled:opacity-40`}
-                    aria-label={`${dayNames[day.weekday]} slot minutes`}
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <input
-                    type="number"
-                    min={0}
-                    step={5}
-                    disabled={day.closed}
-                    value={day.bufferMin}
-                    onChange={(event) =>
-                      updateDay(day.weekday, { bufferMin: Number(event.target.value) })
-                    }
-                    className={`${adminFormControl} w-24 disabled:opacity-40`}
-                    aria-label={`${dayNames[day.weekday]} buffer minutes`}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AdminPanel className="p-5 md:p-6">
+        <div>
+          <p className={adminFormLabel}>Open days</p>
+          <p className="mt-1 text-xs text-deep/50">Tap a day to open or close the lounge.</p>
+          <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {dayNames.map((name, weekday) => {
+              const open = openDays[weekday];
+              return (
+                <li key={name}>
+                  <button
+                    type="button"
+                    onClick={() => toggleDay(weekday)}
+                    aria-pressed={open}
+                    className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+                      open
+                        ? "border-deep bg-deep text-cream"
+                        : "border-deep/12 bg-cream/40 text-deep/45 hover:border-deep/25 hover:text-deep/70"
+                    }`}
+                  >
+                    <span className="block text-sm font-medium">{dayShort[weekday]}</span>
+                    <span className="mt-1 block text-[10px] tracking-[0.16em] uppercase opacity-80">
+                      {open ? "Open" : "Closed"}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
 
-      <p className={`${adminFormLabel} !mt-0 text-deep/50`}>
-        Hours are in 24-hour local lounge time (Lagos). Slot is the chair length; buffer is gap before
-        the next bookable start.
-      </p>
+        <div
+          className={`mt-8 grid gap-5 border-t border-deep/8 pt-8 sm:grid-cols-2 ${
+            openCount === 0 ? "pointer-events-none opacity-40" : ""
+          }`}
+        >
+          <div>
+            <label className={adminFormLabel} htmlFor="hours-start">
+              Opens
+            </label>
+            <select
+              id="hours-start"
+              name="startHour"
+              value={startHour}
+              disabled={openCount === 0}
+              onChange={(event) => setStartHour(Number(event.target.value))}
+              className={`${adminFormControl} mt-1.5`}
+            >
+              {HOUR_OPTIONS.filter((hour) => hour < 23).map((hour) => (
+                <option key={hour} value={hour}>
+                  {formatHour(hour)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={adminFormLabel} htmlFor="hours-end">
+              Closes
+            </label>
+            <select
+              id="hours-end"
+              name="endHour"
+              value={endHour}
+              disabled={openCount === 0}
+              onChange={(event) => setEndHour(Number(event.target.value))}
+              className={`${adminFormControl} mt-1.5`}
+            >
+              {HOUR_OPTIONS.filter((hour) => hour > 7).map((hour) => (
+                <option key={hour} value={hour}>
+                  {formatHour(hour)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={adminFormLabel} htmlFor="hours-slot">
+              Session length
+            </label>
+            <select
+              id="hours-slot"
+              name="slotMin"
+              value={slotMin}
+              disabled={openCount === 0}
+              onChange={(event) => setSlotMin(Number(event.target.value))}
+              className={`${adminFormControl} mt-1.5`}
+            >
+              {[30, 45, 60, 75, 90].map((mins) => (
+                <option key={mins} value={mins}>
+                  {mins} minutes
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={adminFormLabel} htmlFor="hours-buffer">
+              Buffer between sessions
+            </label>
+            <select
+              id="hours-buffer"
+              name="bufferMin"
+              value={bufferMin}
+              disabled={openCount === 0}
+              onChange={(event) => setBufferMin(Number(event.target.value))}
+              className={`${adminFormControl} mt-1.5`}
+            >
+              {[0, 10, 15, 20, 30].map((mins) => (
+                <option key={mins} value={mins}>
+                  {mins === 0 ? "No buffer" : `${mins} minutes`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={pending} className={adminButtonPrimary}>
-          {pending ? "Saving…" : "Save weekly hours"}
-        </button>
-        {message ? <p className="text-sm text-deep/65">{message}</p> : null}
-      </div>
+        <p className="mt-5 text-xs leading-5 text-deep/50">
+          {openCount === 0
+            ? "No open days selected — online booking will show no slots."
+            : `Applies to all open days · Lagos time · ${formatHour(startHour)}–${formatHour(endHour)}`}
+        </p>
+
+        <div className="mt-6">
+          <button type="submit" disabled={pending} className={adminButtonPrimary}>
+            {pending ? "Saving…" : "Save weekly hours"}
+          </button>
+        </div>
+      </AdminPanel>
     </form>
   );
 }
