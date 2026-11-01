@@ -47,9 +47,11 @@ export function AppointmentCancelConfirm({
           time — this cannot be reversed from the admin panel.
         </p>
 
-        <label className="block text-xs font-medium text-deep/70">
+        <label className="block text-xs font-medium text-deep/70" htmlFor="cancel-note">
           Internal note <span className="font-normal text-deep/45">(optional)</span>
           <textarea
+            id="cancel-note"
+            name="note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
             rows={3}

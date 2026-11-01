@@ -10,9 +10,9 @@ import {
   AdminTableHeaderCell,
   AdminTableRow,
 } from "@/components/admin/ui";
+import { AdminListSearch, filterByQuery } from "@/components/admin/list-search";
 import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
-import { SearchField } from "@/components/ui/search-field";
 import { formatNaira } from "@/lib/money";
 
 export type CustomerRow = {
@@ -23,19 +23,17 @@ export type CustomerRow = {
   spent: number;
 };
 
+function customerSearchText(row: CustomerRow) {
+  return `${row.name} ${row.email} ${row.phone}`;
+}
+
 export function AdminCustomerList({ rows }: { rows: CustomerRow[] }) {
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (row) =>
-        row.name.toLowerCase().includes(q) ||
-        row.email.toLowerCase().includes(q) ||
-        row.phone.toLowerCase().includes(q),
-    );
-  }, [rows, query]);
+  const filtered = useMemo(
+    () => filterByQuery(rows, query, customerSearchText),
+    [rows, query],
+  );
 
   const pagination = usePaginatedList(filtered, query);
 
@@ -47,52 +45,48 @@ export function AdminCustomerList({ rows }: { rows: CustomerRow[] }) {
         description="People who have checked out. Spend excludes unpaid and cancelled orders."
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">
-          {filtered.length} of {rows.length} customers
-        </p>
-        <SearchField
-          value={query}
-          onChange={setQuery}
-          placeholder="Search by name, email, or phone…"
-          variant="admin"
-          className="w-full sm:max-w-xs"
-        />
-      </div>
+      {rows.length === 0 ? (
+        <AdminEmptyState>No customers yet.</AdminEmptyState>
+      ) : (
+        <>
+          <AdminListSearch
+            value={query}
+            onChange={setQuery}
+            placeholder="Search by name, email, or phone…"
+            countLabel={`${pagination.total} matching · ${rows.length} total`}
+          />
 
-      <div className="mt-4">
-        {filtered.length === 0 ? (
-          <AdminEmptyState>
-            {query.trim() ? "No customers match your search." : "No customers yet."}
-          </AdminEmptyState>
-        ) : (
-          <PaginatedTableWrap pagination={pagination.tablePaginationProps("customers")}>
-            <AdminTable>
-              <AdminTableHead>
-                <tr>
-                  <AdminTableHeaderCell>Name</AdminTableHeaderCell>
-                  <AdminTableHeaderCell>Contact</AdminTableHeaderCell>
-                  <AdminTableHeaderCell>Orders</AdminTableHeaderCell>
-                  <AdminTableHeaderCell>Spent</AdminTableHeaderCell>
-                </tr>
-              </AdminTableHead>
-              <tbody>
-                {pagination.visible.map((row) => (
-                  <AdminTableRow key={row.email}>
-                    <AdminTableCell className="font-medium text-deep">{row.name}</AdminTableCell>
-                    <AdminTableCell>
-                      {row.email}
-                      <span className="mt-1 block text-deep/50">{row.phone}</span>
-                    </AdminTableCell>
-                    <AdminTableCell>{row.orders}</AdminTableCell>
-                    <AdminTableCell className="font-medium">{formatNaira(row.spent)}</AdminTableCell>
-                  </AdminTableRow>
-                ))}
-              </tbody>
-            </AdminTable>
-          </PaginatedTableWrap>
-        )}
-      </div>
+          {filtered.length === 0 ? (
+            <AdminEmptyState>No customers match your search.</AdminEmptyState>
+          ) : (
+            <PaginatedTableWrap pagination={pagination.tablePaginationProps("customers")}>
+              <AdminTable>
+                <AdminTableHead>
+                  <tr>
+                    <AdminTableHeaderCell>Name</AdminTableHeaderCell>
+                    <AdminTableHeaderCell>Contact</AdminTableHeaderCell>
+                    <AdminTableHeaderCell>Orders</AdminTableHeaderCell>
+                    <AdminTableHeaderCell>Spent</AdminTableHeaderCell>
+                  </tr>
+                </AdminTableHead>
+                <tbody>
+                  {pagination.visible.map((row) => (
+                    <AdminTableRow key={row.email}>
+                      <AdminTableCell className="font-medium text-deep">{row.name}</AdminTableCell>
+                      <AdminTableCell>
+                        {row.email}
+                        <span className="mt-1 block text-deep/50">{row.phone}</span>
+                      </AdminTableCell>
+                      <AdminTableCell>{row.orders}</AdminTableCell>
+                      <AdminTableCell className="font-medium">{formatNaira(row.spent)}</AdminTableCell>
+                    </AdminTableRow>
+                  ))}
+                </tbody>
+              </AdminTable>
+            </PaginatedTableWrap>
+          )}
+        </>
+      )}
     </div>
   );
 }

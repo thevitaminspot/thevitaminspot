@@ -21,7 +21,7 @@ export default async function AdminAvailabilityPage() {
       <AdminPageHeader
         eyebrow="Clinic"
         title="Hours"
-        description="Edit weekly chair hours and block or unblock dates for online booking."
+        description="Set open days and lounge hours for online booking, then block any closed dates."
       />
 
       <AdminSection title="Weekly schedule">
@@ -36,18 +36,17 @@ export default async function AdminAvailabilityPage() {
         />
       </AdminSection>
 
-      <div className="mt-10">
-        <BlockDateForm />
-      </div>
-
       <AdminSection title="Blocked dates" className="mt-10">
-        <AdminBlockedDatesList
-          rows={blocked.map((row) => ({
-            id: row.id,
-            date: row.date.toISOString(),
-            reason: row.reason,
-          }))}
-        />
+        <div className="space-y-6">
+          <BlockDateForm />
+          <AdminBlockedDatesList
+            rows={blocked.map((row) => ({
+              id: row.id,
+              date: row.date.toISOString(),
+              reason: row.reason,
+            }))}
+          />
+        </div>
       </AdminSection>
     </div>
   );

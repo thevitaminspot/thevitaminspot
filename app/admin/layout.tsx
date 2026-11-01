@@ -25,13 +25,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <>
       <DynamicMarker />
-      <Suspense
-        fallback={
-          <div className="min-h-screen bg-cream px-5 py-10 text-sm text-deep/50 md:px-8">
-            Loading admin…
-          </div>
-        }
-      >
+      {/* Show the shell chrome immediately — no loading theatre on client → admin. */}
+      <Suspense fallback={<AdminShell />}>
         <AuthedAdminShell>{children}</AuthedAdminShell>
       </Suspense>
     </>

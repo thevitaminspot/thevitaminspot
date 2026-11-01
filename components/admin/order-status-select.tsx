@@ -9,6 +9,7 @@ import {
   type AdminFulfillment,
   type AdminOrderStatus,
 } from "@/lib/admin-orders";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 export function OrderStatusSelect({
   id,
@@ -28,6 +29,7 @@ export function OrderStatusSelect({
 
   return (
     <select
+      name="status"
       aria-label="Order status"
       value={current}
       disabled={pending}
@@ -36,7 +38,12 @@ export function OrderStatusSelect({
         if (next === current) return;
         start(async () => {
           const result = await updateOrderStatus(id, next);
-          if ("ok" in result) router.refresh();
+          if ("error" in result && result.error) {
+            adminNotifyError(result.error);
+            return;
+          }
+          adminNotifySuccess("Order status updated.");
+          router.refresh();
         });
       }}
       className="max-w-full rounded-lg border border-deep/15 bg-white px-2 py-1.5 text-xs text-deep"

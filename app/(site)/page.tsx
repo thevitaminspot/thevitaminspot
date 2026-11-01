@@ -2,6 +2,7 @@ import { Faq } from "@/components/home/faq";
 import { ProductStories, WalkIn } from "@/components/home/home-sections";
 import { Hero } from "@/components/home/hero";
 import { listFeaturedProducts } from "@/lib/data";
+import { faqJsonLd, homeFaqs } from "@/lib/faqs";
 import { site } from "@/lib/site";
 
 export const metadata = {
@@ -20,6 +21,10 @@ export default async function HomePage() {
 
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(homeFaqs)) }}
+      />
       <Hero
         packs={featured.map((product) => ({
           href: `/shop/${product.slug}`,

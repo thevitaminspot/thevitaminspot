@@ -42,18 +42,7 @@ export default function AdminOrderDetailPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   return (
-    <Suspense
-      fallback={
-        <div className="space-y-8 animate-pulse">
-          <div className="h-3 w-24 rounded bg-deep/10" />
-          <div className="h-9 w-48 rounded bg-deep/10" />
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="h-64 rounded-2xl bg-deep/5" />
-            <div className="h-64 rounded-2xl bg-deep/5" />
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={null}>
       <AdminOrderDetail searchParams={searchParams} />
     </Suspense>
   );

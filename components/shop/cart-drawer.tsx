@@ -147,8 +147,8 @@ export function CartDrawer() {
                   <span className="font-medium text-deep">{formatNaira(total)}</span>
                 </div>
                 <div className="flex justify-between text-deep/60">
-                  <span>Abuja Delivery</span>
-                  <span className="text-[11px] text-sage font-medium">Calculated at checkout</span>
+                  <span>Delivery</span>
+                  <span className="text-[11px] font-medium text-sage">Calculated at checkout</span>
                 </div>
               </div>
 
@@ -169,7 +169,7 @@ export function CartDrawer() {
               </button>
 
               <p className="mt-3 text-center text-[10px] text-deep/50">
-                Same-day delivery in Abuja, if you order early.
+                Abuja, other Nigerian cities, or international — fees at checkout.
               </p>
             </>
           ) : (

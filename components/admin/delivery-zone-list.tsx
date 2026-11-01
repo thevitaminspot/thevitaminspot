@@ -4,11 +4,21 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteZone, updateZone } from "@/actions/admin";
 import { AdminActionMenu } from "@/components/admin/action-menu";
-import { TablePagination } from "@/components/ui/table-pagination";
+import { ConfirmModal } from "@/components/admin/confirm-modal";
+import { AdminListSearch, filterByQuery } from "@/components/admin/list-search";
+import { PaginatedTableWrap } from "@/components/admin/paginated-table-wrap";
+import {
+  AdminEmptyState,
+  AdminFilterTabs,
+} from "@/components/admin/ui";
+import {
+  type DeliveryRegion,
+  deliveryRegionForSlug,
+  partitionZones,
+} from "@/lib/delivery-regions";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { Modal } from "@/components/ui/modal";
 import { adminFormField, adminFormLabel } from "@/components/ui/form-styles";
-import { SearchField } from "@/components/ui/search-field";
 import { formatNaira } from "@/lib/money";
 
 type Zone = {
@@ -20,6 +30,12 @@ type Zone = {
   isActive: boolean;
 };
 
+const regionLabels: Record<DeliveryRegion, string> = {
+  abuja: "Abuja",
+  nigeria: "Elsewhere in Nigeria",
+  international: "International",
+};
+
 export function DeliveryZoneList({
   zones,
   onMessage,
@@ -29,27 +45,34 @@ export function DeliveryZoneList({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [region, setRegion] = useState<DeliveryRegion | "all">("all");
   const [editing, setEditing] = useState<Zone | null>(null);
-  const [localMessage, setLocalMessage] = useState("");
-  const message = localMessage;
+  const [deleting, setDeleting] = useState<Zone | null>(null);
   const setMessage = (value: string) => {
-    setLocalMessage(value);
     onMessage?.(value);
   };
   const [pending, start] = useTransition();
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return zones;
-    return zones.filter(
-      (zone) =>
-        zone.name.toLowerCase().includes(q) ||
-        zone.slug.toLowerCase().includes(q) ||
-        zone.eta.toLowerCase().includes(q),
-    );
-  }, [zones, query]);
+  const grouped = useMemo(() => partitionZones(zones), [zones]);
 
-  const pagination = usePaginatedList(filtered, query);
+  const scoped = useMemo(() => {
+    if (region === "all") return zones;
+    if (region === "abuja") return grouped.abuja;
+    if (region === "nigeria") return grouped.nigeria;
+    return grouped.international;
+  }, [zones, region, grouped]);
+
+  const filtered = useMemo(
+    () =>
+      filterByQuery(
+        scoped,
+        query,
+        (zone) => `${zone.name} ${zone.slug} ${zone.eta} ${regionLabels[deliveryRegionForSlug(zone.slug)]}`,
+      ),
+    [scoped, query],
+  );
+
+  const pagination = usePaginatedList(filtered, `${region}:${query}`);
 
   function toggleActive(zone: Zone) {
     start(async () => {
@@ -64,90 +87,112 @@ export function DeliveryZoneList({
     });
   }
 
-  function remove(zone: Zone) {
-    if (!window.confirm(`Remove ${zone.name}? Existing orders keep their zone reference.`)) return;
+  function confirmRemove() {
+    if (!deleting) return;
+    const zone = deleting;
     start(async () => {
       const result = await deleteZone(zone.id);
-      setMessage("error" in result && result.error ? result.error : `${zone.name} removed.`);
-      if ("ok" in result) router.refresh();
+      if ("ok" in result) {
+        setDeleting(null);
+        setMessage(`${zone.name} removed.`);
+        router.refresh();
+      } else {
+        setMessage(result.error || "Could not remove zone.");
+      }
     });
   }
 
   return (
     <div>
-      <div className="flex flex-col gap-3 border-b border-deep/8 bg-cream/20 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">
-          {filtered.length} of {zones.length} locations
-        </p>
-        <SearchField
-          value={query}
-          onChange={setQuery}
-          placeholder="Search by location…"
-          variant="admin"
-          className="w-full sm:max-w-xs"
-        />
-      </div>
-
-      {message && !onMessage ? (
-        <p className="border-b border-deep/6 px-5 py-2.5 text-xs text-deep/60">{message}</p>
-      ) : null}
-
-      {filtered.length === 0 ? (
-        <p className="px-5 py-10 text-center text-sm text-deep/55">
-          No locations match &ldquo;{query}&rdquo;.
-        </p>
+      {zones.length === 0 ? (
+        <AdminEmptyState>No delivery zones yet.</AdminEmptyState>
       ) : (
         <>
-          <TablePagination {...pagination.tablePaginationProps("zones")} edge="top" />
-          <ul className="divide-y divide-deep/6">
-          {pagination.visible.map((zone) => (
-            <li
-              key={zone.id}
-              className="flex items-center gap-4 px-5 py-4 transition hover:bg-cream/20"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-deep">{zone.name}</span>
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] tracking-[0.12em] uppercase ring-1 ring-inset ${
-                      zone.isActive
-                        ? "bg-sage/15 text-deep ring-sage/30"
-                        : "bg-deep/[0.04] text-deep/50 ring-deep/10"
-                    }`}
-                  >
-                    {zone.isActive ? "Live" : "Off"}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs text-deep/50">
-                  {formatNaira(zone.fee)} · {zone.eta}
-                </p>
-              </div>
+          <AdminListSearch
+            value={query}
+            onChange={setQuery}
+            placeholder="Search by location…"
+            countLabel={`${pagination.total} matching · ${zones.length} total`}
+          />
+          <AdminFilterTabs
+            value={region}
+            onChange={(id) => setRegion(id as DeliveryRegion | "all")}
+            tabs={[
+              { id: "all", label: "All", count: zones.length },
+              { id: "abuja", label: "Abuja", count: grouped.abuja.length },
+              { id: "nigeria", label: "Other cities", count: grouped.nigeria.length },
+              {
+                id: "international",
+                label: "Countries",
+                count: grouped.international.length,
+              },
+            ]}
+          />
 
-              <AdminActionMenu
-                label={`Options for ${zone.name}`}
-                disabled={pending}
-                items={[
-                  {
-                    label: "Edit zone",
-                    onClick: () => setEditing(zone),
-                  },
-                  {
-                    label: zone.isActive ? "Turn off" : "Turn on",
-                    disabled: pending,
-                    onClick: () => toggleActive(zone),
-                  },
-                  {
-                    label: "Delete zone",
-                    tone: "danger",
-                    disabled: pending,
-                    onClick: () => remove(zone),
-                  },
-                ]}
-              />
-            </li>
-          ))}
-          </ul>
-          <TablePagination {...pagination.tablePaginationProps("zones")} edge="bottom" />
+          {filtered.length === 0 ? (
+            <AdminEmptyState>No locations match this view.</AdminEmptyState>
+          ) : (
+            <PaginatedTableWrap
+              pagination={pagination.tablePaginationProps("zones")}
+              scroll={false}
+              clip={false}
+            >
+              <ul className="divide-y divide-deep/8">
+                {pagination.visible.map((zone) => {
+                  const zoneRegion = deliveryRegionForSlug(zone.slug);
+                  return (
+                    <li
+                      key={zone.id}
+                      className="flex items-center gap-4 px-5 py-4 transition hover:bg-cream/20"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-deep">{zone.name}</span>
+                          <span className="inline-flex rounded-full bg-cream px-2.5 py-0.5 text-[10px] tracking-[0.12em] text-deep/55 uppercase ring-1 ring-deep/10 ring-inset">
+                            {regionLabels[zoneRegion]}
+                          </span>
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] tracking-[0.12em] uppercase ring-1 ring-inset ${
+                              zone.isActive
+                                ? "bg-sage/15 text-deep ring-sage/30"
+                                : "bg-deep/[0.04] text-deep/50 ring-deep/10"
+                            }`}
+                          >
+                            {zone.isActive ? "Live" : "Off"}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-deep/50">
+                          {formatNaira(zone.fee)} · {zone.eta}
+                        </p>
+                      </div>
+
+                      <AdminActionMenu
+                        label={`Options for ${zone.name}`}
+                        disabled={pending}
+                        items={[
+                          {
+                            label: "Edit zone",
+                            onClick: () => setEditing(zone),
+                          },
+                          {
+                            label: zone.isActive ? "Turn off" : "Turn on",
+                            disabled: pending,
+                            onClick: () => toggleActive(zone),
+                          },
+                          {
+                            label: "Delete zone",
+                            tone: "danger",
+                            disabled: pending,
+                            onClick: () => setDeleting(zone),
+                          },
+                        ]}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            </PaginatedTableWrap>
+          )}
         </>
       )}
 
@@ -170,6 +215,17 @@ export function DeliveryZoneList({
           });
         }}
       />
+
+      <ConfirmModal
+        open={Boolean(deleting)}
+        title={deleting ? `Remove ${deleting.name}?` : "Remove zone"}
+        description="Existing orders keep their zone reference. This only removes the zone from checkout."
+        confirmLabel="Remove zone"
+        danger
+        pending={pending}
+        onConfirm={confirmRemove}
+        onClose={() => setDeleting(null)}
+      />
     </div>
   );
 }
@@ -188,7 +244,13 @@ function ZoneEditModal({
   if (!zone) return null;
 
   return (
-    <Modal open={Boolean(zone)} onClose={onClose} title={`Edit ${zone.name}`}>
+    <Modal
+      open={Boolean(zone)}
+      onClose={onClose}
+      title={`Edit ${zone.name}`}
+      description={`${regionLabels[deliveryRegionForSlug(zone.slug)]} · courier fee, ETA, and checkout visibility.`}
+      size="md"
+    >
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -202,8 +264,11 @@ function ZoneEditModal({
         className="space-y-4"
       >
         <div>
-          <label className={adminFormLabel}>Delivery fee (₦)</label>
+          <label className={adminFormLabel} htmlFor="zone-fee">
+            Delivery fee (₦)
+          </label>
           <input
+            id="zone-fee"
             name="fee"
             type="number"
             min={0}
@@ -213,8 +278,11 @@ function ZoneEditModal({
           />
         </div>
         <div>
-          <label className={adminFormLabel}>Estimated delivery time</label>
+          <label className={adminFormLabel} htmlFor="zone-eta">
+            Estimated delivery time
+          </label>
           <input
+            id="zone-eta"
             name="eta"
             required
             defaultValue={zone.eta}
@@ -224,6 +292,7 @@ function ZoneEditModal({
         </div>
         <label className="flex items-center gap-2 text-sm text-deep/80">
           <input
+            id="zone-active"
             type="checkbox"
             name="active"
             defaultChecked={zone.isActive}

@@ -1,9 +1,10 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrderStatus } from "@/actions/admin";
+import { ConfirmModal } from "@/components/admin/confirm-modal";
 import { OrderStatusSelect } from "@/components/admin/order-status-select";
 import { adminButtonPrimary, interactiveControl } from "@/components/ui/form-styles";
 import {
@@ -28,6 +29,7 @@ export function OrderActions({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [cancelOpen, setCancelOpen] = useState(false);
   const next = nextOrderStep(status, fulfillment);
   const steps = orderSteps(fulfillment);
   const current = steps.indexOf(status);
@@ -43,6 +45,7 @@ export function OrderActions({
       adminNotifySuccess(
         nextStatus === "CANCELLED" ? "Order cancelled." : "Order updated.",
       );
+      setCancelOpen(false);
       router.refresh();
     });
   }
@@ -100,16 +103,24 @@ export function OrderActions({
         <button
           type="button"
           disabled={pending}
-          onClick={() => {
-            if (!window.confirm("Cancel this order? The customer will be emailed.")) return;
-            apply("CANCELLED");
-          }}
+          onClick={() => setCancelOpen(true)}
           className={`text-xs text-deep/45 underline-offset-2 hover:text-red-700 hover:underline ${interactiveControl}`}
         >
           Cancel order
         </button>
       ) : null}
 
+      <ConfirmModal
+        open={cancelOpen}
+        title="Cancel this order?"
+        description="The customer will be emailed. This cannot be undone from the admin panel."
+        confirmLabel="Cancel order"
+        cancelLabel="Keep order"
+        danger
+        pending={pending}
+        onConfirm={() => apply("CANCELLED")}
+        onClose={() => setCancelOpen(false)}
+      />
     </div>
   );
 }
