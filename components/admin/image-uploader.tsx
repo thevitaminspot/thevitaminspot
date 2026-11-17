@@ -1,7 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useRef, useState, type DragEvent } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type KeyboardEvent,
+} from "react";
 import { ImagePlus, X } from "lucide-react";
 import { uploadProductImage } from "@/actions/admin";
 import {
@@ -65,8 +72,8 @@ export function ImageUploader({
   emptyHint?: string;
   altPlaceholder?: string;
 }) {
-  const fileId = useId();
   const libraryId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef(images);
   const pendingRef = useRef<PendingTile[]>([]);
   imagesRef.current = images;
@@ -80,6 +87,7 @@ export function ImageUploader({
   const canReplaceSingle = max === 1 && images.length === 1 && !uploading;
   const showDropZone = !atLimit || canReplaceSingle;
   const slotsLeft = Math.max(0, max - images.length - pending.length);
+  const canPick = showDropZone && !uploading;
 
   function syncPending(next: PendingTile[]) {
     pendingRef.current = next;
@@ -205,24 +213,37 @@ export function ImageUploader({
     }
   }
 
-  function onDragOver(event: DragEvent<HTMLLabelElement>) {
-    event.preventDefault();
-    if (showDropZone) setDragging(true);
+  function openPicker() {
+    if (!canPick) return;
+    inputRef.current?.click();
   }
 
-  function onDragLeave(event: DragEvent<HTMLLabelElement>) {
+  function onInputChange(event: ChangeEvent<HTMLInputElement>) {
+    // FileList is live — copy File objects before clearing the input.
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    event.target.value = "";
+    if (files.length) void handleFiles(files);
+  }
+
+  function onDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    if (canPick) setDragging(true);
+  }
+
+  function onDragLeave(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
   }
 
-  function onDrop(event: DragEvent<HTMLLabelElement>) {
+  function onDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
-    if (!showDropZone) {
+    if (!canPick) {
       reportError(`Up to ${max} pictures.`);
       return;
     }
-    void handleFiles(event.dataTransfer.files);
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length) void handleFiles(files);
   }
 
   function removeImage(index: number) {
@@ -247,6 +268,18 @@ export function ImageUploader({
           ({images.length}/{max})
         </span>
       </legend>
+
+      {/* Keep the native file control out of layout so “No file chosen” never shows. */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPT}
+        multiple={max > 1}
+        tabIndex={-1}
+        aria-hidden
+        className="pointer-events-none fixed top-0 left-0 h-px w-px opacity-0"
+        onChange={onInputChange}
+      />
 
       {images.length > 0 || pending.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -314,16 +347,30 @@ export function ImageUploader({
       )}
 
       {showDropZone ? (
-        <label
-          htmlFor={fileId}
+        <div
+          role="button"
+          tabIndex={canPick ? 0 : -1}
+          onClick={openPicker}
+          onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openPicker();
+            }
+          }}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
-          className={`relative flex min-h-[8.5rem] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center transition ${
+          aria-disabled={!canPick}
+          aria-label={
+            canReplaceSingle ? "Replace picture" : "Upload pictures"
+          }
+          className={`flex min-h-[8.5rem] flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center transition ${
+            canPick ? `cursor-pointer ${interactiveControl}` : "cursor-not-allowed opacity-60"
+          } ${
             dragging
               ? "border-deep/45 bg-tint/80"
               : "border-deep/20 bg-cream/50 hover:border-deep/35 hover:bg-cream/80"
-          } ${uploading ? "pointer-events-none opacity-60" : ""}`}
+          }`}
         >
           <ImagePlus className="size-5 text-deep/45" strokeWidth={1.5} />
           <span className="text-sm text-deep">
@@ -339,21 +386,14 @@ export function ImageUploader({
             JPG, PNG, or WebP
             {max > 1 ? ` · up to ${slotsLeft} more` : ""} · large photos compress automatically
           </span>
-          <input
-            id={fileId}
-            name="uploadFile"
-            type="file"
-            accept={ACCEPT}
-            multiple={max > 1}
-            disabled={uploading || (atLimit && !canReplaceSingle)}
-            className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
-            onChange={(event) => {
-              const files = event.target.files;
-              event.target.value = "";
-              if (files?.length) void handleFiles(files);
-            }}
-          />
-        </label>
+          <span
+            className={`mt-1 inline-flex rounded-lg border border-deep/20 bg-white px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
+              canPick ? "text-deep" : "text-deep/40"
+            }`}
+          >
+            {uploading ? "Uploading…" : canReplaceSingle ? "Replace picture" : "Browse files"}
+          </span>
+        </div>
       ) : uploading ? null : (
         <p className="text-xs text-deep/55">Remove a picture to add another.</p>
       )}

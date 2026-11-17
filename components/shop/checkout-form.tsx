@@ -381,7 +381,13 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
               <div key={item.productId} className="flex items-center gap-3 pb-6 pt-3.5 first:pt-0">
                 <div className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-deep/10 bg-tint/40">
                   {item.image ? (
-                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="size-full bg-tint" />
                   )}
