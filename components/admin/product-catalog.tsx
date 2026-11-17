@@ -181,7 +181,13 @@ export function ProductCatalog({
                       <div className="flex min-w-0 flex-1 items-center gap-3.5">
                         <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-deep/10 bg-tint/40">
                           {photo ? (
-                            <Image src={photo.url} alt="" fill className="object-cover" />
+                            <Image
+                              src={photo.url}
+                              alt=""
+                              fill
+                              sizes="56px"
+                              className="object-cover"
+                            />
                           ) : (
                             <div className="size-full bg-tint" />
                           )}
