@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { AdminShell } from "@/components/admin/shell";
 import { DynamicMarker } from "@/components/ui/dynamic-marker";
 import { pageAuth, pageShell } from "@/components/ui/layout-styles";
+import { RoutePlaceholder } from "@/components/ui/route-placeholder";
 import { requireAdmin } from "@/lib/admin";
 import { hasClerk } from "@/lib/auth";
 
@@ -25,8 +26,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <>
       <DynamicMarker />
-      {/* Show the shell chrome immediately — no loading theatre on client → admin. */}
-      <Suspense fallback={<AdminShell />}>
+      {/* Show shell + quiet main placeholder while auth resolves — no blank pane. */}
+      <Suspense
+        fallback={
+          <AdminShell>
+            <RoutePlaceholder />
+          </AdminShell>
+        }
+      >
         <AuthedAdminShell>{children}</AuthedAdminShell>
       </Suspense>
     </>

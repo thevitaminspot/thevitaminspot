@@ -54,8 +54,9 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      // Product image uploads use multipart FormData; default 1MB rejects before our handlers run.
-      bodySizeLimit: "10mb",
+      // Multipart uploads; keep under Vercel’s ~4.5MB request cap with headroom for form overhead.
+      // Client compresses large phone photos before upload (see lib/prepare-image-upload.ts).
+      bodySizeLimit: "4.5mb",
     },
     optimizePackageImports: ["lucide-react", "@clerk/nextjs"],
     staleTimes: {

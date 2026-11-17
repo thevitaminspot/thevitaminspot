@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Suspense } from "react";
 import { StripCursorRefs } from "@/components/dev/strip-cursor-refs";
 import { Providers } from "@/components/providers";
 import { brand } from "@/lib/brand";
@@ -156,9 +155,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <Suspense fallback={null}>
-          <Providers>{children}</Providers>
-        </Suspense>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

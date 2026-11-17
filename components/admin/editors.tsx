@@ -30,6 +30,7 @@ import {
   SERVER_ACTION_SOFT_LIMIT_BYTES,
   serverActionErrorMessage,
 } from "@/lib/server-action-error";
+import { prepareImageForUpload } from "@/lib/prepare-image-upload";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 function naira(kobo: number) {
@@ -160,6 +161,7 @@ export function AddProductForm({
 } & FormCallbacks) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [pendingUpload, setPendingUpload] = useState(false);
   const [images, setImages] = useState<{ url: string; alt: string }[]>([]);
 
   function addImage(url: string) {
@@ -201,10 +203,17 @@ export function AddProductForm({
         onAdd={addImage}
         onChange={setImages}
         onError={onError}
-        onUpload={(work) => start(async () => work())}
+        onUpload={(work) => {
+          void work();
+        }}
+        onUploadingChange={setPendingUpload}
       />
-      <button type="submit" disabled={pending} className={`md:w-fit ${adminButtonPrimary}`}>
-        {pending ? "Adding…" : "Add product"}
+      <button
+        type="submit"
+        disabled={pending || pendingUpload}
+        className={`md:w-fit ${adminButtonPrimary}`}
+      >
+        {pending ? "Adding…" : pendingUpload ? "Uploading…" : "Add product"}
       </button>
     </form>
   );
@@ -218,6 +227,7 @@ function ProductFields({
   onChange,
   onError,
   onUpload,
+  onUploadingChange,
 }: {
   product?: CatalogProduct;
   library: string[];
@@ -226,6 +236,7 @@ function ProductFields({
   onChange: (images: { url: string; alt: string }[]) => void;
   onError?: (message: string) => void;
   onUpload?: (work: () => Promise<void>) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   return (
     <>
@@ -332,6 +343,7 @@ function ProductFields({
         onAdd={onAdd}
         onChange={onChange}
         onUpload={onUpload ?? ((work) => void work())}
+        onUploadingChange={onUploadingChange}
         onError={(error) => onError?.(error)}
       />
     </>
@@ -344,6 +356,7 @@ function PicturePicker({
   onAdd,
   onChange,
   onUpload,
+  onUploadingChange,
   onError,
 }: {
   images: { url: string; alt: string }[];
@@ -351,11 +364,18 @@ function PicturePicker({
   onAdd: (url: string) => void;
   onChange: (images: { url: string; alt: string }[]) => void;
   onUpload: (work: () => Promise<void>) => void;
+  onUploadingChange?: (uploading: boolean) => void;
   onError: (message: string) => void;
 }) {
   const atLimit = images.length >= PRODUCT_MAX_IMAGES;
   const libraryId = useId();
   const fileId = useId();
+  const [uploading, setUploading] = useState(false);
+
+  function markUploading(next: boolean) {
+    setUploading(next);
+    onUploadingChange?.(next);
+  }
 
   return (
     <fieldset className="space-y-3">
@@ -421,7 +441,7 @@ function PicturePicker({
             id={libraryId}
             name="libraryImage"
             defaultValue=""
-            disabled={atLimit}
+            disabled={atLimit || uploading}
             className={`${field} disabled:cursor-not-allowed disabled:opacity-50`}
             onChange={(event) => {
               onAdd(event.target.value);
@@ -440,18 +460,18 @@ function PicturePicker({
         </div>
         <label
           htmlFor={fileId}
-          className={`inline-flex items-center rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
-            atLimit ? "cursor-not-allowed opacity-50" : interactiveControl
+          className={`relative inline-flex items-center rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
+            atLimit || uploading ? "cursor-not-allowed opacity-50" : interactiveControl
           }`}
         >
-          Upload picture
+          {uploading ? "Uploading…" : "Upload picture"}
           <input
             id={fileId}
             name="uploadFile"
             type="file"
-            accept="image/*"
-            disabled={atLimit}
-            className="sr-only"
+            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp"
+            disabled={atLimit || uploading}
+            className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
@@ -460,24 +480,36 @@ function PicturePicker({
                 onError(`Up to ${PRODUCT_MAX_IMAGES} pictures per product.`);
                 return;
               }
-              const body = new FormData();
-              body.set("file", file);
               onUpload(async () => {
+                markUploading(true);
                 try {
+                  const prepared = await prepareImageForUpload(file);
+                  const body = new FormData();
+                  body.set("file", prepared, prepared.name);
                   const result = await uploadProductImage(body);
-                  if ("url" in result && result.url) onAdd(result.url);
-                  else onError("error" in result && result.error ? result.error : "Upload failed.");
+                  if ("url" in result && result.url) {
+                    onAdd(result.url);
+                    adminNotifySuccess("Picture uploaded.");
+                  } else {
+                    onError("error" in result && result.error ? result.error : "Upload failed.");
+                  }
                 } catch (error) {
                   onError(serverActionErrorMessage(error, "Upload failed."));
+                } finally {
+                  markUploading(false);
                 }
               });
             }}
           />
         </label>
       </div>
-      {atLimit ? (
+      {uploading ? (
+        <p className="text-xs text-deep/55">Uploading picture…</p>
+      ) : atLimit ? (
         <p className="text-xs text-deep/55">Remove a picture to add another.</p>
-      ) : null}
+      ) : (
+        <p className="text-xs text-deep/45">JPG, PNG, or WebP · large phone photos are compressed automatically.</p>
+      )}
     </fieldset>
   );
 }
@@ -496,6 +528,7 @@ export function ProductEditor({
   }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [pendingUpload, setPendingUpload] = useState(false);
   const [images, setImages] = useState(product.images);
 
   function addImage(url: string) {
@@ -538,14 +571,26 @@ export function ProductEditor({
         onAdd={addImage}
         onChange={setImages}
         onError={onError}
-        onUpload={(work) => start(async () => work())}
+        onUpload={(work) => {
+          void work();
+        }}
+        onUploadingChange={setPendingUpload}
       />
       <div className="flex flex-wrap gap-3">
-        <button type="submit" disabled={pending} className={adminButtonPrimary}>
-          {pending ? "Saving…" : "Save changes"}
+        <button
+          type="submit"
+          disabled={pending || pendingUpload}
+          className={adminButtonPrimary}
+        >
+          {pending ? "Saving…" : pendingUpload ? "Uploading…" : "Save changes"}
         </button>
         {onDelete ? (
-          <button type="button" disabled={pending} className={adminButtonDanger} onClick={onDelete}>
+          <button
+            type="button"
+            disabled={pending || pendingUpload}
+            className={adminButtonDanger}
+            onClick={onDelete}
+          >
             Delete
           </button>
         ) : null}
@@ -578,6 +623,7 @@ export function AddInfusionForm({
   const router = useRouter();
   const [image, setImage] = useState("");
   const [pending, start] = useTransition();
+  const [pendingUpload, setPendingUpload] = useState(false);
 
   return (
     <form
@@ -599,9 +645,18 @@ export function AddInfusionForm({
         });
       }}
     >
-      <InfusionFields library={library} image={image} onImage={setImage} />
-      <button type="submit" disabled={pending} className={`md:w-fit ${adminButtonPrimary}`}>
-        {pending ? "Adding…" : "Add session"}
+      <InfusionFields
+        library={library}
+        image={image}
+        onImage={setImage}
+        onUploadingChange={setPendingUpload}
+      />
+      <button
+        type="submit"
+        disabled={pending || pendingUpload}
+        className={`md:w-fit ${adminButtonPrimary}`}
+      >
+        {pending ? "Adding…" : pendingUpload ? "Uploading…" : "Add session"}
       </button>
     </form>
   );
@@ -622,6 +677,7 @@ export function InfusionEditor({
   const router = useRouter();
   const [image, setImage] = useState(infusion.image);
   const [pending, start] = useTransition();
+  const [pendingUpload, setPendingUpload] = useState(false);
 
   return (
     <form
@@ -643,13 +699,28 @@ export function InfusionEditor({
         });
       }}
     >
-      <InfusionFields infusion={infusion} library={library} image={image} onImage={setImage} />
+      <InfusionFields
+        infusion={infusion}
+        library={library}
+        image={image}
+        onImage={setImage}
+        onUploadingChange={setPendingUpload}
+      />
       <div className="flex flex-wrap gap-3">
-        <button type="submit" disabled={pending} className={adminButtonPrimary}>
-          {pending ? "Saving…" : "Save changes"}
+        <button
+          type="submit"
+          disabled={pending || pendingUpload}
+          className={adminButtonPrimary}
+        >
+          {pending ? "Saving…" : pendingUpload ? "Uploading…" : "Save changes"}
         </button>
         {onDelete ? (
-          <button type="button" disabled={pending} className={adminButtonDanger} onClick={onDelete}>
+          <button
+            type="button"
+            disabled={pending || pendingUpload}
+            className={adminButtonDanger}
+            onClick={onDelete}
+          >
             Delete
           </button>
         ) : null}
@@ -663,13 +734,21 @@ function InfusionFields({
   library,
   image,
   onImage,
+  onUploadingChange,
 }: {
   infusion?: CatalogInfusion;
   library: string[];
   image: string;
   onImage: (url: string) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const fileId = useId();
+  const [uploading, setUploading] = useState(false);
+
+  function markUploading(next: boolean) {
+    setUploading(next);
+    onUploadingChange?.(next);
+  }
 
   return (
     <>
@@ -765,6 +844,7 @@ function InfusionFields({
           value={image}
           onChange={(event) => onImage(event.target.value)}
           className={field}
+          disabled={uploading}
         >
           <option value="">Choose a picture</option>
           {image && !library.includes(image) ? <option value={image}>{image}</option> : null}
@@ -776,29 +856,49 @@ function InfusionFields({
         </select>
         <label
           htmlFor={fileId}
-          className={`mt-2 inline-flex rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${interactiveControl}`}
+          className={`relative mt-2 inline-flex rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
+            uploading ? "cursor-not-allowed opacity-50" : interactiveControl
+          }`}
         >
-          Upload picture
+          {uploading ? "Uploading…" : "Upload picture"}
           <input
             id={fileId}
             name="uploadFile"
             type="file"
-            accept="image/*"
-            className="sr-only"
+            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp"
+            disabled={uploading}
+            className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (!file) return;
-              const body = new FormData();
-              body.set("file", file);
-              void uploadProductImage(body).then((result) => {
-                if ("url" in result && result.url) onImage(result.url);
-                else if ("error" in result && result.error) adminNotifyError(result.error);
-                else adminNotifyError("Upload failed.");
-              });
+              markUploading(true);
+              void (async () => {
+                try {
+                  const prepared = await prepareImageForUpload(file);
+                  const body = new FormData();
+                  body.set("file", prepared, prepared.name);
+                  const result = await uploadProductImage(body);
+                  if ("url" in result && result.url) {
+                    onImage(result.url);
+                    adminNotifySuccess("Picture uploaded.");
+                  } else if ("error" in result && result.error) {
+                    adminNotifyError(result.error);
+                  } else {
+                    adminNotifyError("Upload failed.");
+                  }
+                } catch (error) {
+                  adminNotifyError(serverActionErrorMessage(error, "Upload failed."));
+                } finally {
+                  markUploading(false);
+                }
+              })();
             }}
           />
         </label>
+        <p className="mt-2 text-xs text-deep/45">
+          JPG, PNG, or WebP · large phone photos are compressed automatically.
+        </p>
       </Field>
       {image ? (
         <Image
