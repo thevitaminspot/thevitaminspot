@@ -19,6 +19,7 @@ import {
 } from "@/components/admin/ui";
 import { fulfillmentLabel } from "@/lib/admin-orders";
 import { tryPrisma } from "@/lib/db";
+import { RoutePlaceholder } from "@/components/ui/route-placeholder";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatNaira } from "@/lib/money";
 
@@ -42,7 +43,7 @@ export default function AdminOrderDetailPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<RoutePlaceholder />}>
       <AdminOrderDetail searchParams={searchParams} />
     </Suspense>
   );

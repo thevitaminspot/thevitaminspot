@@ -12,7 +12,7 @@ import {
   notifyBookingConfirmed,
 } from "@/lib/booking-notify";
 import { sendOrderUpdate } from "@/lib/email";
-import { uploadImage } from "@/lib/images";
+import { asUploadFile, uploadImage } from "@/lib/images";
 import { nairaToKobo } from "@/lib/money";
 import { seedCatalog } from "@/lib/seed-catalog";
 import { site } from "@/lib/site";
@@ -169,8 +169,8 @@ export async function updateProduct(input: {
 export async function uploadProductImage(formData: FormData) {
   const denied = await guard();
   if (denied) return denied;
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose an image." };
+  const file = asUploadFile(formData.get("file"));
+  if (!file || file.size === 0) return { error: "Choose an image." };
   return uploadImage(file);
 }
 
