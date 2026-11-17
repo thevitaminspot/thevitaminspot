@@ -1,37 +1,34 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useId, useState, useTransition, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import {
   acceptAppointment,
   createInfusion,
   createProduct,
   updateInfusion,
   updateProduct,
-  uploadProductImage,
 } from "@/actions/admin";
-import {
-  PRODUCT_MAX_IMAGES,
-  categories,
-  type CatalogInfusion,
-  type CatalogProduct,
-} from "@/lib/catalog";
+import { ImageUploader, type UploaderImage } from "@/components/admin/image-uploader";
 import {
   adminButtonDanger,
   adminButtonPrimary,
   adminFormControl,
   adminFormLabel,
   adminFormTextarea,
-  interactiveControl,
 } from "@/components/ui/form-styles";
+import {
+  PRODUCT_MAX_IMAGES,
+  categories,
+  type CatalogInfusion,
+  type CatalogProduct,
+} from "@/lib/catalog";
+import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 import {
   estimateServerActionBytes,
   SERVER_ACTION_SOFT_LIMIT_BYTES,
   serverActionErrorMessage,
 } from "@/lib/server-action-error";
-import { prepareImageForUpload } from "@/lib/prepare-image-upload";
-import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 
 function naira(kobo: number) {
   return Math.round(kobo / 100);
@@ -59,6 +56,15 @@ function Field({
       </label>
       <div className="mt-1.5">{children}</div>
     </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-4">
+      <h3 className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">{title}</h3>
+      <div className="space-y-4">{children}</div>
+    </section>
   );
 }
 
@@ -108,10 +114,10 @@ async function runServerAction<T>(
 }
 
 function validateProductImagesForSave(
-  images: { url: string; alt: string }[],
+  images: UploaderImage[],
   onError?: (message: string) => void,
 ) {
-  if (images.some((image) => image.url.startsWith("data:"))) {
+  if (images.some((image) => image.url.startsWith("data:") || image.url.startsWith("blob:"))) {
     onError?.("Wait for pictures to finish uploading before you save.");
     return false;
   }
@@ -126,10 +132,7 @@ function validateProductPayloadSize(payload: unknown, onError?: (message: string
   return true;
 }
 
-function productPayloadFromForm(
-  data: FormData,
-  images: { url: string; alt: string }[],
-) {
+function productPayloadFromForm(data: FormData, images: UploaderImage[]) {
   return {
     name: String(data.get("name") ?? ""),
     priceNaira: Number(data.get("price")),
@@ -162,20 +165,11 @@ export function AddProductForm({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [pendingUpload, setPendingUpload] = useState(false);
-  const [images, setImages] = useState<{ url: string; alt: string }[]>([]);
-
-  function addImage(url: string) {
-    if (!url || images.some((image) => image.url === url)) return;
-    if (images.length >= PRODUCT_MAX_IMAGES) {
-      onError?.(`Up to ${PRODUCT_MAX_IMAGES} pictures per product.`);
-      return;
-    }
-    setImages((current) => [...current, { url, alt: "" }]);
-  }
+  const [images, setImages] = useState<UploaderImage[]>([]);
 
   return (
     <form
-      className="grid gap-5"
+      className="grid gap-8"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -200,12 +194,8 @@ export function AddProductForm({
       <ProductFields
         library={library}
         images={images}
-        onAdd={addImage}
         onChange={setImages}
         onError={onError}
-        onUpload={(work) => {
-          void work();
-        }}
         onUploadingChange={setPendingUpload}
       />
       <button
@@ -223,294 +213,139 @@ function ProductFields({
   product,
   library,
   images,
-  onAdd,
   onChange,
   onError,
-  onUpload,
   onUploadingChange,
 }: {
   product?: CatalogProduct;
   library: string[];
-  images: { url: string; alt: string }[];
-  onAdd: (url: string) => void;
-  onChange: (images: { url: string; alt: string }[]) => void;
+  images: UploaderImage[];
+  onChange: (images: UploaderImage[]) => void;
   onError?: (message: string) => void;
-  onUpload?: (work: () => Promise<void>) => void;
   onUploadingChange?: (uploading: boolean) => void;
 }) {
   return (
     <>
-      <Field label="Product name" htmlFor="product-name">
-        <input
-          id="product-name"
-          name="name"
-          required
-          defaultValue={product?.name}
-          placeholder="e.g. Collagen Atelier"
-          className={field}
+      <Section title="Media">
+        <ImageUploader
+          images={images}
+          onChange={onChange}
+          max={PRODUCT_MAX_IMAGES}
+          library={library}
+          onUploadingChange={onUploadingChange}
+          onError={onError}
         />
-      </Field>
-      <Field label="Tagline" htmlFor="product-tagline" hint="short line under the name">
-        <input
-          id="product-tagline"
-          name="tagline"
-          defaultValue={product?.tagline}
-          placeholder="One short sentence"
-          className={field}
-        />
-      </Field>
-      <div className="grid gap-4 md:grid-cols-3">
-        <Field label="Price (₦)" htmlFor="product-price">
+      </Section>
+
+      <Section title="Basics">
+        <Field label="Product name" htmlFor="product-name">
           <input
-            id="product-price"
-            name="price"
+            id="product-name"
+            name="name"
             required
-            type="number"
-            min={0}
-            defaultValue={product ? naira(product.price) : undefined}
-            placeholder="e.g. 40000"
+            defaultValue={product?.name}
+            placeholder="e.g. Collagen Atelier"
             className={field}
           />
         </Field>
-        <Field label="Compare-at price (₦)" htmlFor="product-compareAtPrice" hint="optional">
+        <Field label="Tagline" htmlFor="product-tagline" hint="short line under the name">
           <input
-            id="product-compareAtPrice"
-            name="compareAtPrice"
-            type="number"
-            min={0}
-            defaultValue={product?.compareAtPrice ? naira(product.compareAtPrice) : ""}
-            placeholder="Strike-through price"
+            id="product-tagline"
+            name="tagline"
+            defaultValue={product?.tagline}
+            placeholder="One short sentence"
             className={field}
           />
         </Field>
-        <Field label="Stock" htmlFor="product-stock">
-          <input
-            id="product-stock"
-            name="stock"
-            required
-            type="number"
-            min={0}
-            defaultValue={product?.stock ?? 0}
-            placeholder="Units on hand"
-            className={field}
+      </Section>
+
+      <Section title="Price and stock">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label="Price (₦)" htmlFor="product-price">
+            <input
+              id="product-price"
+              name="price"
+              required
+              type="number"
+              min={0}
+              defaultValue={product ? naira(product.price) : undefined}
+              placeholder="e.g. 40000"
+              className={field}
+            />
+          </Field>
+          <Field label="Compare-at price (₦)" htmlFor="product-compareAtPrice" hint="optional">
+            <input
+              id="product-compareAtPrice"
+              name="compareAtPrice"
+              type="number"
+              min={0}
+              defaultValue={product?.compareAtPrice ? naira(product.compareAtPrice) : ""}
+              placeholder="Strike-through price"
+              className={field}
+            />
+          </Field>
+          <Field label="Stock" htmlFor="product-stock">
+            <input
+              id="product-stock"
+              name="stock"
+              required
+              type="number"
+              min={0}
+              defaultValue={product?.stock ?? 0}
+              placeholder="Units on hand"
+              className={field}
+            />
+          </Field>
+        </div>
+        <CategoryField value={product?.categorySlug} />
+      </Section>
+
+      <Section title="Details">
+        <Field label="Description" htmlFor="product-description">
+          <textarea
+            id="product-description"
+            name="description"
+            defaultValue={product?.description}
+            rows={4}
+            className={area}
           />
         </Field>
-      </div>
-      <CategoryField value={product?.categorySlug} />
-      <div className="flex flex-wrap gap-4">
-        <FeaturedField checked={product?.featured} />
-        <ActiveField checked={product ? product.isActive !== false : true} />
-      </div>
-      <Field label="Description" htmlFor="product-description">
-        <textarea
-          id="product-description"
-          name="description"
-          defaultValue={product?.description}
-          rows={4}
-          className={area}
-        />
-      </Field>
-      <Field label="Benefits" htmlFor="product-benefits" hint="one per line">
-        <textarea
-          id="product-benefits"
-          name="benefits"
-          defaultValue={product?.benefits.join("\n")}
-          rows={4}
-          className={area}
-        />
-      </Field>
-      <Field label="Ingredients" htmlFor="product-ingredients" hint="one per line">
-        <textarea
-          id="product-ingredients"
-          name="ingredients"
-          defaultValue={product?.ingredients.join("\n")}
-          rows={4}
-          className={area}
-        />
-      </Field>
-      <Field label="How to take it" htmlFor="product-usage">
-        <textarea
-          id="product-usage"
-          name="usage"
-          defaultValue={product?.usage}
-          rows={3}
-          className={area}
-        />
-      </Field>
-      <PicturePicker
-        images={images}
-        library={library}
-        onAdd={onAdd}
-        onChange={onChange}
-        onUpload={onUpload ?? ((work) => void work())}
-        onUploadingChange={onUploadingChange}
-        onError={(error) => onError?.(error)}
-      />
+        <Field label="Benefits" htmlFor="product-benefits" hint="one per line">
+          <textarea
+            id="product-benefits"
+            name="benefits"
+            defaultValue={product?.benefits.join("\n")}
+            rows={4}
+            className={area}
+          />
+        </Field>
+        <Field label="Ingredients" htmlFor="product-ingredients" hint="one per line">
+          <textarea
+            id="product-ingredients"
+            name="ingredients"
+            defaultValue={product?.ingredients.join("\n")}
+            rows={4}
+            className={area}
+          />
+        </Field>
+        <Field label="How to take it" htmlFor="product-usage">
+          <textarea
+            id="product-usage"
+            name="usage"
+            defaultValue={product?.usage}
+            rows={3}
+            className={area}
+          />
+        </Field>
+      </Section>
+
+      <Section title="Visibility">
+        <div className="flex flex-wrap gap-4">
+          <FeaturedField checked={product?.featured} />
+          <ActiveField checked={product ? product.isActive !== false : true} />
+        </div>
+      </Section>
     </>
-  );
-}
-
-function PicturePicker({
-  images,
-  library,
-  onAdd,
-  onChange,
-  onUpload,
-  onUploadingChange,
-  onError,
-}: {
-  images: { url: string; alt: string }[];
-  library: string[];
-  onAdd: (url: string) => void;
-  onChange: (images: { url: string; alt: string }[]) => void;
-  onUpload: (work: () => Promise<void>) => void;
-  onUploadingChange?: (uploading: boolean) => void;
-  onError: (message: string) => void;
-}) {
-  const atLimit = images.length >= PRODUCT_MAX_IMAGES;
-  const libraryId = useId();
-  const fileId = useId();
-  const [uploading, setUploading] = useState(false);
-
-  function markUploading(next: boolean) {
-    setUploading(next);
-    onUploadingChange?.(next);
-  }
-
-  return (
-    <fieldset className="space-y-3">
-      <legend className={adminFormLabel}>
-        Pictures{" "}
-        <span className="font-normal text-deep/45">
-          ({images.length}/{PRODUCT_MAX_IMAGES})
-        </span>
-      </legend>
-
-      {images.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {images.map((image, index) => {
-            const altName = `imageAlt-${index}`;
-            return (
-              <div key={`${image.url}-${index}`} className="space-y-2">
-                <Image
-                  src={image.url}
-                  alt={image.alt || `Product picture ${index + 1}`}
-                  width={240}
-                  height={180}
-                  className="aspect-[4/3] w-full rounded-lg object-cover"
-                />
-                <input type="hidden" name={`imageUrl-${index}`} value={image.url} />
-                <label className="block text-[11px] tracking-[0.12em] text-deep/45 uppercase" htmlFor={altName}>
-                  Alt text
-                </label>
-                <input
-                  id={altName}
-                  name={altName}
-                  value={image.alt}
-                  onChange={(event) =>
-                    onChange(
-                      images.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, alt: event.target.value } : item,
-                      ),
-                    )
-                  }
-                  placeholder="Describe this picture"
-                  className={field}
-                />
-                <button
-                  type="button"
-                  className={`text-[11px] tracking-[0.14em] uppercase ${interactiveControl}`}
-                  onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))}
-                >
-                  Remove
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="text-xs text-deep/50">Add at least one picture for the shop listing.</p>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        <div className="min-w-[12rem] flex-1">
-          <label htmlFor={libraryId} className="sr-only">
-            Add a saved picture
-          </label>
-          <select
-            id={libraryId}
-            name="libraryImage"
-            defaultValue=""
-            disabled={atLimit || uploading}
-            className={`${field} disabled:cursor-not-allowed disabled:opacity-50`}
-            onChange={(event) => {
-              onAdd(event.target.value);
-              event.target.value = "";
-            }}
-          >
-            <option value="">
-              {atLimit ? "Maximum pictures added" : "Add a saved picture"}
-            </option>
-            {library.map((url) => (
-              <option key={url} value={url}>
-                {url.replace("/images/", "")}
-              </option>
-            ))}
-          </select>
-        </div>
-        <label
-          htmlFor={fileId}
-          className={`relative inline-flex items-center rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
-            atLimit || uploading ? "cursor-not-allowed opacity-50" : interactiveControl
-          }`}
-        >
-          {uploading ? "Uploading…" : "Upload picture"}
-          <input
-            id={fileId}
-            name="uploadFile"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp"
-            disabled={atLimit || uploading}
-            className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (!file) return;
-              if (atLimit) {
-                onError(`Up to ${PRODUCT_MAX_IMAGES} pictures per product.`);
-                return;
-              }
-              onUpload(async () => {
-                markUploading(true);
-                try {
-                  const prepared = await prepareImageForUpload(file);
-                  const body = new FormData();
-                  body.set("file", prepared, prepared.name);
-                  const result = await uploadProductImage(body);
-                  if ("url" in result && result.url) {
-                    onAdd(result.url);
-                    adminNotifySuccess("Picture uploaded.");
-                  } else {
-                    onError("error" in result && result.error ? result.error : "Upload failed.");
-                  }
-                } catch (error) {
-                  onError(serverActionErrorMessage(error, "Upload failed."));
-                } finally {
-                  markUploading(false);
-                }
-              });
-            }}
-          />
-        </label>
-      </div>
-      {uploading ? (
-        <p className="text-xs text-deep/55">Uploading picture…</p>
-      ) : atLimit ? (
-        <p className="text-xs text-deep/55">Remove a picture to add another.</p>
-      ) : (
-        <p className="text-xs text-deep/45">JPG, PNG, or WebP · large phone photos are compressed automatically.</p>
-      )}
-    </fieldset>
   );
 }
 
@@ -529,20 +364,11 @@ export function ProductEditor({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [pendingUpload, setPendingUpload] = useState(false);
-  const [images, setImages] = useState(product.images);
-
-  function addImage(url: string) {
-    if (!url || images.some((image) => image.url === url)) return;
-    if (images.length >= PRODUCT_MAX_IMAGES) {
-      onError?.(`Up to ${PRODUCT_MAX_IMAGES} pictures per product.`);
-      return;
-    }
-    setImages((current) => [...current, { url, alt: product.name }]);
-  }
+  const [images, setImages] = useState<UploaderImage[]>(product.images);
 
   return (
     <form
-      className="grid gap-5"
+      className="grid gap-8"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -568,12 +394,8 @@ export function ProductEditor({
         product={product}
         library={library}
         images={images}
-        onAdd={addImage}
         onChange={setImages}
         onError={onError}
-        onUpload={(work) => {
-          void work();
-        }}
         onUploadingChange={setPendingUpload}
       />
       <div className="flex flex-wrap gap-3">
@@ -621,22 +443,27 @@ export function AddInfusionForm({
   library: string[];
 } & FormCallbacks) {
   const router = useRouter();
-  const [image, setImage] = useState("");
+  const [images, setImages] = useState<UploaderImage[]>([]);
   const [pending, start] = useTransition();
   const [pendingUpload, setPendingUpload] = useState(false);
+  const image = images[0]?.url ?? "";
 
   return (
     <form
-      className="grid gap-5"
+      className="grid gap-8"
       onSubmit={(event) => {
         event.preventDefault();
+        if (pendingUpload || image.startsWith("blob:") || image.startsWith("data:")) {
+          onError?.("Wait for the picture to finish uploading before you save.");
+          return;
+        }
         const data = new FormData(event.currentTarget);
         const form = event.currentTarget;
         start(async () => {
           const result = await createInfusion(infusionPayload(data));
           if ("ok" in result) {
             form.reset();
-            setImage("");
+            setImages([]);
             router.refresh();
             onSuccess?.();
           } else {
@@ -647,8 +474,9 @@ export function AddInfusionForm({
     >
       <InfusionFields
         library={library}
-        image={image}
-        onImage={setImage}
+        images={images}
+        onChange={setImages}
+        onError={onError}
         onUploadingChange={setPendingUpload}
       />
       <button
@@ -675,15 +503,22 @@ export function InfusionEditor({
     onDelete?: () => void;
   }) {
   const router = useRouter();
-  const [image, setImage] = useState(infusion.image);
+  const [images, setImages] = useState<UploaderImage[]>(
+    infusion.image ? [{ url: infusion.image, alt: infusion.name }] : [],
+  );
   const [pending, start] = useTransition();
   const [pendingUpload, setPendingUpload] = useState(false);
+  const image = images[0]?.url ?? "";
 
   return (
     <form
-      className="grid gap-5"
+      className="grid gap-8"
       onSubmit={(event) => {
         event.preventDefault();
+        if (pendingUpload || image.startsWith("blob:") || image.startsWith("data:")) {
+          onError?.("Wait for the picture to finish uploading before you save.");
+          return;
+        }
         const data = new FormData(event.currentTarget);
         start(async () => {
           const result = await updateInfusion({
@@ -702,8 +537,9 @@ export function InfusionEditor({
       <InfusionFields
         infusion={infusion}
         library={library}
-        image={image}
-        onImage={setImage}
+        images={images}
+        onChange={setImages}
+        onError={onError}
         onUploadingChange={setPendingUpload}
       />
       <div className="flex flex-wrap gap-3">
@@ -732,183 +568,129 @@ export function InfusionEditor({
 function InfusionFields({
   infusion,
   library,
-  image,
-  onImage,
+  images,
+  onChange,
+  onError,
   onUploadingChange,
 }: {
   infusion?: CatalogInfusion;
   library: string[];
-  image: string;
-  onImage: (url: string) => void;
+  images: UploaderImage[];
+  onChange: (images: UploaderImage[]) => void;
+  onError?: (message: string) => void;
   onUploadingChange?: (uploading: boolean) => void;
 }) {
-  const fileId = useId();
-  const [uploading, setUploading] = useState(false);
-
-  function markUploading(next: boolean) {
-    setUploading(next);
-    onUploadingChange?.(next);
-  }
+  const image = images[0]?.url ?? "";
 
   return (
     <>
       <input type="hidden" name="image" value={image} />
-      <Field label="Session name" htmlFor="infusion-name">
-        <input
-          id="infusion-name"
-          name="name"
-          required
-          defaultValue={infusion?.name}
-          placeholder="e.g. Myers Cocktail"
-          className={field}
+
+      <Section title="Media">
+        <ImageUploader
+          images={images}
+          onChange={onChange}
+          max={1}
+          library={library}
+          onUploadingChange={onUploadingChange}
+          onError={onError}
+          emptyHint="Add a session picture for the booking page."
+          altPlaceholder="Describe this session picture"
         />
-      </Field>
-      <Field label="Tagline" htmlFor="infusion-tagline" hint="short line under the name">
-        <input
-          id="infusion-tagline"
-          name="tagline"
-          defaultValue={infusion?.tagline}
-          placeholder="One short sentence"
-          className={field}
-        />
-      </Field>
-      <Field label="Description" htmlFor="infusion-description">
-        <textarea
-          id="infusion-description"
-          name="description"
-          defaultValue={infusion?.description}
-          rows={4}
-          className={area}
-        />
-      </Field>
-      <Field label="What it does" htmlFor="infusion-benefits" hint="one per line">
-        <textarea
-          id="infusion-benefits"
-          name="benefits"
-          defaultValue={infusion?.benefits.join("\n")}
-          rows={4}
-          className={area}
-        />
-      </Field>
-      <Field label="What’s in it" htmlFor="infusion-ingredients" hint="one per line">
-        <textarea
-          id="infusion-ingredients"
-          name="ingredients"
-          defaultValue={infusion?.ingredients.join("\n")}
-          rows={4}
-          className={area}
-        />
-      </Field>
-      <div className="grid gap-4 md:grid-cols-3">
-        <Field label="Price (₦)" htmlFor="infusion-price">
+      </Section>
+
+      <Section title="Basics">
+        <Field label="Session name" htmlFor="infusion-name">
           <input
-            id="infusion-price"
-            name="price"
+            id="infusion-name"
+            name="name"
             required
-            type="number"
-            min={0}
-            defaultValue={infusion ? naira(infusion.price) : undefined}
-            placeholder="Full price"
+            defaultValue={infusion?.name}
+            placeholder="e.g. Myers Cocktail"
             className={field}
           />
         </Field>
-        <Field label="Booking fee (₦)" htmlFor="infusion-deposit">
+        <Field label="Tagline" htmlFor="infusion-tagline" hint="short line under the name">
           <input
-            id="infusion-deposit"
-            name="deposit"
-            required
-            type="number"
-            min={0}
-            defaultValue={infusion ? naira(infusion.deposit) : undefined}
-            placeholder="Deposit to hold the chair"
+            id="infusion-tagline"
+            name="tagline"
+            defaultValue={infusion?.tagline}
+            placeholder="One short sentence"
             className={field}
           />
         </Field>
-        <Field label="Duration (minutes)" htmlFor="infusion-duration">
-          <input
-            id="infusion-duration"
-            name="duration"
-            required
-            type="number"
-            min={15}
-            defaultValue={infusion?.durationMin}
-            placeholder="e.g. 60"
-            className={field}
+      </Section>
+
+      <Section title="Price and timing">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label="Price (₦)" htmlFor="infusion-price">
+            <input
+              id="infusion-price"
+              name="price"
+              required
+              type="number"
+              min={0}
+              defaultValue={infusion ? naira(infusion.price) : undefined}
+              placeholder="Full price"
+              className={field}
+            />
+          </Field>
+          <Field label="Booking fee (₦)" htmlFor="infusion-deposit">
+            <input
+              id="infusion-deposit"
+              name="deposit"
+              required
+              type="number"
+              min={0}
+              defaultValue={infusion ? naira(infusion.deposit) : undefined}
+              placeholder="Deposit to hold the chair"
+              className={field}
+            />
+          </Field>
+          <Field label="Duration (minutes)" htmlFor="infusion-duration">
+            <input
+              id="infusion-duration"
+              name="duration"
+              required
+              type="number"
+              min={15}
+              defaultValue={infusion?.durationMin}
+              placeholder="e.g. 60"
+              className={field}
+            />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="Details">
+        <Field label="Description" htmlFor="infusion-description">
+          <textarea
+            id="infusion-description"
+            name="description"
+            defaultValue={infusion?.description}
+            rows={4}
+            className={area}
           />
         </Field>
-      </div>
-      <Field label="Session picture" htmlFor="infusion-imageSelect">
-        <select
-          id="infusion-imageSelect"
-          name="imageSelect"
-          value={image}
-          onChange={(event) => onImage(event.target.value)}
-          className={field}
-          disabled={uploading}
-        >
-          <option value="">Choose a picture</option>
-          {image && !library.includes(image) ? <option value={image}>{image}</option> : null}
-          {library.map((url) => (
-            <option key={url} value={url}>
-              {url.replace("/images/", "")}
-            </option>
-          ))}
-        </select>
-        <label
-          htmlFor={fileId}
-          className={`relative mt-2 inline-flex rounded-lg border border-deep/20 px-4 py-2 text-[11px] tracking-[0.14em] uppercase ${
-            uploading ? "cursor-not-allowed opacity-50" : interactiveControl
-          }`}
-        >
-          {uploading ? "Uploading…" : "Upload picture"}
-          <input
-            id={fileId}
-            name="uploadFile"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp"
-            disabled={uploading}
-            className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (!file) return;
-              markUploading(true);
-              void (async () => {
-                try {
-                  const prepared = await prepareImageForUpload(file);
-                  const body = new FormData();
-                  body.set("file", prepared, prepared.name);
-                  const result = await uploadProductImage(body);
-                  if ("url" in result && result.url) {
-                    onImage(result.url);
-                    adminNotifySuccess("Picture uploaded.");
-                  } else if ("error" in result && result.error) {
-                    adminNotifyError(result.error);
-                  } else {
-                    adminNotifyError("Upload failed.");
-                  }
-                } catch (error) {
-                  adminNotifyError(serverActionErrorMessage(error, "Upload failed."));
-                } finally {
-                  markUploading(false);
-                }
-              })();
-            }}
+        <Field label="What it does" htmlFor="infusion-benefits" hint="one per line">
+          <textarea
+            id="infusion-benefits"
+            name="benefits"
+            defaultValue={infusion?.benefits.join("\n")}
+            rows={4}
+            className={area}
           />
-        </label>
-        <p className="mt-2 text-xs text-deep/45">
-          JPG, PNG, or WebP · large phone photos are compressed automatically.
-        </p>
-      </Field>
-      {image ? (
-        <Image
-          src={image}
-          alt=""
-          width={320}
-          height={200}
-          className="aspect-[8/5] w-48 rounded-lg object-cover"
-        />
-      ) : null}
+        </Field>
+        <Field label="What’s in it" htmlFor="infusion-ingredients" hint="one per line">
+          <textarea
+            id="infusion-ingredients"
+            name="ingredients"
+            defaultValue={infusion?.ingredients.join("\n")}
+            rows={4}
+            className={area}
+          />
+        </Field>
+      </Section>
     </>
   );
 }
