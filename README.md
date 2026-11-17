@@ -1,4 +1,4 @@
-# The Vitamin Spot
+# The Vitamin Spot!
 
 Upscale wellness lounge and shop for Abuja. Infusion bookings and a vitamin atelier.
 
