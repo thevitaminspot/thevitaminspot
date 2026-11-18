@@ -27,7 +27,7 @@ import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 import {
   estimateServerActionBytes,
   SERVER_ACTION_SOFT_LIMIT_BYTES,
-  serverActionErrorMessage,
+  withActionError,
 } from "@/lib/server-action-error";
 
 function naira(kobo: number) {
@@ -101,22 +101,14 @@ type FormCallbacks = {
   onError?: (message: string) => void;
 };
 
-async function runServerAction<T>(
-  work: () => Promise<T>,
-  onError?: (message: string) => void,
-): Promise<T | undefined> {
-  try {
-    return await work();
-  } catch (error) {
-    onError?.(serverActionErrorMessage(error));
-    return undefined;
-  }
-}
-
 function validateProductImagesForSave(
   images: UploaderImage[],
   onError?: (message: string) => void,
 ) {
+  if (images.length === 0) {
+    onError?.("Add at least one picture.");
+    return false;
+  }
   if (images.some((image) => image.url.startsWith("data:") || image.url.startsWith("blob:"))) {
     onError?.("Wait for pictures to finish uploading before you save.");
     return false;
@@ -178,7 +170,10 @@ export function AddProductForm({
           if (!validateProductImagesForSave(images, onError)) return;
           const payload = productPayloadFromForm(data, images);
           if (!validateProductPayloadSize(payload, onError)) return;
-          const result = await runServerAction(() => createProduct(payload), onError);
+          const result = await withActionError(
+            () => createProduct(payload),
+            (message) => onError?.(message),
+          );
           if (!result) return;
           if ("ok" in result) {
             form.reset();
@@ -379,7 +374,10 @@ export function ProductEditor({
             ...productPayloadFromForm(data, images),
           };
           if (!validateProductPayloadSize(payload, onError)) return;
-          const result = await runServerAction(() => updateProduct(payload), onError);
+          const result = await withActionError(
+            () => updateProduct(payload),
+            (message) => onError?.(message),
+          );
           if (!result) return;
           if ("ok" in result) {
             router.refresh();
@@ -460,7 +458,15 @@ export function AddInfusionForm({
         const data = new FormData(event.currentTarget);
         const form = event.currentTarget;
         start(async () => {
-          const result = await createInfusion(infusionPayload(data));
+          if (!image) {
+            onError?.("Add a session picture.");
+            return;
+          }
+          const result = await withActionError(
+            () => createInfusion(infusionPayload(data)),
+            (message) => onError?.(message),
+          );
+          if (!result) return;
           if ("ok" in result) {
             form.reset();
             setImages([]);
@@ -521,10 +527,19 @@ export function InfusionEditor({
         }
         const data = new FormData(event.currentTarget);
         start(async () => {
-          const result = await updateInfusion({
-            id: infusion.id,
-            ...infusionPayload(data),
-          });
+          if (!image) {
+            onError?.("Add a session picture.");
+            return;
+          }
+          const result = await withActionError(
+            () =>
+              updateInfusion({
+                id: infusion.id,
+                ...infusionPayload(data),
+              }),
+            (message) => onError?.(message),
+          );
+          if (!result) return;
           if ("ok" in result) {
             router.refresh();
             onSuccess?.();
@@ -707,7 +722,12 @@ export function AcceptAppointmentButton({ id, status }: { id: string; status: st
       className={`${adminButtonPrimary} disabled:opacity-40`}
       onClick={() => {
         start(async () => {
-          const result = await acceptAppointment(id);
+          const result = await withActionError(
+            () => acceptAppointment(id),
+            adminNotifyError,
+            "Could not accept booking.",
+          );
+          if (!result) return;
           if ("error" in result && result.error) {
             adminNotifyError(result.error);
             return;

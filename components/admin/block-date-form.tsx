@@ -10,6 +10,7 @@ import {
   adminFormLabel,
 } from "@/components/ui/form-styles";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
+import { withActionError } from "@/lib/server-action-error";
 
 export function BlockDateForm() {
   const router = useRouter();
@@ -40,7 +41,12 @@ export function BlockDateForm() {
             const date = String(form.get("date") ?? "");
             const reason = String(form.get("reason") ?? "");
             start(async () => {
-              const result = await blockDate(date, reason);
+              const result = await withActionError(
+                () => blockDate(date, reason),
+                adminNotifyError,
+                "Could not block that date.",
+              );
+              if (!result) return;
               if ("error" in result && result.error) {
                 adminNotifyError(result.error);
                 return;

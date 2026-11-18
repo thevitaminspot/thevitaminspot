@@ -280,12 +280,14 @@ export async function deleteProduct(id: string) {
   if (!existing) return { error: "Product not found." };
   const sold = await prisma.orderItem.count({ where: { productId: id } });
   if (sold > 0) {
+    // Keep the row for order history — hide it from the shop instead of hard-deleting.
     await prisma.product.update({ where: { id }, data: { isActive: false, stock: 0 } });
-  } else {
-    await prisma.product.delete({ where: { id } });
+    refreshShop(existing.slug);
+    return { ok: true as const, hidden: true as const };
   }
+  await prisma.product.delete({ where: { id } });
   refreshShop(existing.slug);
-  return { ok: true as const };
+  return { ok: true as const, hidden: false as const };
 }
 
 type InfusionInput = {

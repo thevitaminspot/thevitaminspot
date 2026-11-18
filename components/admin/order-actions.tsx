@@ -15,6 +15,7 @@ import {
   type AdminOrderStatus,
 } from "@/lib/admin-orders";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
+import { withActionError } from "@/lib/server-action-error";
 
 export function OrderActions({
   id,
@@ -37,7 +38,12 @@ export function OrderActions({
 
   function apply(nextStatus: AdminOrderStatus) {
     start(async () => {
-      const result = await updateOrderStatus(id, nextStatus);
+      const result = await withActionError(
+        () => updateOrderStatus(id, nextStatus),
+        adminNotifyError,
+        "Could not update order.",
+      );
+      if (!result) return;
       if ("error" in result && result.error) {
         adminNotifyError(result.error);
         return;

@@ -10,6 +10,7 @@ import {
   type AdminOrderStatus,
 } from "@/lib/admin-orders";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
+import { withActionError } from "@/lib/server-action-error";
 
 export function OrderStatusSelect({
   id,
@@ -37,7 +38,12 @@ export function OrderStatusSelect({
         const next = event.target.value as AdminOrderStatus;
         if (next === current) return;
         start(async () => {
-          const result = await updateOrderStatus(id, next);
+          const result = await withActionError(
+            () => updateOrderStatus(id, next),
+            adminNotifyError,
+            "Could not update order status.",
+          );
+          if (!result) return;
           if ("error" in result && result.error) {
             adminNotifyError(result.error);
             return;

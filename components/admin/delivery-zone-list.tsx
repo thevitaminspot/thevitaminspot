@@ -20,6 +20,7 @@ import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { Modal } from "@/components/ui/modal";
 import { adminFormField, adminFormLabel } from "@/components/ui/form-styles";
 import { formatNaira } from "@/lib/money";
+import { withActionError } from "@/lib/server-action-error";
 
 type Zone = {
   id: string;
@@ -76,12 +77,18 @@ export function DeliveryZoneList({
 
   function toggleActive(zone: Zone) {
     start(async () => {
-      const result = await updateZone({
-        id: zone.id,
-        feeNaira: Math.round(zone.fee / 100),
-        eta: zone.eta,
-        isActive: !zone.isActive,
-      });
+      const result = await withActionError(
+        () =>
+          updateZone({
+            id: zone.id,
+            feeNaira: Math.round(zone.fee / 100),
+            eta: zone.eta,
+            isActive: !zone.isActive,
+          }),
+        setMessage,
+        "Could not update zone.",
+      );
+      if (!result) return;
       setMessage("error" in result && result.error ? result.error : `${zone.name} updated.`);
       if ("ok" in result) router.refresh();
     });
@@ -91,7 +98,12 @@ export function DeliveryZoneList({
     if (!deleting) return;
     const zone = deleting;
     start(async () => {
-      const result = await deleteZone(zone.id);
+      const result = await withActionError(
+        () => deleteZone(zone.id),
+        setMessage,
+        "Could not remove zone.",
+      );
+      if (!result) return;
       if ("ok" in result) {
         setDeleting(null);
         setMessage(`${zone.name} removed.`);
@@ -203,7 +215,12 @@ export function DeliveryZoneList({
         onSave={(data) => {
           if (!editing) return;
           start(async () => {
-            const result = await updateZone({ id: editing.id, ...data });
+            const result = await withActionError(
+              () => updateZone({ id: editing.id, ...data }),
+              setMessage,
+              "Failed to save.",
+            );
+            if (!result) return;
             if ("ok" in result) {
               const name = editing.name;
               setEditing(null);

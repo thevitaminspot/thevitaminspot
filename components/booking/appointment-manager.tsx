@@ -71,6 +71,8 @@ export function AppointmentManager({
       }
       notifySuccess(`Moved to ${first.label}. We emailed you an updated booking.`);
       router.refresh();
+    } catch {
+      notifyError("Could not reschedule. Try again or WhatsApp us.");
     } finally {
       setReschedulePending(false);
     }

@@ -9,6 +9,7 @@ import {
   formTextarea,
 } from "@/components/ui/form-styles";
 import { notifyError, notifySuccess } from "@/lib/notify";
+import { withActionError } from "@/lib/server-action-error";
 
 export function ContactForm() {
   const [pending, startTransition] = useTransition();
@@ -20,12 +21,18 @@ export function ContactForm() {
     const data = new FormData(form);
 
     startTransition(async () => {
-      const result = await submitContact({
-        name: String(data.get("name") ?? ""),
-        email: String(data.get("email") ?? ""),
-        phone: String(data.get("phone") ?? ""),
-        message: String(data.get("message") ?? ""),
-      });
+      const result = await withActionError(
+        () =>
+          submitContact({
+            name: String(data.get("name") ?? ""),
+            email: String(data.get("email") ?? ""),
+            phone: String(data.get("phone") ?? ""),
+            message: String(data.get("message") ?? ""),
+          }),
+        notifyError,
+        "Could not send your note. Try again.",
+      );
+      if (!result) return;
 
       if (result.error) {
         notifyError(result.error);
