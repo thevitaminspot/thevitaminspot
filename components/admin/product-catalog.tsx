@@ -17,6 +17,7 @@ import { adminButtonPrimary } from "@/components/ui/form-styles";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 import { formatNaira } from "@/lib/money";
 import type { CatalogProduct } from "@/lib/catalog";
+import { withActionError } from "@/lib/server-action-error";
 
 export function ProductCatalog({
   products,
@@ -70,21 +71,35 @@ export function ProductCatalog({
     if (!deleting) return;
     const product = deleting;
     start(async () => {
-      const result = await deleteProduct(product.id);
-      if ("ok" in result) {
-        if (editingId === product.id) setEditingId(null);
-        setDeleting(null);
-        adminNotifySuccess(`${product.name} deleted.`);
-        router.refresh();
-      } else {
-        adminNotifyError(result.error || "Could not delete.");
+      try {
+        const result = await deleteProduct(product.id);
+        if ("ok" in result) {
+          if (editingId === product.id) setEditingId(null);
+          setDeleting(null);
+          adminNotifySuccess(
+            result.hidden
+              ? `${product.name} hidden — kept for past orders.`
+              : `${product.name} deleted.`,
+          );
+          if (result.hidden) setTab("hidden");
+          router.refresh();
+        } else {
+          adminNotifyError(result.error || "Could not delete.");
+        }
+      } catch {
+        adminNotifyError("Could not delete. Check your connection and try again.");
       }
     });
   }
 
   function handleToggleActive(product: CatalogProduct) {
     start(async () => {
-      const result = await toggleProductActive(product.id);
+      const result = await withActionError(
+        () => toggleProductActive(product.id),
+        adminNotifyError,
+        "Could not update visibility.",
+      );
+      if (!result) return;
       if ("error" in result && result.error) {
         adminNotifyError(result.error);
       } else {
@@ -99,7 +114,12 @@ export function ProductCatalog({
   function handleAdjustStock(product: CatalogProduct, newStock: number) {
     if (newStock < 0) return;
     start(async () => {
-      const result = await updateProductStock(product.id, newStock);
+      const result = await withActionError(
+        () => updateProductStock(product.id, newStock),
+        adminNotifyError,
+        "Could not update stock.",
+      );
+      if (!result) return;
       if ("error" in result && result.error) {
         adminNotifyError(result.error);
       } else {
@@ -351,7 +371,7 @@ export function ProductCatalog({
       <ConfirmModal
         open={Boolean(deleting)}
         title={deleting ? `Delete ${deleting.name}?` : "Delete product"}
-        description="This removes the product from the catalogue. Existing orders keep their line items."
+        description="If this product is on past orders it is hidden instead of removed, so order history stays intact."
         confirmLabel="Delete product"
         danger
         pending={pending}

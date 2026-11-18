@@ -1,3 +1,17 @@
+/** Run a server action and map thrown network/size errors into UI copy. */
+export async function withActionError<T>(
+  work: () => Promise<T>,
+  onError: (message: string) => void,
+  fallback = "Something went wrong. Try again.",
+): Promise<T | undefined> {
+  try {
+    return await work();
+  } catch (error) {
+    onError(serverActionErrorMessage(error, fallback));
+    return undefined;
+  }
+}
+
 /** Map thrown Server Action / network errors to copy for admins. */
 export function serverActionErrorMessage(error: unknown, fallback = "Something went wrong. Try again.") {
   const message =

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { seedCatalogue } from "@/actions/admin";
 import { adminButtonPrimary } from "@/components/ui/form-styles";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
+import { withActionError } from "@/lib/server-action-error";
 
 export function DatabaseSetup() {
   return (
@@ -30,7 +31,12 @@ export function SeedCatalogueButton({ label = "Load starter catalogue" }: { labe
         disabled={pending}
         onClick={() => {
           start(async () => {
-            const result = await seedCatalogue();
+            const result = await withActionError(
+              () => seedCatalogue(),
+              adminNotifyError,
+              "Could not load catalogue.",
+            );
+            if (!result) return;
             if ("error" in result && result.error) {
               adminNotifyError(result.error);
               return;

@@ -14,6 +14,7 @@ import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
 import { adminButtonPrimary } from "@/components/ui/form-styles";
 import { nairaLabel } from "@/lib/money";
 import type { CatalogInfusion } from "@/lib/catalog";
+import { withActionError } from "@/lib/server-action-error";
 
 export function InfusionCatalog({
   infusions,
@@ -65,7 +66,12 @@ export function InfusionCatalog({
 
   function restore(item: CatalogInfusion) {
     start(async () => {
-      const result = await toggleInfusionActive(item.id);
+      const result = await withActionError(
+        () => toggleInfusionActive(item.id),
+        adminNotifyError,
+        "Could not restore session.",
+      );
+      if (!result) return;
       if ("error" in result && result.error) {
         adminNotifyError(result.error);
       } else {

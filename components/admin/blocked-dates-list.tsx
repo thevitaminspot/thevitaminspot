@@ -8,6 +8,7 @@ import { AdminEmptyState } from "@/components/admin/ui";
 import { adminButtonDanger } from "@/components/ui/form-styles";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
+import { withActionError } from "@/lib/server-action-error";
 
 export type BlockedDateRow = {
   id: string;
@@ -81,8 +82,13 @@ export function AdminBlockedDatesList({ rows }: { rows: BlockedDateRow[] }) {
                   onClick={() => {
                     setPendingId(row.id);
                     startTransition(async () => {
-                      const result = await unblockDate(row.id);
+                      const result = await withActionError(
+                        () => unblockDate(row.id),
+                        adminNotifyError,
+                        "Could not unblock date.",
+                      );
                       setPendingId(null);
+                      if (!result) return;
                       if ("error" in result) {
                         adminNotifyError(result.error ?? "Could not unblock date.");
                         return;

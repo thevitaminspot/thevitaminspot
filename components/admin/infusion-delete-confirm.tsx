@@ -6,6 +6,7 @@ import { deleteInfusion } from "@/actions/admin";
 import { Modal } from "@/components/ui/modal";
 import { interactiveControl } from "@/components/ui/form-styles";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
+import { withActionError } from "@/lib/server-action-error";
 import { nairaLabel } from "@/lib/money";
 import type { CatalogInfusion } from "@/lib/catalog";
 
@@ -73,7 +74,12 @@ export function InfusionDeleteConfirm({
             disabled={pending}
             onClick={() => {
               start(async () => {
-                const result = await deleteInfusion(infusion.id);
+                const result = await withActionError(
+                  () => deleteInfusion(infusion.id),
+                  adminNotifyError,
+                  "Could not remove session.",
+                );
+                if (!result) return;
                 if ("error" in result && result.error) {
                   adminNotifyError(result.error);
                   return;

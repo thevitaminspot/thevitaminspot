@@ -9,6 +9,7 @@ import {
   adminFormLabel,
 } from "@/components/ui/form-styles";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
+import { withActionError } from "@/lib/server-action-error";
 
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const dayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -79,7 +80,12 @@ export function WeeklyHoursForm({ initialRules }: { initialRules: RuleInput[] })
           bufferMin,
         }));
         startTransition(async () => {
-          const result = await saveWeeklyHours(payload);
+          const result = await withActionError(
+            () => saveWeeklyHours(payload),
+            adminNotifyError,
+            "Could not save hours.",
+          );
+          if (!result) return;
           if ("error" in result) {
             adminNotifyError(result.error ?? "Could not save hours.");
             return;

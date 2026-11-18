@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createZone } from "@/actions/admin";
 import { adminFormField, adminFormLabel } from "@/components/ui/form-styles";
+import { withActionError } from "@/lib/server-action-error";
 
 export function AddZoneForm({
   onSuccess,
@@ -21,14 +22,29 @@ export function AddZoneForm({
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
-        const name = String(data.get("name") ?? "");
+        const name = String(data.get("name") ?? "").trim();
+        if (!name) {
+          onError?.("Enter a zone name.");
+          return;
+        }
+        const feeNaira = Number(data.get("fee") ?? 0);
+        if (!Number.isFinite(feeNaira) || feeNaira < 0) {
+          onError?.("Enter a valid fee in naira.");
+          return;
+        }
         start(async () => {
-          const result = await createZone({
-            name,
-            feeNaira: Number(data.get("fee") ?? 0),
-            eta: String(data.get("eta") ?? "Same day"),
-            isActive: data.get("active") === "on",
-          });
+          const result = await withActionError(
+            () =>
+              createZone({
+                name,
+                feeNaira,
+                eta: String(data.get("eta") ?? "Same day"),
+                isActive: data.get("active") === "on",
+              }),
+            (message) => onError?.(message),
+            "Failed to create zone.",
+          );
+          if (!result) return;
           if ("ok" in result) {
             router.refresh();
             onSuccess?.(name);

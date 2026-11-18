@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { interactiveControl } from "@/components/ui/form-styles";
 import { adminFormTextarea } from "@/components/ui/form-styles";
 import { adminNotifyError, adminNotifySuccess } from "@/lib/admin-toast";
+import { withActionError } from "@/lib/server-action-error";
 
 export function AppointmentCancelConfirm({
   open,
@@ -76,7 +77,12 @@ export function AppointmentCancelConfirm({
             disabled={pending}
             onClick={() => {
               start(async () => {
-                const result = await updateAppointmentStatus(id, "CANCELLED");
+                const result = await withActionError(
+                  () => updateAppointmentStatus(id, "CANCELLED"),
+                  adminNotifyError,
+                  "Could not cancel booking.",
+                );
+                if (!result) return;
                 if ("error" in result && result.error) {
                   adminNotifyError(result.error);
                   return;
