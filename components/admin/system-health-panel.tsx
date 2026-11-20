@@ -75,7 +75,10 @@ export function SystemHealthPanel() {
   }, []);
 
   useEffect(() => {
-    void run();
+    const timer = window.setTimeout(() => {
+      void run();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [run]);
 
   async function seedCatalogue() {
