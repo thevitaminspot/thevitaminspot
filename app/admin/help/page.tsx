@@ -18,9 +18,9 @@ const sections = [
     linkLabel: "Open Today",
     steps: [
       `Sign in with an admin email (listed in ADMIN_EMAIL, e.g. ${site.email}) or a Clerk user with role admin.`,
-      "Use the left menu for daily work (Orders, Bookings, Products, Messages). Open Settings for Infusions, Hours, and Delivery.",
+      "Use the left menu for daily work (Orders, Bookings, Products, Messages). Open Settings for Infusions, Hours, Delivery, and System.",
       "Today shows open orders, pending bookings, revenue, and low stock at a glance.",
-      "If the shop tables are empty, use Load starter catalogue on Today, then review Products, Infusions, and Delivery before going live.",
+      "If the shop tables are empty, use Load starter catalogue on Today or System, then review Products, Infusions, and Delivery before going live.",
     ],
   },
   {
@@ -124,6 +124,17 @@ const sections = [
       "Booking confirmed / cancelled / deposit paid → customer (+ admin as configured).",
       "Contact form → admin email and Messages archive.",
       `From address is your Resend domain; replies often go to ${site.email}. Check spam if something is missing.`,
+    ],
+  },
+  {
+    id: "system",
+    title: "System settings & tests",
+    href: "/admin/system",
+    linkLabel: "Open System",
+    steps: [
+      "Open System under Settings to confirm Clerk, Neon, Paystack, Resend, and Cloudinary.",
+      "Run front + back tests after deploy or env changes. Failures show which secret or table needs attention.",
+      "Use Seed starter catalogue if Products, Infusions, or Delivery zones are empty.",
     ],
   },
 ] as const;

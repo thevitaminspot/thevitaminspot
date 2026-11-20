@@ -124,6 +124,7 @@ export default async function AdminPage() {
         <AdminQuickAction href="/admin/availability">Block dates</AdminQuickAction>
         <AdminQuickAction href="/admin/products">Update products</AdminQuickAction>
         <AdminQuickAction href="/admin/messages">Read messages</AdminQuickAction>
+        <AdminQuickAction href="/admin/system">System tests</AdminQuickAction>
         <AdminQuickAction href="/admin/help">Help & guide</AdminQuickAction>
       </AdminQuickActions>
 
