@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AccountPaginationBars } from "@/components/account/account-pagination";
-import { AccountBookingCard } from "@/components/account/booking-card";
+import { AccountBookingsTable } from "@/components/account/booking-card";
 import {
   AccountLoadingFallback,
   AccountSignInPrompt,
@@ -119,11 +119,7 @@ async function BookingsContent({
             pageSize={PAGE_SIZE}
             itemLabel="bookings"
           >
-            <div>
-              {data.appointments.map((appointment) => (
-                <AccountBookingCard key={appointment.id} booking={appointment} />
-              ))}
-            </div>
+            <AccountBookingsTable bookings={data.appointments} />
           </AccountPaginationBars>
         )}
       </div>

@@ -104,22 +104,22 @@ export function CartDrawer() {
                     </p>
 
                     <div className="mt-3 flex items-center justify-between">
-                      <div className="flex items-center rounded-xl border border-deep/15 bg-white">
+                      <div className="inline-flex h-8 items-stretch overflow-hidden rounded-xl border border-deep/15 bg-white">
                         <button
                           type="button"
                           onClick={() => setQuantity(item.productId, item.quantity - 1)}
-                          className="flex size-7 items-center justify-center text-deep/70 transition hover:bg-tint"
+                          className="inline-flex w-8 shrink-0 items-center justify-center text-sm leading-none text-deep/70 transition hover:bg-tint"
                           aria-label="Decrease quantity"
                         >
                           −
                         </button>
-                        <span className="w-8 text-center text-xs font-semibold text-deep">
+                        <span className="inline-flex w-8 shrink-0 items-center justify-center text-xs font-semibold leading-none text-deep">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => setQuantity(item.productId, item.quantity + 1)}
-                          className="flex size-7 items-center justify-center text-deep/70 transition hover:bg-tint"
+                          className="inline-flex w-8 shrink-0 items-center justify-center text-sm leading-none text-deep/70 transition hover:bg-tint"
                           aria-label="Increase quantity"
                         >
                           +
