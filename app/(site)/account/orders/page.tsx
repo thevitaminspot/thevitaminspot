@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AccountPaginationBars } from "@/components/account/account-pagination";
-import { AccountOrderCard } from "@/components/account/order-card";
+import { AccountOrdersTable } from "@/components/account/order-card";
 import {
   AccountLoadingFallback,
   AccountSignInPrompt,
@@ -129,11 +129,7 @@ async function OrdersContent({
             pageSize={PAGE_SIZE}
             itemLabel="orders"
           >
-            <div>
-              {data.orders.map((order) => (
-                <AccountOrderCard key={order.id} order={order} />
-              ))}
-            </div>
+            <AccountOrdersTable orders={data.orders} />
           </AccountPaginationBars>
         )}
       </div>
