@@ -14,6 +14,7 @@ import {
   Mail,
   Menu,
   Package,
+  Settings2,
   ShoppingBag,
   Truck,
   Users,
@@ -46,6 +47,7 @@ const settingsLinks: NavLink[] = [
   { href: "/admin/infusions", label: "Infusions", icon: Droplets, group: "Settings" },
   { href: "/admin/availability", label: "Hours", icon: Clock3, group: "Settings" },
   { href: "/admin/zones", label: "Delivery", icon: Truck, group: "Settings" },
+  { href: "/admin/system", label: "System", icon: Settings2, group: "Settings" },
 ];
 
 export const adminNavLinks = [...primaryLinks, ...settingsLinks];
