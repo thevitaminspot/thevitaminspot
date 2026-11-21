@@ -69,7 +69,6 @@ export async function listSlots(
   const taken = prisma
     ? await prisma.appointment.findMany({
         where: {
-          status: { in: ["PENDING", "CONFIRMED"] },
           startsAt: {
             gte: new Date(`${dateIso}T00:00:00+01:00`),
             lt: new Date(`${dateIso}T23:59:59+01:00`),
@@ -77,6 +76,18 @@ export async function listSlots(
           ...(options?.excludeAppointmentId
             ? { id: { not: options.excludeAppointmentId } }
             : {}),
+          // Confirmed bookings always hold the chair. Pending holds only while
+          // the booking-fee payment is still in flight — failed fees do not.
+          OR: [
+            { status: "CONFIRMED" },
+            {
+              status: "PENDING",
+              OR: [
+                { payment: null },
+                { payment: { status: { in: ["PENDING", "PAID"] } } },
+              ],
+            },
+          ],
         },
       })
     : [];

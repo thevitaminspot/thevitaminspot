@@ -313,25 +313,28 @@ export function BookingFlow({
     if (paystack.busy) return;
     const storageKey = `tvs-booking:${drip.slug}:${slot.start}`;
     const savedToken = readBookingToken(storageKey);
-    const result = await paystack.start(
-      () =>
-        savedToken
-          ? resumeAppointmentDeposit(savedToken)
-          : createBooking({
-              slug: drip.slug,
-              start: slot.start,
-              ...parsed.data,
-              payDeposit: true,
-            }),
+    const book = () =>
+      createBooking({
+        slug: drip.slug,
+        start: slot.start,
+        ...parsed.data,
+        payDeposit: true,
+      });
+    let result = await paystack.start(
+      () => (savedToken ? resumeAppointmentDeposit(savedToken) : book()),
       {
         cancel: "stay",
         cancelMessage: "Payment cancelled. Your booking details are still here when you’re ready.",
       },
     );
-    if (result?.token) writeBookingToken(storageKey, result.token);
-    if (result?.error && savedToken && /not found|cancelled/i.test(result.error)) {
+    if (result?.error && savedToken && /not found|cancelled|already taken place/i.test(result.error)) {
       clearBookingToken(storageKey);
+      result = await paystack.start(book, {
+        cancel: "stay",
+        cancelMessage: "Payment cancelled. Your booking details are still here when you’re ready.",
+      });
     }
+    if (result?.token) writeBookingToken(storageKey, result.token);
   }
 
   return (

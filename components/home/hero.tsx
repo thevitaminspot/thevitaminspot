@@ -10,8 +10,8 @@ export function Hero({
   const lead = packs[0];
 
   return (
-    <section className="hero-stage flex h-[calc(100dvh-var(--site-header-height))] min-h-[calc(100dvh-var(--site-header-height))] max-h-[calc(100dvh-var(--site-header-height))] flex-col text-cream 2xl:h-auto 2xl:min-h-0 2xl:max-h-none">
-      <div className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 content-center items-start gap-x-10 gap-y-6 px-5 py-[clamp(0.85rem,2.2vh,2.25rem)] md:px-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,26rem)] lg:content-center">
+    <section className="hero-stage flex h-[calc(100dvh-var(--site-header-height))] min-h-[calc(100dvh-var(--site-header-height))] max-h-[calc(100dvh-var(--site-header-height))] flex-col overflow-hidden text-cream 2xl:h-auto 2xl:min-h-0 2xl:max-h-none 2xl:overflow-visible">
+      <div className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 grid-rows-[auto_minmax(0,1fr)] items-center gap-x-10 gap-y-[clamp(0.5rem,1.4vh,1.25rem)] px-5 py-[clamp(0.65rem,1.8vh,2rem)] md:px-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-rows-1 lg:items-stretch">
         <div className="min-w-0 max-w-2xl self-center">
           <h1 className="animate-hero-in font-display text-[clamp(2.55rem,5.6vw,4.75rem)] leading-[0.98] tracking-[-0.025em]">
             Wellness, served beautifully.
@@ -32,8 +32,9 @@ export function Hero({
           </div>
         </div>
 
-        <div className="animate-hero-in hero-delay-2 relative mx-auto w-full max-w-[22rem] sm:max-w-[24rem] lg:mx-0 lg:w-full lg:max-w-none">
-          <div className="relative aspect-[3/4] w-full">
+        <div className="animate-hero-in hero-delay-2 relative flex min-h-0 w-full items-center justify-center self-stretch lg:justify-end">
+          {/* Height-first: arch never exceeds the media slot, so the strip cannot clip it. */}
+          <div className="relative mx-auto aspect-[3/4] h-full max-h-full w-auto max-w-full lg:mx-0 lg:max-h-[min(100%,28rem)] xl:max-h-[min(100%,30rem)] 2xl:h-[28rem] 2xl:max-h-[28rem]">
             <div className="hero-arch absolute inset-0 overflow-hidden border border-cream/15 shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
               <Image
                 src="/images/lifestyle/table-02.jpg"
@@ -41,14 +42,14 @@ export function Hero({
                 fill
                 priority
                 className="object-cover object-[center_58%]"
-                sizes="(min-width: 1024px) 416px, 90vw"
+                sizes="(min-width: 1024px) 420px, 85vw"
               />
               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-deep/65 to-transparent sm:h-24" />
             </div>
             {lead?.image ? (
               <Link
                 href={lead.href}
-                className="animate-hero-in hero-delay-4 absolute bottom-0 left-0 z-10 flex w-[min(100%,13rem)] items-center gap-2 rounded-2xl border border-cream/20 bg-cream p-1.5 text-deep shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus-visible:outline focus-visible:outline-offset-4 focus-visible:outline-cream sm:-left-5 sm:w-[14rem] sm:gap-2.5 sm:p-2"
+                className="animate-hero-in hero-delay-4 absolute bottom-0 left-0 z-10 flex w-[min(100%,13rem)] items-center gap-2 rounded-2xl border border-cream/20 bg-cream p-1.5 text-deep shadow-[0_10px_24px_rgba(0,0,0,0.18)] focus-visible:outline focus-visible:outline-offset-4 focus-visible:outline-cream sm:-left-4 sm:w-[14rem] sm:gap-2.5 sm:p-2"
               >
                 <Image
                   src={lead.image}

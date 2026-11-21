@@ -137,9 +137,18 @@ export async function createBooking(input: {
 
     const clash = await tx.appointment.findFirst({
       where: {
-        status: { in: ["PENDING", "CONFIRMED"] },
         startsAt: { lt: endsAt },
         endsAt: { gt: startsAt },
+        OR: [
+          { status: "CONFIRMED" },
+          {
+            status: "PENDING",
+            OR: [
+              { payment: null },
+              { payment: { status: { in: ["PENDING", "PAID"] } } },
+            ],
+          },
+        ],
       },
     });
     if (clash) {
@@ -220,26 +229,7 @@ export async function createBooking(input: {
       },
     });
 
-    await notifyBookingReceived({
-      to: details.data.email,
-      name: details.data.name,
-      serviceName: drip.name,
-      startsAt,
-      manageUrl,
-      deposit: drip.deposit,
-      sessionPrice: drip.price,
-    }).catch((error) => {
-      console.error("[booking:create] customer email failed", error);
-    });
-
-    await notifyAdminNewBooking({
-      name: details.data.name,
-      serviceName: drip.name,
-      startsAt,
-      deposit: drip.deposit,
-    }).catch((error) => {
-      console.error("[booking:create] admin email failed", error);
-    });
+    // Confirmation emails go out only after the booking fee settles as PAID.
 
     return {
       token,
@@ -483,9 +473,18 @@ export async function updateAppointment(token: string, start: string) {
       const clash = await tx.appointment.findFirst({
         where: {
           id: { not: appointment.id },
-          status: { in: ["PENDING", "CONFIRMED"] },
           startsAt: { lt: endsAt },
           endsAt: { gt: startsAt },
+          OR: [
+            { status: "CONFIRMED" },
+            {
+              status: "PENDING",
+              OR: [
+                { payment: null },
+                { payment: { status: { in: ["PENDING", "PAID"] } } },
+              ],
+            },
+          ],
         },
       });
       if (clash) throw new Error("TAKEN");

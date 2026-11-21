@@ -450,6 +450,15 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
   if (!allowed[existing.status]?.includes(status)) {
     return { error: "That status change is not allowed." };
   }
+  if (
+    status === "CONFIRMED" &&
+    existing.service.deposit > 0 &&
+    existing.payment?.status !== "PAID"
+  ) {
+    return {
+      error: "Booking fee must be paid before this booking can be confirmed.",
+    };
+  }
   const manageUrl = `${site.url}/appointments/${existing.accessToken}`;
   const depositPaid =
     existing.payment?.status === "PAID" ? existing.payment.amount : undefined;

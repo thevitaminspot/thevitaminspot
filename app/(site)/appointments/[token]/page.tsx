@@ -135,11 +135,22 @@ export default async function AppointmentPage({
           Checking your payment… this page will update on its own.
         </p>
       ) : null}
-      {paymentNotCompleted ? (
+      {paymentNotCompleted && appointment.status !== "CANCELLED" ? (
         <p className={`${surfaceMuted} mt-4 px-4 py-3 text-sm text-deep/70`}>
           {paymentCancelled
             ? "Payment was cancelled. Pay the booking fee below to hold this time."
             : "Payment was not completed. Pay the booking fee below to hold this time."}
+        </p>
+      ) : null}
+      {appointment.status === "CANCELLED" &&
+      typeof reference === "string" &&
+      paystackReturn.outcome === "failed" ? (
+        <p className={`${surfaceMuted} mt-4 px-4 py-3 text-sm text-deep/70`}>
+          The booking fee was not paid, so this booking was released.{" "}
+          <Link href="/book" className="font-medium text-deep underline underline-offset-2">
+            Book again
+          </Link>{" "}
+          when you’re ready.
         </p>
       ) : null}
       <p className="mt-6 leading-8 text-deep">
