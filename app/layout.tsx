@@ -20,12 +20,16 @@ const display = localFont({
   ],
   variable: "--font-display",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
+  fallback: ["Georgia", "Times New Roman", "serif"],
 });
 
 const wordmark = localFont({
   src: [{ path: "./fonts/cormorant-500.woff2", weight: "500", style: "normal" }],
   variable: "--font-wordmark",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
+  fallback: ["Palatino", "Georgia", "serif"],
 });
 
 const sans = localFont({
@@ -36,6 +40,8 @@ const sans = localFont({
   ],
   variable: "--font-sans",
   display: "swap",
+  adjustFontFallback: "Arial",
+  fallback: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
 });
 
 export const metadata: Metadata = {
