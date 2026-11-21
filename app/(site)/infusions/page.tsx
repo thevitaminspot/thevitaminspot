@@ -22,20 +22,20 @@ export default async function InfusionsPage() {
           <BrandWordmark className="text-2xl text-deep" />
           <span className="text-sm"> · Abuja</span>
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-deep/55">
+        <p className="mt-2 text-sm leading-relaxed text-deep/65">
           Pick your drip, choose a time, and pay the booking fee online. Most sessions take about an hour.
         </p>
       </div>
       <div className={`${pageNarrow} mt-8`}>
         <Suspense
           fallback={
-            <p className="py-12 text-center text-sm text-deep/50">Loading…</p>
+            <p className="py-12 text-center text-sm text-deep/60">Loading…</p>
           }
         >
           <InfusionBooking drips={drips} />
         </Suspense>
       </div>
-      <p className={`${pageNarrow} mt-8 text-center text-xs leading-relaxed text-deep/45`}>
+      <p className={`${pageNarrow} mt-8 text-center text-xs leading-relaxed text-deep/60`}>
         Tell us if you’re pregnant, on medication, or have allergies. Wellness care only — not
         emergency treatment.
       </p>

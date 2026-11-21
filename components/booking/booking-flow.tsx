@@ -124,7 +124,7 @@ function DripDetails({ item }: { item: CatalogInfusion }) {
         </ul>
       ) : null}
       {item.ingredients.length > 0 ? (
-        <p className="mt-3 text-xs text-deep/50">Contains: {item.ingredients.join(", ")}</p>
+        <p className="mt-3 text-xs text-deep/60">Contains: {item.ingredients.join(", ")}</p>
       ) : null}
     </div>
   );
@@ -141,7 +141,7 @@ function ServiceList({
 }) {
   return (
     <div className={surfaceCard}>
-      <p className="text-sm leading-relaxed text-deep/60">
+      <p className="text-sm leading-relaxed text-deep/65">
         Select a drip below. Session price and booking fee are shown for each option.
       </p>
       <ul className="mt-5 space-y-3" role="listbox" aria-label="IV drips">
@@ -179,10 +179,10 @@ function ServiceList({
                         {nairaLabel(item.price)}
                       </span>
                     </span>
-                    <span className="mt-1 block text-xs text-deep/50">
+                    <span className="mt-1 block text-xs text-deep/60">
                       {item.durationMin} min · booking fee {nairaLabel(item.deposit)}
                     </span>
-                    <span className="mt-2 block text-sm leading-snug text-deep/65">{item.tagline}</span>
+                    <span className="mt-2 block text-sm leading-snug text-deep/70">{item.tagline}</span>
                   </span>
                 </div>
               </button>
@@ -196,7 +196,7 @@ function ServiceList({
         })}
       </ul>
       {!slug ? (
-        <p className="mt-5 text-center text-sm text-deep/50">Choose a drip, then tap Continue.</p>
+        <p className="mt-5 text-center text-sm text-deep/60">Choose a drip, then tap Continue.</p>
       ) : null}
     </div>
   );
@@ -366,7 +366,7 @@ export function BookingFlow({
         <div className="min-w-0">
           {step === 0 ? (
             drips.length === 0 ? (
-              <p className="text-sm text-deep/60">No sessions available right now.</p>
+              <p className="text-sm text-deep/65">No sessions available right now.</p>
             ) : (
               <ServiceList drips={drips} slug={slug} onChoose={(next) => void choose(next)} />
             )
@@ -484,7 +484,7 @@ export function BookingFlow({
                   <dd className="text-right font-medium text-deep">{drip.name}</dd>
                 </div>
                 <div className="flex justify-between gap-4 py-3">
-                  <dt className="text-deep/65">Date & time</dt>
+                  <dt className="text-deep/65">Date &amp; time</dt>
                   <dd className="text-right font-medium text-deep">{slot.label}</dd>
                 </div>
                 <div className="flex justify-between gap-4 py-3">
@@ -524,7 +524,6 @@ export function BookingFlow({
               </dl>
             </div>
           ) : null}
-
         </div>
 
         <footer className="mt-8 space-y-2">
@@ -610,7 +609,7 @@ function ClerkBookingNote({
 
 function GuestBookingCopy() {
   return (
-    <p className="text-xs text-deep/60">
+    <p className="text-xs text-deep/65">
       No account required.{" "}
       <Link href="/login" className="font-medium text-deep underline-offset-2 hover:underline">
         Sign in

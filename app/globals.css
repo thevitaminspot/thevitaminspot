@@ -20,7 +20,14 @@ html {
 body {
   background: var(--color-cream);
   color: var(--color-ink);
-  font-family: var(--font-sans), sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1;
+  text-rendering: optimizeLegibility;
+}
+
+strong,
+b {
+  font-weight: 600;
 }
 
 ::selection {
@@ -29,13 +36,17 @@ body {
 }
 
 .font-display {
-  font-family: var(--font-display), serif;
+  font-family: var(--font-display), Georgia, serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.022em;
+  font-feature-settings: "kern" 1, "liga" 1;
 }
 
 .font-wordmark {
   font-family: var(--font-wordmark), Palatino, "Palatino Linotype", Georgia, serif;
   font-weight: 500;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
+  font-feature-settings: "kern" 1, "liga" 1;
 }
 
 .hairline {

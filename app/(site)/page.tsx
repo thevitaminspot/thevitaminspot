@@ -1,7 +1,7 @@
 import { Faq } from "@/components/home/faq";
 import { ProductStories, WalkIn } from "@/components/home/home-sections";
 import { Hero } from "@/components/home/hero";
-import { listFeaturedProducts } from "@/lib/data";
+import { listFeaturedProducts, listInfusions } from "@/lib/data";
 import { faqJsonLd, homeFaqs } from "@/lib/faqs";
 import { site } from "@/lib/site";
 
@@ -17,7 +17,7 @@ function nairaLabel(kobo: number) {
 }
 
 export default async function HomePage() {
-  const featured = await listFeaturedProducts();
+  const [featured, drips] = await Promise.all([listFeaturedProducts(), listInfusions()]);
 
   return (
     <main>
@@ -36,7 +36,7 @@ export default async function HomePage() {
         }))}
       />
       <ProductStories products={featured} />
-      <WalkIn />
+      <WalkIn drips={drips} />
       <Faq />
     </main>
   );
