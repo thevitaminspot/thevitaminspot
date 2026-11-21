@@ -2,20 +2,30 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, Search, ShoppingBag, X } from "lucide-react";
+import {
+  ArrowRight,
+  MapPin,
+  Menu,
+  MessageCircle,
+  Phone,
+  Search,
+  ShoppingBag,
+  X,
+} from "lucide-react";
 import { AccountButton } from "@/components/layout/account-button";
 import { MobileAccountBar } from "@/components/layout/mobile-account-bar";
 import { BrandWordmark } from "@/components/brand/wordmark";
 import { brand } from "@/lib/brand";
+import { site, whatsappHref } from "@/lib/site";
 import { useCartStore } from "@/stores/cart-store";
 import { useUiStore } from "@/stores/ui-store";
 
 const links = [
-  { href: "/shop", label: "Shop", description: "Vitamins & packs" },
-  { href: "/infusions", label: "Infusions", description: "Book an IV drip" },
-  { href: "/contact", label: "Contact", description: "Message the shop" },
+  { href: "/shop", label: "Shop", description: "Daily vitamins & packs" },
+  { href: "/infusions", label: "Infusions", description: "Nurse-led IV drips" },
+  { href: "/contact", label: "Contact", description: "Visit or message us" },
 ];
 
 function isCurrent(href: string, pathname: string) {
@@ -26,35 +36,13 @@ function MobileNav({
   open,
   pathname,
   onClose,
-  bagCount,
-  onOpenBag,
 }: {
   open: boolean;
   pathname: string;
   onClose: () => void;
-  bagCount: number;
-  onOpenBag: () => void;
 }) {
-  const [mounted, setMounted] = useState(open);
-  const [leaving, setLeaving] = useState(false);
-
   useEffect(() => {
-    if (open) {
-      setMounted(true);
-      setLeaving(false);
-      return;
-    }
-    if (!mounted) return;
-    setLeaving(true);
-    const timer = window.setTimeout(() => {
-      setMounted(false);
-      setLeaving(false);
-    }, 280);
-    return () => window.clearTimeout(timer);
-  }, [open, mounted]);
-
-  useEffect(() => {
-    if (!mounted) return;
+    if (!open) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -67,119 +55,175 @@ function MobileNav({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [mounted, onClose]);
+  }, [open, onClose]);
 
-  if (!mounted) return null;
-
-  const animOut = leaving || !open;
+  const onInfusionsPage = isCurrent("/infusions", pathname);
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+    <div
+      className={`fixed inset-0 z-50 md:hidden ${
+        open ? "pointer-events-auto visible" : "pointer-events-none invisible"
+      }`}
+      role="dialog"
+      aria-modal={open ? "true" : undefined}
+      aria-hidden={!open}
+      aria-label="Menu"
+    >
       <button
         type="button"
-        className={`absolute inset-0 bg-ink/50 backdrop-blur-[3px] ${
-          animOut ? "animate-backdrop-out" : "animate-backdrop-in"
+        tabIndex={open ? 0 : -1}
+        className={`absolute inset-0 bg-ink/45 backdrop-blur-[3px] transition-opacity duration-300 ${
+          open ? "opacity-100" : "opacity-0"
         }`}
         aria-label="Close menu"
         onClick={onClose}
       />
 
       <nav
-        className={`absolute top-0 right-0 flex h-full w-[min(100%,22rem)] flex-col border-l border-deep/10 bg-gradient-to-b from-white via-cream to-cream shadow-[-12px_0_40px_rgba(8,21,15,0.12)] ${
-          animOut ? "animate-drawer-out" : "animate-drawer-in"
+        className={`absolute top-0 right-0 flex h-full w-[min(100%,21.5rem)] flex-col border-l border-deep/10 bg-cream shadow-[-16px_0_44px_rgba(8,21,15,0.16)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          open ? "translate-x-0" : "translate-x-full"
         }`}
         aria-label="Mobile"
       >
-        <div className="relative flex min-h-[4.25rem] items-center justify-between border-b border-deep/8 px-5 py-4">
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent"
-            aria-hidden
-          />
-          <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-h-16 items-center justify-between gap-3 border-b border-deep/10 bg-white/60 px-5 py-3.5">
+          <Link
+            href="/"
+            onClick={onClose}
+            tabIndex={open ? 0 : -1}
+            className="flex min-w-0 items-center gap-2.5"
+          >
             <Image
               src={brand.mark.src}
               alt=""
-              width={40}
-              height={40}
-              className="size-10 object-contain"
+              width={38}
+              height={38}
+              sizes="38px"
+              className="size-9 shrink-0 object-contain"
               aria-hidden
             />
-            <BrandWordmark className="truncate text-[1.35rem] leading-none text-deep" />
-          </div>
+            <BrandWordmark className="truncate text-[1.4rem] leading-none text-deep" />
+          </Link>
           <button
             type="button"
             onClick={onClose}
+            tabIndex={open ? 0 : -1}
             aria-label="Close menu"
-            className="nav-icon grid size-11 place-items-center rounded-full text-deep/70 hover:text-deep"
+            className="nav-icon grid size-10 shrink-0 place-items-center rounded-full text-deep/75 hover:text-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep"
           >
-            <X className="size-5" strokeWidth={1.35} />
+            <X className="size-5" strokeWidth={1.5} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5">
-          <div className="mb-5 grid grid-cols-2 gap-2.5">
-            <Link
-              href="/shop#shop-search"
-              onClick={onClose}
-              className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl border border-deep/10 bg-white/80 px-3 text-[11px] font-medium tracking-[0.14em] text-deep uppercase shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition hover:border-deep/20 hover:bg-white"
-            >
-              <Search className="size-4" strokeWidth={1.35} aria-hidden />
-              Search
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onOpenBag();
-              }}
-              className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl border border-deep/10 bg-white/80 px-3 text-[11px] font-medium tracking-[0.14em] text-deep uppercase shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition hover:border-deep/20 hover:bg-white"
-            >
-              <ShoppingBag className="size-4" strokeWidth={1.35} aria-hidden />
-              Bag
-              {bagCount > 0 ? (
-                <span className="rounded-full bg-sage/90 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-deep">
-                  {bagCount > 9 ? "9+" : bagCount}
-                </span>
-              ) : null}
-            </button>
-          </div>
+        <div className="flex flex-1 flex-col overflow-y-auto overscroll-contain px-5 pt-6 pb-5">
+          <p className="text-[10px] font-medium tracking-[0.22em] text-deep/55 uppercase">
+            Explore
+          </p>
 
-          <ul className="space-y-2">
+          <ul className="mt-3 divide-y divide-deep/10 border-y border-deep/10">
             {links.map((link, index) => {
               const current = isCurrent(link.href, pathname);
               return (
-                <li
-                  key={link.href}
-                  className={animOut ? undefined : "animate-menu-item"}
-                  style={animOut ? undefined : { animationDelay: `${80 + index * 55}ms` }}
-                >
+                <li key={link.href}>
                   <Link
                     href={link.href}
                     onClick={onClose}
+                    tabIndex={open ? 0 : -1}
                     aria-current={current ? "page" : undefined}
-                    className={`group flex flex-col rounded-2xl px-4 py-4 transition duration-200 ${
-                      current
-                        ? "bg-deep text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
-                        : "text-deep hover:bg-white/80 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]"
+                    className={`group flex items-center justify-between gap-3 py-4 transition ${
+                      current ? "text-deep" : "text-deep/85 hover:text-deep"
                     }`}
                   >
-                    <span className="text-[0.95rem] font-medium tracking-wide">{link.label}</span>
-                    <span
-                      className={`mt-1 text-xs transition ${
-                        current ? "text-cream/80" : "text-deep/65 group-hover:text-deep/80"
+                    <div className="flex min-w-0 items-baseline gap-3">
+                      <span
+                        className={`font-sans text-[11px] tabular-nums ${
+                          current ? "font-semibold text-deep" : "text-deep/45"
+                        }`}
+                      >
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <span className="flex items-center gap-2">
+                          <span className="font-display text-[1.6rem] leading-none tracking-[-0.02em]">
+                            {link.label}
+                          </span>
+                          {current ? (
+                            <span
+                              className="size-1.5 rounded-full bg-deep"
+                              aria-hidden
+                            />
+                          ) : null}
+                        </span>
+                        <span className="mt-1.5 block text-xs text-deep/65">
+                          {link.description}
+                        </span>
+                      </div>
+                    </div>
+                    <ArrowRight
+                      className={`size-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 ${
+                        current ? "text-deep" : "text-deep/40 group-hover:text-deep"
                       }`}
-                    >
-                      {link.description}
-                    </span>
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
                   </Link>
                 </li>
               );
             })}
           </ul>
+
+          <div className="mt-5">
+            <Link
+              href={onInfusionsPage ? "/shop" : "/infusions"}
+              onClick={onClose}
+              tabIndex={open ? 0 : -1}
+              className="btn-primary flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] uppercase"
+            >
+              {onInfusionsPage ? "Shop vitamin packs" : "Book an IV drip"}
+              <ArrowRight className="size-3.5" strokeWidth={1.75} aria-hidden />
+            </Link>
+          </div>
+
+          <div className="mt-auto pt-6">
+            <div className="rounded-2xl border border-deep/10 bg-white/70 px-4 py-3.5">
+              <p className="text-[10px] font-medium tracking-[0.2em] text-deep/55 uppercase">
+                Abuja Lounge
+              </p>
+              <p className="mt-1.5 flex items-start gap-2 text-xs leading-relaxed text-deep/80">
+                <MapPin
+                  className="mt-0.5 size-3.5 shrink-0 text-deep/55"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
+                <span>
+                  Theodak Plaza, {site.address.area}, {site.address.city}
+                </span>
+              </p>
+              <div className="mt-3 flex items-center gap-2 border-t border-deep/8 pt-3">
+                <a
+                  href={whatsappHref("Hi The Vitamin Spot, I'd like to ask about your packs or IV drips.")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  tabIndex={open ? 0 : -1}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-deep/15 bg-cream/70 px-3 py-2 text-[11px] font-medium tracking-[0.12em] text-deep uppercase transition hover:border-deep/30 hover:bg-white"
+                >
+                  <MessageCircle className="size-3.5" strokeWidth={1.5} aria-hidden />
+                  WhatsApp
+                </a>
+                <a
+                  href={`tel:${site.phoneHref}`}
+                  tabIndex={open ? 0 : -1}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-deep/15 bg-cream/70 px-3 py-2 text-[11px] font-medium tracking-[0.12em] text-deep uppercase transition hover:border-deep/30 hover:bg-white"
+                >
+                  <Phone className="size-3.5" strokeWidth={1.5} aria-hidden />
+                  Call
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="border-t border-deep/8 bg-white/50 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
-          <MobileAccountBar onNavigate={onClose} />
+        <div className="border-t border-deep/10 bg-white/75 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+          {open ? <MobileAccountBar onNavigate={onClose} /> : <div className="h-11" />}
         </div>
       </nav>
     </div>
@@ -208,10 +252,10 @@ export function Header() {
   return (
     <>
       <header className="site-header sticky top-0 z-40">
-        <div className="mx-auto flex min-h-14 max-w-6xl items-center justify-between gap-2 px-3.5 py-3 sm:min-h-[3.75rem] sm:gap-3 sm:px-5 md:min-h-0 md:px-8 md:py-3.5">
+        <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-5 md:min-h-[4.5rem] md:px-8 md:py-3.5">
           <Link
             href="/"
-            className="flex min-w-0 flex-1 items-center gap-2 transition active:scale-[0.99] sm:gap-2.5 md:flex-none"
+            className="flex min-w-0 flex-1 items-center gap-2.5 transition active:scale-[0.99] md:flex-none"
             onClick={closeNav}
           >
             <Image
@@ -220,10 +264,10 @@ export function Header() {
               width={44}
               height={44}
               sizes="44px"
-              className="size-9 shrink-0 object-contain sm:size-10 md:size-11"
+              className="size-10 shrink-0 object-contain md:size-11"
               aria-hidden
             />
-            <BrandWordmark className="min-w-0 truncate text-[1.05rem] leading-none tracking-[-0.03em] sm:text-[1.4rem] sm:tracking-[-0.02em] md:text-[1.65rem]" />
+            <BrandWordmark className="min-w-0 truncate text-[1.42rem] leading-none tracking-[-0.015em] text-deep sm:text-[1.55rem] md:text-[1.7rem]" />
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
@@ -250,28 +294,30 @@ export function Header() {
             })}
           </nav>
 
-          <div className="flex shrink-0 items-center gap-0.5">
+          <div className="flex shrink-0 items-center gap-1 md:gap-0.5">
             <Link
               href="/shop#shop-search"
-              className="nav-icon grid size-10 place-items-center rounded-full text-deep focus-visible:outline focus-visible:outline-offset-4 sm:size-11"
+              className="nav-icon hidden size-11 place-items-center rounded-full text-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep md:grid"
               aria-label="Search packs"
               onClick={closeNav}
             >
-              <Search className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={1.35} />
+              <Search className="size-[1.15rem]" strokeWidth={1.35} />
             </Link>
-            <AccountButton className="text-deep" />
+            <div className="hidden md:block">
+              <AccountButton className="text-deep" />
+            </div>
             <button
               type="button"
               onClick={() => {
                 closeNav();
                 openCart();
               }}
-              className="nav-icon relative grid size-10 place-items-center rounded-full text-deep focus-visible:outline focus-visible:outline-offset-4 sm:size-11"
+              className="nav-icon relative grid size-10 place-items-center rounded-full text-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep sm:size-11"
               aria-label={mounted && count > 0 ? `Open bag, ${count} items` : "Open bag"}
             >
-              <ShoppingBag className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={1.35} />
+              <ShoppingBag className="size-[1.15rem]" strokeWidth={1.45} />
               {mounted && count > 0 ? (
-                <span className="absolute top-0 right-0 flex h-4 min-w-4 translate-x-0.5 -translate-y-0.5 items-center justify-center rounded-full bg-sage px-1 text-[9px] font-semibold leading-none text-deep ring-2 ring-cream">
+                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sage px-1 text-[9px] font-semibold leading-none text-deep ring-2 ring-cream">
                   {count > 9 ? "9+" : count}
                 </span>
               ) : null}
@@ -284,22 +330,16 @@ export function Header() {
               aria-expanded={isNavOpen}
             >
               {isNavOpen ? (
-                <X className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={1.35} />
+                <X className="size-5" strokeWidth={1.5} />
               ) : (
-                <Menu className="size-[1.05rem] sm:size-[1.15rem]" strokeWidth={1.35} />
+                <Menu className="size-5" strokeWidth={1.5} />
               )}
             </button>
           </div>
         </div>
       </header>
 
-      <MobileNav
-        open={isNavOpen}
-        pathname={pathname}
-        onClose={closeNav}
-        bagCount={mounted ? count : 0}
-        onOpenBag={openCart}
-      />
+      <MobileNav open={isNavOpen} pathname={pathname} onClose={closeNav} />
     </>
   );
 }

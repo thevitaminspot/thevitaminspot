@@ -37,23 +37,34 @@ export async function syncDeliveryZones() {
   }
 }
 
+const FALLBACK_CACHE_LIFE = { stale: 300, revalidate: 15, expire: 300 } as const;
+
 /** Cached checkout zone list — avoids live DB writes/counts on every checkout page load. */
 export async function listCheckoutZones(): Promise<CatalogZone[]> {
   "use cache";
   cacheTag(CACHE_TAGS.zones);
-  cacheLife("hours");
 
   const prisma = await tryPrisma();
-  if (!prisma) return deliveryZones;
+  if (!prisma) {
+    cacheLife("hours");
+    return deliveryZones;
+  }
 
-  await syncDeliveryZones();
+  try {
+    await syncDeliveryZones();
 
-  const slugs = deliveryZones.map((zone) => zone.slug);
-  const rows = await prisma.deliveryZone.findMany({
-    where: { isActive: true, slug: { in: slugs } },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, slug: true, fee: true, eta: true },
-  });
+    const slugs = deliveryZones.map((zone) => zone.slug);
+    const rows = await prisma.deliveryZone.findMany({
+      where: { isActive: true, slug: { in: slugs } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, slug: true, fee: true, eta: true },
+    });
 
-  return rows.length === 0 ? deliveryZones : rows;
+    cacheLife("hours");
+    return rows.length === 0 ? deliveryZones : rows;
+  } catch {
+    cacheLife(FALLBACK_CACHE_LIFE);
+    console.warn("[zones:checkout] Neon unreachable; using static fallback zones.");
+    return deliveryZones;
+  }
 }

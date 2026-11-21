@@ -31,12 +31,20 @@ export function MobileAccountBar({ onNavigate }: { onNavigate?: () => void }) {
       <Link
         href="/login"
         onClick={onNavigate}
-        className="flex min-h-12 items-center gap-3 rounded-2xl border border-deep/10 bg-white/70 px-3.5 py-2.5 text-sm font-medium text-deep transition hover:border-deep/20"
+        className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-1 py-1 text-sm font-medium text-deep transition hover:text-deep/80"
       >
-        <span className="grid size-10 place-items-center rounded-full bg-deep/[0.06] text-deep">
-          <AccountIcon />
+        <span className="flex items-center gap-3">
+          <span className="grid size-9 place-items-center rounded-full bg-deep/[0.06] text-deep">
+            <AccountIcon className="size-[1.125rem]" />
+          </span>
+          <span>
+            <span className="block text-sm font-medium text-deep">Sign in</span>
+            <span className="block text-xs font-normal text-deep/65">Orders &amp; bookings</span>
+          </span>
         </span>
-        Sign in
+        <span className="text-[11px] font-medium tracking-[0.14em] text-deep/70 uppercase">
+          Account →
+        </span>
       </Link>
     );
   }
@@ -47,23 +55,31 @@ export function MobileAccountBar({ onNavigate }: { onNavigate?: () => void }) {
         <Link
           href="/login"
           onClick={onNavigate}
-          className="flex min-h-12 items-center gap-3 rounded-2xl border border-deep/10 bg-white/70 px-3.5 py-2.5 text-sm font-medium text-deep transition hover:border-deep/20"
+          className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-1 py-1 text-sm font-medium text-deep transition hover:text-deep/80"
         >
-          <span className="grid size-10 place-items-center rounded-full bg-deep/[0.06] text-deep">
-            <AccountIcon />
+          <span className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-full bg-deep/[0.06] text-deep">
+              <AccountIcon className="size-[1.125rem]" />
+            </span>
+            <span>
+              <span className="block text-sm font-medium text-deep">Sign in</span>
+              <span className="block text-xs font-normal text-deep/65">Orders &amp; bookings</span>
+            </span>
           </span>
-          Sign in
+          <span className="text-[11px] font-medium tracking-[0.14em] text-deep/70 uppercase">
+            Account →
+          </span>
         </Link>
       </Show>
       <Show when="signed-in">
-        <div className="flex items-center gap-2.5 rounded-2xl border border-deep/10 bg-white/70 p-2.5">
-          <div className="grid size-11 shrink-0 place-items-center">
+        <div className="flex items-center gap-3">
+          <div className="grid size-10 shrink-0 place-items-center">
             <UserButton
               appearance={{
                 ...siteClerkAppearance,
                 elements: {
                   ...siteClerkAppearance.elements,
-                  userButtonAvatarBox: "size-10 ring-1 ring-deep/15",
+                  userButtonAvatarBox: "size-9 ring-1 ring-deep/15",
                 },
               }}
             >
@@ -84,13 +100,31 @@ export function MobileAccountBar({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-deep">Account</p>
-            <p className="text-xs text-deep/45">Orders &amp; bookings</p>
+            <div className="mt-0.5 flex items-center gap-2 text-xs text-deep/70">
+              <Link
+                href="/account/orders"
+                onClick={onNavigate}
+                className="underline-offset-2 transition hover:text-deep hover:underline"
+              >
+                Orders
+              </Link>
+              <span className="text-deep/30" aria-hidden>
+                ·
+              </span>
+              <Link
+                href="/account/bookings"
+                onClick={onNavigate}
+                className="underline-offset-2 transition hover:text-deep hover:underline"
+              >
+                Bookings
+              </Link>
+            </div>
           </div>
           <SignOutButton>
             <button
               type="button"
               onClick={onNavigate}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-deep/12 bg-cream/80 px-3 py-2.5 text-[11px] font-medium tracking-[0.12em] text-deep uppercase transition hover:border-deep/25 hover:bg-white"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-deep/15 bg-cream/70 px-3 py-2 text-[11px] font-medium tracking-[0.12em] text-deep uppercase transition hover:border-deep/30 hover:bg-white"
             >
               <LogOut className="size-3.5" strokeWidth={1.5} aria-hidden />
               Sign out
