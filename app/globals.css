@@ -3,6 +3,7 @@
 @theme {
   --color-sage: #8ba575;
   --color-deep: #0b2c21;
+  --color-deep-hover: #14382a;
   --color-tint: #cfe1af;
   --color-cream: #f4efe4;
   --color-ink: #08150f;
@@ -44,34 +45,6 @@ body {
     var(--color-champagne),
     transparent
   );
-}
-
-.arch {
-  border-radius: 32px;
-}
-
-.blob {
-  border-radius: 24px;
-}
-
-.glass-panel {
-  background: color-mix(in srgb, var(--color-cream) 86%, white);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-/** Soft inset highlight — same language as the search field. */
-.surface-gloss {
-  background: color-mix(in srgb, white 72%, var(--color-cream));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.75),
-    0 1px 2px rgba(11, 44, 33, 0.04);
-}
-
-.hero-wash {
-  background-color: #f4efe4;
-  background-image: linear-gradient(165deg, #f7f4ec 0%, #e4efd0 55%, #f4efe4 100%);
 }
 
 .hero-stage {

@@ -19,6 +19,7 @@ import {
   formButtonSecondary,
   formControl,
   formLabel,
+  formSubmit,
   formSubmitInline,
   formTextarea,
 } from "@/components/ui/form-styles";
@@ -201,8 +202,11 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
 
           <div className="mt-6 space-y-4">
             <div>
-              <label className={formLabel}>Full Name *</label>
+              <label className={formLabel} htmlFor="checkout-name">
+                Full name *
+              </label>
               <input
+                id="checkout-name"
                 name="name"
                 required
                 value={customerName}
@@ -214,8 +218,11 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={formLabel}>Email Address *</label>
+                <label className={formLabel} htmlFor="checkout-email">
+                  Email address *
+                </label>
                 <input
+                  id="checkout-email"
                   name="email"
                   type="email"
                   required
@@ -227,8 +234,11 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
               </div>
 
               <div>
-                <label className={formLabel}>Phone Number *</label>
+                <label className={formLabel} htmlFor="checkout-phone">
+                  Phone number *
+                </label>
                 <input
+                  id="checkout-phone"
                   name="phone"
                   required
                   value={customerPhone}
@@ -436,7 +446,7 @@ export function CheckoutForm({ zones }: { zones: CatalogZone[] }) {
           <button
             type="submit"
             disabled={paystack.busy || items.length === 0}
-            className={`mt-6 flex w-full py-4 ${formSubmitInline}`}
+            className={`mt-6 ${formSubmit}`}
           >
             <PaystackButtonContent phase={paystack.phase} idle={`Pay ${formatNaira(grandTotal)}`} />
           </button>

@@ -157,20 +157,36 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
     if (updated.count === 0) return false;
 
     if (payment.orderId && payment.order && !orderCancelled) {
-      let stockIssue = false;
-
+      // Aggregate quantities by productId so duplicate lines cannot bypass stock checks.
+      const neededByProduct = new Map<string, number>();
       for (const item of payment.order.items) {
         if (!item.productId) continue;
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
-        if (!product || product.stock < item.quantity) {
+        neededByProduct.set(
+          item.productId,
+          (neededByProduct.get(item.productId) ?? 0) + item.quantity,
+        );
+      }
+      const productIds = [...neededByProduct.keys()];
+      const existingProducts =
+        productIds.length > 0
+          ? await tx.product.findMany({
+              where: { id: { in: productIds } },
+              select: { id: true, stock: true },
+            })
+          : [];
+      const stockById = new Map(existingProducts.map((p) => [p.id, p.stock]));
+
+      let stockIssue = false;
+      for (const [productId, quantity] of neededByProduct) {
+        if ((stockById.get(productId) ?? -1) < quantity) {
           stockIssue = true;
           break;
         }
       }
 
       if (stockIssue) {
-        await tx.order.update({
-          where: { id: payment.orderId },
+        await tx.order.updateMany({
+          where: { id: payment.orderId, status: { not: "CANCELLED" } },
           data: {
             status: "PAID",
             notes: "Paid, but stock ran short at settlement. Check inventory and contact the customer.",
@@ -179,17 +195,16 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
       } else {
         const decremented: { id: string; quantity: number }[] = [];
 
-        for (const item of payment.order.items) {
-          if (!item.productId) continue;
+        for (const [productId, quantity] of neededByProduct) {
           const row = await tx.product.updateMany({
-            where: { id: item.productId, stock: { gte: item.quantity } },
-            data: { stock: { decrement: item.quantity } },
+            where: { id: productId, stock: { gte: quantity } },
+            data: { stock: { decrement: quantity } },
           });
           if (row.count === 0) {
             stockIssue = true;
             break;
           }
-          decremented.push({ id: item.productId, quantity: item.quantity });
+          decremented.push({ id: productId, quantity });
         }
 
         if (stockIssue) {
@@ -201,8 +216,8 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
           }
         }
 
-        await tx.order.update({
-          where: { id: payment.orderId },
+        await tx.order.updateMany({
+          where: { id: payment.orderId, status: { not: "CANCELLED" } },
           data: stockIssue
             ? {
                 status: "PAID",
@@ -214,8 +229,8 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
     }
 
     if (payment.appointmentId && payment.appointment?.status === "PENDING") {
-      await tx.appointment.update({
-        where: { id: payment.appointmentId },
+      await tx.appointment.updateMany({
+        where: { id: payment.appointmentId, status: "PENDING" },
         data: { status: "CONFIRMED" },
       });
     }
@@ -375,6 +390,18 @@ async function resolvePaymentForWebhook(data: PaystackWebhookCharge) {
   }
 
   if (payment && payment.paystackReference !== data.reference) {
+    // Never overwrite a paid reference or let an abandoned attempt's failure cancel a newer attempt.
+    if (payment.status === "PAID" || data.status !== "success") {
+      console.info(
+        "[paystack:webhook] ignoring stale reference",
+        data.reference,
+        "status",
+        data.status,
+        "current",
+        payment.paystackReference,
+      );
+      return null;
+    }
     console.info(
       "[paystack:webhook] stale reference paid",
       data.reference,
@@ -557,12 +584,12 @@ export async function confirmPaystackReturn(
   if (!reference) return { outcome: "skipped" };
 
   try {
-    const transaction = await verifyPaystackTransaction(reference);
     const prisma = await tryPrisma();
     if (!prisma) {
       return { outcome: "error", message: "Checkout needs the database." };
     }
 
+    // Verify local payment ownership and pending state BEFORE calling Paystack's API.
     const payment = await loadPaymentByReference(reference);
     if (!payment) {
       console.info("[paystack:return] unknown reference", reference);
@@ -574,12 +601,17 @@ export async function confirmPaystackReturn(
       return { outcome: "skipped" };
     }
 
+    if (payment.status === "PAID") {
+      return { outcome: "paid" };
+    }
+
+    const transaction = await verifyPaystackTransaction(reference);
     return settlePaystackReturn(reference, payment, transaction);
   } catch (error) {
     console.error("[paystack:return]", reference, error);
     return {
       outcome: "error",
-      message: error instanceof Error ? error.message : "Paystack could not verify that payment.",
+      message: "Paystack could not verify that payment.",
     };
   }
 }

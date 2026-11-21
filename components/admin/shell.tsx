@@ -38,10 +38,10 @@ export function AdminShell({
 
         <div className="hidden items-center justify-between gap-4 border-b border-deep/6 bg-white/60 px-10 py-3.5 backdrop-blur-sm md:flex">
           {page ? (
-            <p className="text-[10px] tracking-[0.18em] text-deep/40 uppercase">
+            <p className="text-[10px] tracking-[0.18em] text-deep/65 uppercase">
               {page.group}
-              <span className="mx-2 text-deep/20">/</span>
-              <span className="text-deep/65">{page.label}</span>
+              <span className="mx-2 text-deep/35">/</span>
+              <span className="font-medium text-deep">{page.label}</span>
             </p>
           ) : (
             <span />

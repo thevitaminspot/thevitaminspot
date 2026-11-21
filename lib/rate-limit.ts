@@ -39,39 +39,35 @@ type WindowEntry = {
 };
 
 const MAX_KEYS = 4_000;
+const MAX_WINDOW_MS = 10 * 60_000;
 const store = new Map<string, WindowEntry>();
-let pruneCursor = 0;
+let lastSweepAt = 0;
 
 function prune(now: number) {
-  // Amortized cleanup: scan a slice of keys each call instead of the whole map.
-  const keys = [...store.keys()];
-  if (keys.length === 0) return;
-
-  const slice = Math.min(64, keys.length);
-  for (let i = 0; i < slice; i += 1) {
-    const index = (pruneCursor + i) % keys.length;
-    const key = keys[index];
-    const entry = store.get(key);
-    if (!entry) continue;
-    const windowMs = 10 * 60_000;
-    entry.hits = entry.hits.filter((t) => now - t < windowMs);
-    if (entry.hits.length === 0 && now - entry.touchedAt > windowMs) {
-      store.delete(key);
-    } else {
-      store.set(key, entry);
+  // Periodic sweep (at most once per 30s) + O(1) FIFO eviction using Map insertion order.
+  if (now - lastSweepAt >= 30_000) {
+    lastSweepAt = now;
+    let checked = 0;
+    for (const [key, entry] of store) {
+      if (checked++ >= 128) break;
+      entry.hits = entry.hits.filter((t) => now - t < MAX_WINDOW_MS);
+      if (entry.hits.length === 0 && now - entry.touchedAt > MAX_WINDOW_MS) {
+        store.delete(key);
+      }
     }
   }
-  pruneCursor = (pruneCursor + slice) % Math.max(keys.length, 1);
 
-  if (store.size <= MAX_KEYS) return;
-  const ranked = [...store.entries()].sort((a, b) => a[1].touchedAt - b[1].touchedAt);
-  const drop = store.size - MAX_KEYS;
-  for (let i = 0; i < drop; i += 1) {
-    store.delete(ranked[i][0]);
+  while (store.size > MAX_KEYS) {
+    const oldestKey = store.keys().next().value;
+    if (oldestKey === undefined) break;
+    store.delete(oldestKey);
   }
 }
 
 export function getClientIp(headerStore: Headers | { get(name: string): string | null }) {
+  // On Vercel, x-vercel-forwarded-for is set by the edge platform and cannot be spoofed by clients.
+  const vercelIp = headerStore.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
+  if (vercelIp) return vercelIp;
   const realIp = headerStore.get("x-real-ip")?.trim();
   if (realIp) return realIp;
   const forwarded = headerStore.get("x-forwarded-for");

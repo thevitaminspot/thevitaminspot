@@ -23,7 +23,9 @@ export default async function HomePage() {
     <main>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(homeFaqs)) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd(homeFaqs)).replace(/</g, "\\u003c"),
+        }}
       />
       <Hero
         packs={featured.map((product) => ({

@@ -88,11 +88,11 @@ export function AdminPageHeader({
     <header className="mb-8 flex flex-col gap-4 border-b border-deep/8 pb-7 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow ? (
-          <p className="text-[11px] tracking-[0.22em] text-sage uppercase">{eyebrow}</p>
+          <p className="text-[11px] font-medium tracking-[0.22em] text-deep/65 uppercase">{eyebrow}</p>
         ) : null}
         <h1 className="font-display text-4xl text-deep sm:text-[2.75rem]">{title}</h1>
         {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-deep/60">{description}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-deep/70">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -116,7 +116,7 @@ export function AdminSummaryStrip({
               : "border-deep/10 bg-white"
           }`}
         >
-          <p className="text-[10px] tracking-[0.16em] text-deep/45 uppercase">{item.label}</p>
+          <p className="text-[10px] tracking-[0.16em] text-deep/65 uppercase">{item.label}</p>
           <p className="mt-1 font-display text-2xl text-deep">{item.value}</p>
         </div>
       ))}
@@ -159,9 +159,9 @@ export function AdminStatCard({
   const className = "block rounded-2xl border border-deep/10 bg-white p-5 transition hover:border-deep/20";
   const body = (
     <>
-      <span className="text-[11px] tracking-[0.16em] text-deep/45 uppercase">{label}</span>
+      <span className="text-[11px] tracking-[0.16em] text-deep/65 uppercase">{label}</span>
       <span className="mt-3 block font-display text-3xl text-deep">{value}</span>
-      {hint ? <span className="mt-2 block text-xs leading-5 text-deep/45">{hint}</span> : null}
+      {hint ? <span className="mt-2 block text-xs leading-5 text-deep/65">{hint}</span> : null}
     </>
   );
 
@@ -189,9 +189,9 @@ export function AdminSection({
   return (
     <section className={className}>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-[11px] tracking-[0.18em] text-deep/45 uppercase">{title}</h2>
+        <h2 className="text-[11px] tracking-[0.18em] text-deep/65 uppercase">{title}</h2>
         {href ? (
-          <Link href={href} className="text-[11px] tracking-[0.12em] text-sage uppercase hover:text-deep">
+          <Link href={href} className="text-[11px] font-medium tracking-[0.12em] text-deep/75 uppercase hover:text-deep">
             {linkLabel}
           </Link>
         ) : null}
@@ -288,7 +288,7 @@ export function AdminTable({ children }: { children: ReactNode }) {
 
 export function AdminTableHead({ children }: { children: ReactNode }) {
   return (
-    <thead className="border-b border-deep/8 bg-cream/20 text-[11px] tracking-[0.14em] text-deep/45 uppercase">
+    <thead className="border-b border-deep/8 bg-cream/20 text-[11px] tracking-[0.14em] text-deep/65 uppercase">
       {children}
     </thead>
   );
@@ -385,11 +385,11 @@ export function AdminFilterTabs({
               className={`ml-1.5 tabular-nums ${
                 active
                   ? attention
-                    ? "text-amber-800/70"
-                    : "text-deep/55"
+                    ? "text-amber-800/80"
+                    : "text-deep/70"
                   : attention
-                    ? "text-amber-700/55"
-                    : "text-deep/35"
+                    ? "text-amber-800/70"
+                    : "text-deep/60"
               }`}
             >
               {tab.count}

@@ -8,6 +8,7 @@ import {
   formSubmit,
   formTextarea,
 } from "@/components/ui/form-styles";
+import { surfaceCard } from "@/components/ui/layout-styles";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { withActionError } from "@/lib/server-action-error";
 
@@ -46,7 +47,7 @@ export function ContactForm() {
   }
 
   return (
-    <section className="rounded-3xl bg-white p-6 sm:p-8">
+    <section className={`${surfaceCard} sm:p-8`}>
       <h2 className="font-display text-4xl text-deep">Send us a note.</h2>
       <p className="mt-2 text-sm leading-6 text-deep/65">
         A pack, a drip, or a visit. We reply by email. WhatsApp is faster if you need us today.
@@ -86,7 +87,7 @@ export function ContactForm() {
             </label>
           </div>
           <label className={formLabel}>
-            Phone <span className="font-normal text-deep/40">optional</span>
+            Phone <span className="font-normal text-deep/60">optional</span>
             <input
               name="phone"
               type="tel"

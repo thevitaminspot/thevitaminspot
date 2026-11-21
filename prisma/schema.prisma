@@ -94,6 +94,7 @@ model Product {
 
   @@index([categoryId])
   @@index([isActive, featured])
+  @@index([isActive, stock])
 }
 
 model ProductImage {
@@ -107,6 +108,7 @@ model ProductImage {
   updatedAt DateTime @updatedAt
 
   @@index([productId])
+  @@index([productId, position])
 }
 
 model DeliveryZone {
@@ -150,6 +152,9 @@ model Order {
   @@index([userId])
   @@index([status])
   @@index([email])
+  @@index([status, createdAt])
+  @@index([email, createdAt])
+  @@index([deliveryZoneId])
 }
 
 model OrderItem {
@@ -185,6 +190,7 @@ model Payment {
   updatedAt            DateTime        @updatedAt
 
   @@index([status])
+  @@index([status, purpose])
 }
 
 model InfusionService {
@@ -228,6 +234,7 @@ model Appointment {
 
   @@index([serviceId])
   @@index([email])
+  @@index([email, startsAt])
   @@index([status, startsAt])
 }
 
@@ -261,4 +268,6 @@ model ContactMessage {
   message   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }

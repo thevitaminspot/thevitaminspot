@@ -13,23 +13,47 @@ function cloudinaryConfig() {
   };
 }
 
-function guessMime(file: { type?: string; name?: string }) {
-  if (file.type && file.type.startsWith("image/")) return file.type;
-  const name = (file.name || "").toLowerCase();
-  if (name.endsWith(".png")) return "image/png";
-  if (name.endsWith(".webp")) return "image/webp";
-  if (name.endsWith(".gif")) return "image/gif";
-  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
-  return "image/jpeg";
+const ALLOWED_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_UPLOAD_BYTES = 4_500_000;
+
+function detectImageMime(bytes: Buffer): string | null {
+  if (bytes.length < 12) return null;
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  // WebP: RIFF....WEBP
+  if (
+    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+    bytes.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  // GIF87a / GIF89a
+  const gif = bytes.subarray(0, 6).toString("ascii");
+  if (gif === "GIF87a" || gif === "GIF89a") {
+    return "image/gif";
+  }
+  return null;
 }
 
 function isUploadableImage(file: { type?: string; name?: string; size: number }) {
   if (file.size <= 0) return false;
-  if (file.type?.startsWith("image/")) return true;
-  if (!file.type) {
-    return /\.(jpe?g|png|webp|gif)$/i.test(file.name || "");
-  }
-  return false;
+  if (file.type) return ALLOWED_MIMES.has(file.type.toLowerCase());
+  return /\.(jpe?g|png|webp|gif)$/i.test(file.name || "");
 }
 
 /** Accept File-like values from Server Action FormData (avoid brittle instanceof). */
@@ -48,16 +72,23 @@ export async function uploadImage(file: Blob & { name?: string; type: string; si
     return { error: "Add CLOUDINARY_URL to upload pictures." };
   }
   if (!isUploadableImage(file)) {
-    return { error: "Choose a JPG, PNG, or WebP image." };
+    return { error: "Choose a JPG, PNG, WebP, or GIF image." };
   }
-  if (file.size > 8_000_000) {
-    return { error: "Image must be under 8MB." };
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { error: "Image must be under 4.5MB." };
   }
 
-  const mime = guessMime(file);
   const bytes = Buffer.from(await file.arrayBuffer());
   if (bytes.length === 0) {
     return { error: "That image file was empty. Try another picture." };
+  }
+  if (bytes.length > MAX_UPLOAD_BYTES) {
+    return { error: "Image must be under 4.5MB." };
+  }
+
+  const mime = detectImageMime(bytes);
+  if (!mime) {
+    return { error: "That file is not a valid JPG, PNG, WebP, or GIF image." };
   }
 
   // Data URI avoids Node FormData File streaming quirks with Cloudinary.
@@ -65,8 +96,9 @@ export async function uploadImage(file: Blob & { name?: string; type: string; si
 
   const timestamp = Math.floor(Date.now() / 1000);
   const folder = "thevitaminspot";
+  const allowedFormats = "jpg,png,webp,gif";
   const signature = createHash("sha1")
-    .update(`folder=${folder}&timestamp=${timestamp}${config.apiSecret}`)
+    .update(`allowed_formats=${allowedFormats}&folder=${folder}&timestamp=${timestamp}${config.apiSecret}`)
     .digest("hex");
 
   const body = new FormData();
@@ -75,6 +107,7 @@ export async function uploadImage(file: Blob & { name?: string; type: string; si
   body.append("timestamp", String(timestamp));
   body.append("signature", signature);
   body.append("folder", folder);
+  body.append("allowed_formats", allowedFormats);
 
   let response: Response;
   try {

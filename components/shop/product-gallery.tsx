@@ -30,9 +30,9 @@ export function ProductGallery({
           alt={current.alt}
           width={900}
           height={1125}
-          sizes="(min-width: 1024px) 50vw, 100vw"
+          sizes="(min-width: 1280px) 560px, (min-width: 1024px) 48vw, 100vw"
           className="aspect-[4/5] w-full object-cover"
-          priority
+          preload
         />
       </div>
 

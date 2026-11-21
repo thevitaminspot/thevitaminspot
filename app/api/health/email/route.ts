@@ -1,6 +1,14 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { emailConfigStatus } from "@/lib/email";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { resolveSiteUrl } from "@/lib/site";
+
+function safeTokenMatch(actual: string | null, expected: string | undefined) {
+  if (!actual || !expected) return false;
+  const a = createHash("sha256").update(actual).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
+}
 
 export async function GET(request: Request) {
   const ip = getClientIp(request.headers);
@@ -18,7 +26,7 @@ export async function GET(request: Request) {
   // Only expose config status when a shared probe token is present.
   const probe = request.headers.get("x-health-token");
   const expected = process.env.HEALTH_PROBE_TOKEN;
-  if (!expected || probe !== expected) {
+  if (!safeTokenMatch(probe, expected)) {
     return Response.json({ ok: true }, { status: 200 });
   }
 

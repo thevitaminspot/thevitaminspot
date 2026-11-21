@@ -2,14 +2,49 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 
+let sharedMediaQuery: MediaQueryList | null = null;
+function getMediaQuery() {
+  if (!sharedMediaQuery && typeof window !== "undefined") {
+    sharedMediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  }
+  return sharedMediaQuery;
+}
+
 function subscribeReducedMotion(onStoreChange: () => void) {
-  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const mq = getMediaQuery();
+  if (!mq) return () => {};
   mq.addEventListener("change", onStoreChange);
   return () => mq.removeEventListener("change", onStoreChange);
 }
 
 function getReducedMotion() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return getMediaQuery()?.matches ?? false;
+}
+
+const revealCallbacks = new WeakMap<Element, () => void>();
+let sharedObserver: IntersectionObserver | null = null;
+
+function observeReveal(node: Element, onVisible: () => void) {
+  if (!sharedObserver) {
+    sharedObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const callback = revealCallbacks.get(entry.target);
+          revealCallbacks.delete(entry.target);
+          sharedObserver?.unobserve(entry.target);
+          callback?.();
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+    );
+  }
+  revealCallbacks.set(node, onVisible);
+  sharedObserver.observe(node);
+  return () => {
+    revealCallbacks.delete(node);
+    sharedObserver?.unobserve(node);
+  };
 }
 
 export function Reveal({
@@ -33,24 +68,11 @@ export function Reveal({
   );
 
   useEffect(() => {
-    if (reducedMotion) return;
-
+    if (reducedMotion || revealed) return;
     const node = ref.current;
     if (!node) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setRevealed(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [reducedMotion]);
+    return observeReveal(node, () => setRevealed(true));
+  }, [reducedMotion, revealed]);
 
   const style: CSSProperties | undefined = delay
     ? ({ "--reveal-delay": `${delay}ms` } as CSSProperties)

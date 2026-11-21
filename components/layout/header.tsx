@@ -166,7 +166,7 @@ function MobileNav({
                     <span className="text-[0.95rem] font-medium tracking-wide">{link.label}</span>
                     <span
                       className={`mt-1 text-xs transition ${
-                        current ? "text-cream/70" : "text-deep/45 group-hover:text-deep/60"
+                        current ? "text-cream/80" : "text-deep/65 group-hover:text-deep/80"
                       }`}
                     >
                       {link.description}
@@ -197,7 +197,9 @@ export function Header() {
     state.items.reduce((sum, item) => sum + item.quantity, 0),
   );
   const openCart = useCartStore((state) => state.open);
-  const { isNavOpen, openNav, closeNav } = useUiStore();
+  const isNavOpen = useUiStore((state) => state.isNavOpen);
+  const openNav = useUiStore((state) => state.openNav);
+  const closeNav = useUiStore((state) => state.closeNav);
 
   useEffect(() => {
     closeNav();
@@ -232,8 +234,8 @@ export function Header() {
                   key={link.href}
                   href={link.href}
                   aria-current={current ? "page" : undefined}
-                  className={`relative px-3.5 py-2 text-[11px] tracking-[0.16em] uppercase transition duration-200 ${
-                    current ? "font-medium text-deep" : "text-deep/50 hover:text-deep"
+                  className={`relative px-3.5 py-2 text-[11px] tracking-[0.16em] uppercase transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep ${
+                    current ? "font-medium text-deep" : "text-deep/70 hover:text-deep"
                   }`}
                 >
                   {link.label}
@@ -276,7 +278,7 @@ export function Header() {
             </button>
             <button
               type="button"
-              className="nav-icon grid size-10 place-items-center rounded-full text-deep sm:size-11 md:hidden"
+              className="nav-icon grid size-10 place-items-center rounded-full text-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep sm:size-11 md:hidden"
               onClick={isNavOpen ? closeNav : openNav}
               aria-label={isNavOpen ? "Close menu" : "Open menu"}
               aria-expanded={isNavOpen}

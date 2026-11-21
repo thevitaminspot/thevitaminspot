@@ -23,10 +23,7 @@ const display = localFont({
 });
 
 const wordmark = localFont({
-  src: [
-    { path: "./fonts/cormorant-500.woff2", weight: "500", style: "normal" },
-    { path: "./fonts/cormorant-600.woff2", weight: "600", style: "normal" },
-  ],
+  src: [{ path: "./fonts/cormorant-500.woff2", weight: "500", style: "normal" }],
   variable: "--font-wordmark",
   display: "swap",
 });
@@ -138,22 +135,28 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://imagedelivery.net" />
+        <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="dns-prefetch" href="https://img.clerk.com" />
       </head>
       <body
         suppressHydrationWarning
         className={`${display.variable} ${wordmark.variable} ${sans.variable} bg-cream font-sans text-ink antialiased`}
       >
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var k="data-cursor-ref",n=document;if(!n.documentElement)return;n.querySelectorAll("["+k+"]").forEach(function(el){el.removeAttribute(k);});}catch(e){}})();`,
-          }}
-        />
-        {process.env.NODE_ENV === "development" ? <StripCursorRefs /> : null}
+        {process.env.NODE_ENV === "development" ? (
+          <>
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `(function(){try{var k="data-cursor-ref",n=document;if(!n.documentElement)return;n.querySelectorAll("["+k+"]").forEach(function(el){el.removeAttribute(k);});}catch(e){}})();`,
+              }}
+            />
+            <StripCursorRefs />
+          </>
+        ) : null}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+          }}
         />
         <Providers>{children}</Providers>
       </body>

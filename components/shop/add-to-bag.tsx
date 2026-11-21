@@ -22,7 +22,7 @@ export function AddToBag({ product }: { product: CatalogProduct }) {
       }
       className={formSubmit}
     >
-      {product.stock < 1 ? "Sold through" : "Add to bag"}
+      {product.stock < 1 ? "Sold out" : "Add to bag"}
     </button>
   );
 }

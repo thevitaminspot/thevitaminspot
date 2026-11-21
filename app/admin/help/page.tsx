@@ -5,6 +5,7 @@ import {
   AdminQuickAction,
   AdminQuickActions,
 } from "@/components/admin/ui";
+import { requireAdmin } from "@/lib/admin";
 import { site } from "@/lib/site";
 
 export const metadata = { title: "Help" };
@@ -139,7 +140,8 @@ const sections = [
   },
 ] as const;
 
-export default function AdminHelpPage() {
+export default async function AdminHelpPage() {
+  await requireAdmin();
   return (
     <div>
       <AdminPageHeader

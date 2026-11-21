@@ -15,11 +15,11 @@ export function Faq() {
 
       <div className="relative mx-auto grid max-w-6xl gap-14 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start lg:gap-20 xl:gap-28">
         <Reveal className="lg:sticky lg:top-28 lg:self-start">
-          <p className="text-[11px] tracking-[0.22em] text-deep/45 uppercase">Questions</p>
+          <p className="text-[11px] tracking-[0.22em] text-deep/65 uppercase">Questions</p>
           <h2 className="font-display mt-4 text-4xl leading-[1.05] text-deep md:text-5xl lg:text-[3.25rem]">
             Before you come in.
           </h2>
-          <p className="mt-5 max-w-sm text-sm leading-relaxed text-deep/65">
+          <p className="mt-5 max-w-sm text-sm leading-relaxed text-deep/70">
             Delivery, drips, and paying — the short answers. If yours isn’t here, message the lounge.
           </p>
 
@@ -28,13 +28,13 @@ export function Faq() {
               href={whatsappHref("Hi The Vitamin Spot. I have a question.")}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex w-fit items-center justify-center rounded-xl bg-deep px-5 py-3 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a]"
+              className="inline-flex w-fit items-center justify-center rounded-xl bg-deep px-5 py-3 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-deep-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep"
             >
               Ask on WhatsApp
             </a>
             <a
               href={`tel:${site.phoneHref}`}
-              className="text-sm text-deep/60 transition hover:text-deep"
+              className="text-sm text-deep/70 transition hover:text-deep"
             >
               Or call {site.phone}
             </a>
@@ -66,7 +66,7 @@ export function Faq() {
                   >
                     <span
                       className={`mt-2 shrink-0 font-mono text-[11px] leading-none tracking-[0.14em] transition-colors duration-300 ${
-                        isOpen ? "text-sage" : "text-deep/35"
+                        isOpen ? "text-deep" : "text-deep/55"
                       }`}
                       aria-hidden
                     >

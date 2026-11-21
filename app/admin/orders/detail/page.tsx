@@ -18,6 +18,7 @@ import {
   AdminStatusBadge,
 } from "@/components/admin/ui";
 import { fulfillmentLabel } from "@/lib/admin-orders";
+import { requireAdmin } from "@/lib/admin";
 import { tryPrisma } from "@/lib/db";
 import { RoutePlaceholder } from "@/components/ui/route-placeholder";
 import { TimeAgo } from "@/components/ui/time-ago";
@@ -54,6 +55,7 @@ async function AdminOrderDetail({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireAdmin();
   const query = await searchParams;
   const raw = query.id;
   const id = typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : "";
@@ -155,6 +157,7 @@ async function AdminOrderDetail({
               <Link
                 href={`/orders/${order.accessToken}`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex shrink-0 items-center gap-1 self-start text-xs font-semibold text-deep hover:text-sage"
               >
                 <span>Open View</span>
@@ -186,7 +189,7 @@ async function AdminOrderDetail({
                 href={waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center justify-center gap-1 rounded-xl bg-deep p-2.5 text-center text-[10px] font-medium text-cream transition hover:bg-[#14382a]"
+                className="flex flex-col items-center justify-center gap-1 rounded-xl bg-deep p-2.5 text-center text-[10px] font-medium text-cream transition hover:bg-deep-hover"
               >
                 <MessageCircle className="size-4" />
                 <span>WhatsApp</span>

@@ -23,38 +23,41 @@ export function getPaystackSecret() {
 }
 
 export const contactSchema = z.object({
-  name: z.string().min(2),
-  email: z.email(),
-  phone: z.string().optional(),
-  message: z.string().min(12),
+  name: z.string().trim().min(2).max(120),
+  email: z.email().max(254),
+  phone: z.string().trim().max(32).optional(),
+  message: z.string().trim().min(12).max(5000),
 });
 
 export const checkoutSchema = z.object({
-  name: z.string().min(2),
-  email: z.email(),
-  phone: z.string().min(8),
+  name: z.string().trim().min(2).max(120),
+  email: z.email().max(254),
+  phone: z.string().trim().min(8).max(32),
   fulfillment: z.enum(["DELIVERY", "PICKUP"]),
-  zoneSlug: z.string().optional(),
-  addressLine1: z.string().optional(),
-  addressLine2: z.string().optional(),
-  city: z.string().optional(),
-  notes: z.string().optional(),
+  zoneSlug: z.string().max(80).optional(),
+  addressLine1: z.string().trim().max(240).optional(),
+  addressLine2: z.string().trim().max(240).optional(),
+  city: z.string().trim().max(120).optional(),
+  notes: z.string().trim().max(1000).optional(),
 });
 
 export const bookingDetailsSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(2, "Enter your full name."),
+    .min(2, "Enter your full name.")
+    .max(120),
   email: z
     .string()
     .trim()
+    .max(254)
     .pipe(z.email("Enter a valid email address.")),
   phone: z
     .string()
     .trim()
-    .min(10, "Enter a valid phone number."),
-  notes: z.string().trim().optional(),
+    .min(10, "Enter a valid phone number.")
+    .max(32),
+  notes: z.string().trim().max(1000).optional(),
 });
 
 export function parseBookingDetails(input: {

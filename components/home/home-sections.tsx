@@ -16,18 +16,18 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
         <Reveal>
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
             <div className="max-w-xl">
-              <p className="text-[11px] tracking-[0.22em] text-deep/45 uppercase">In the shop</p>
+              <p className="text-[11px] tracking-[0.22em] text-deep/65 uppercase">In the shop</p>
               <h2 className="font-display mt-3 text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
                 The packs.
               </h2>
-              <p className="mt-4 max-w-md text-sm leading-relaxed text-deep/65">
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-deep/70">
                 Take-home formulas you can open tonight. Each one below is a complete pack — open it
                 for how to take it.
               </p>
             </div>
             <Link
               href="/shop"
-              className="shrink-0 text-xs font-medium tracking-[0.15em] text-deep/70 uppercase transition hover:text-deep"
+              className="shrink-0 text-xs font-medium tracking-[0.15em] text-deep/75 uppercase transition hover:text-deep focus-visible:outline focus-visible:outline-offset-4 focus-visible:outline-deep"
             >
               See all packs
             </Link>
@@ -65,7 +65,7 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
                         <div className="aspect-[5/4] w-full bg-tint/60" />
                       )}
                       {hasDiscount ? (
-                        <div className="absolute top-4 left-4 bg-deep px-3 py-1 text-[10px] font-medium tracking-wider text-cream uppercase">
+                        <div className="absolute top-4 left-4 rounded-full bg-deep px-3 py-1 text-[10px] font-medium tracking-wider text-cream uppercase">
                           On offer
                         </div>
                       ) : null}
@@ -94,7 +94,7 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
                       index % 2 ? "md:order-1 md:pr-2 lg:pr-6" : "md:pl-2 lg:pl-6"
                     }`}
                   >
-                    <p className="text-[11px] tracking-[0.22em] text-deep/40 uppercase">
+                    <p className="text-[11px] tracking-[0.22em] text-deep/65 uppercase">
                       Pack {packIndex(index)}
                     </p>
 
@@ -102,7 +102,7 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
                       {product.name}
                     </h3>
 
-                    <p className="mt-3 max-w-sm text-sm leading-relaxed text-deep/60">
+                    <p className="mt-3 max-w-sm text-sm leading-relaxed text-deep/70">
                       {product.tagline}
                     </p>
 
@@ -144,17 +144,17 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
                           {formatNaira(product.price)}
                         </p>
                         {hasDiscount ? (
-                          <p className="text-sm text-deep/35 line-through">
+                          <p className="text-sm text-deep/60 line-through">
                             {formatNaira(product.compareAtPrice!)}
                           </p>
                         ) : null}
-                        <span className="text-[11px] tracking-[0.12em] text-deep/45 uppercase">
+                        <span className="text-[11px] tracking-[0.12em] text-deep/65 uppercase">
                           each
                         </span>
                       </div>
                       <Link
                         href={`/shop/${product.slug}`}
-                        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-deep px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a] focus-visible:outline focus-visible:outline-offset-4 focus-visible:outline-deep"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-deep px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-deep-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep"
                       >
                         See this pack
                       </Link>
@@ -174,45 +174,45 @@ export function WalkIn() {
   return (
     <section className="px-5 py-16 md:px-8 md:py-24">
       <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2 md:gap-16">
-        <Reveal className="relative h-72 overflow-hidden bg-tint/40 md:aspect-[4/5] md:h-auto">
+        <Reveal className="relative h-72 overflow-hidden rounded-2xl border border-deep/10 bg-tint/40 md:aspect-[4/5] md:h-auto">
           <Image
             src="/images/lifestyle/table-01.jpg"
             alt="Vitamin packs open on a table"
             fill
             loading="lazy"
             className="object-cover"
-            sizes="(min-width: 768px) 50vw, 100vw"
+            sizes="(min-width: 1280px) 560px, (min-width: 768px) 48vw, 100vw"
           />
         </Reveal>
         <Reveal delay={100}>
-          <p className="text-[11px] tracking-[0.22em] text-deep/45 uppercase">The lounge</p>
+          <p className="text-[11px] tracking-[0.22em] text-deep/65 uppercase">The lounge</p>
           <h2 className="font-display mt-3 text-4xl leading-[1.05] text-deep md:text-5xl lg:text-6xl">
             Come in for a drip.
           </h2>
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-deep/70 md:text-base">
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-deep/75 md:text-base">
             You sit for about an hour while a nurse runs the drip. Walk in when it suits you, or
             send a WhatsApp if you want to know a chair is ready.
           </p>
           <dl className="mt-9 max-w-md border-t border-deep/12 text-sm">
             <div className="grid grid-cols-[7rem_1fr] gap-4 border-b border-deep/12 py-3.5">
-              <dt className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">Find us</dt>
-              <dd className="text-deep/80">
+              <dt className="text-[11px] tracking-[0.14em] text-deep/65 uppercase">Find us</dt>
+              <dd className="text-deep/85">
                 {site.address.line1}, {site.address.area}
               </dd>
             </div>
             <div className="grid grid-cols-[7rem_1fr] gap-4 border-b border-deep/12 py-3.5">
-              <dt className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">Plan for</dt>
-              <dd className="text-deep/80">Roughly an hour in the chair</dd>
+              <dt className="text-[11px] tracking-[0.14em] text-deep/65 uppercase">Plan for</dt>
+              <dd className="text-deep/85">Roughly an hour in the chair</dd>
             </div>
             <div className="grid grid-cols-[7rem_1fr] gap-4 border-b border-deep/12 py-3.5">
-              <dt className="text-[11px] tracking-[0.14em] text-deep/45 uppercase">Walk-in</dt>
-              <dd className="text-deep/80">Fine. Book online if you want a set time</dd>
+              <dt className="text-[11px] tracking-[0.14em] text-deep/65 uppercase">Walk-in</dt>
+              <dd className="text-deep/85">Fine. Book online if you want a set time</dd>
             </div>
           </dl>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/infusions"
-              className="inline-flex items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a]"
+              className="inline-flex items-center justify-center rounded-xl bg-deep px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-deep-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep"
             >
               Book a drip
             </Link>
@@ -220,7 +220,7 @@ export function WalkIn() {
               href={whatsappHref("Hi The Vitamin Spot. I want to come in for a drip.")}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-xl border border-deep/15 px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-deep uppercase transition hover:bg-white"
+              className="inline-flex items-center justify-center rounded-xl border border-deep/15 px-6 py-3.5 text-[11px] font-medium tracking-[0.16em] text-deep uppercase transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep"
             >
               WhatsApp us
             </a>

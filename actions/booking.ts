@@ -2,7 +2,12 @@
 
 import { headers } from "next/headers";
 import { parseBookingDetails } from "@/lib/env";
-import { isBookableStart, listSlots } from "@/lib/availability";
+import {
+  isBookableStart,
+  listSlots,
+  MIN_BOOKING_LEAD_MS,
+  PENDING_HOLD_MS,
+} from "@/lib/availability";
 import { findInfusion } from "@/lib/data";
 import { tryPrisma } from "@/lib/db";
 import { attachCustomer, getSessionProfile } from "@/lib/auth";
@@ -10,7 +15,6 @@ import { findLocalAppointment, updateLocalAppointment } from "@/lib/local-store"
 import { cancelReasonLabel, isBookingCancelReason } from "@/lib/booking-cancel";
 import {
   notifyAdminBookingCancelled,
-  notifyAdminNewBooking,
   notifyBookingCancelled,
   notifyBookingConfirmed,
   notifyBookingReceived,
@@ -33,52 +37,14 @@ import { site, whatsappHref } from "@/lib/site";
 import { BOOKING_FEE_REQUIRED_MESSAGE } from "@/lib/booking-policy";
 import { createToken } from "@/lib/tokens";
 
-export async function sendBookingNotifications(token: string) {
-  const requestHeaders = await headers();
-  const limited = limitByIp(requestHeaders, "book-notify", "bookingMutate");
-  if (!limited.ok) {
-    return { error: rateLimitMessage(limited.retryAfterSec) };
-  }
-
-  const prisma = await tryPrisma();
-  if (!prisma) return { error: "Bookings need the database." as const };
-
-  const appointment = await prisma.appointment.findUnique({
-    where: { accessToken: token },
-    include: { service: true },
-  });
-  if (!appointment) return { error: "Booking not found." as const };
-
-  const manageUrl = `${site.url}/appointments/${token}`;
-
-  await notifyBookingReceived({
-    to: appointment.email,
-    name: appointment.name,
-    serviceName: appointment.service.name,
-    startsAt: appointment.startsAt,
-    manageUrl,
-    deposit: appointment.service.deposit,
-    sessionPrice: appointment.service.price,
-  });
-
-  await notifyAdminNewBooking({
-    name: appointment.name,
-    serviceName: appointment.service.name,
-    startsAt: appointment.startsAt,
-    deposit: appointment.service.deposit,
-  });
-
-  return { ok: true as const };
-}
-
-export async function fetchSlots(date: string, slug: string, excludeAppointmentId?: string) {
+export async function fetchSlots(date: string, slug: string) {
   const requestHeaders = await headers();
   const limited = limitByIp(requestHeaders, "slots", "slots");
   if (!limited.ok) return [];
 
   const drip = await findInfusion(slug);
   if (!drip) return [];
-  return listSlots(date, drip.durationMin, { excludeAppointmentId });
+  return listSlots(date, drip.durationMin);
 }
 
 export async function createBooking(input: {
@@ -141,12 +107,11 @@ export async function createBooking(input: {
         endsAt: { gt: startsAt },
         OR: [
           { status: "CONFIRMED" },
+          { status: "PENDING", payment: { status: "PAID" } },
           {
             status: "PENDING",
-            OR: [
-              { payment: null },
-              { payment: { status: { in: ["PENDING", "PAID"] } } },
-            ],
+            createdAt: { gte: new Date(Date.now() - PENDING_HOLD_MS) },
+            OR: [{ payment: null }, { payment: { status: "PENDING" } }],
           },
         ],
       },
@@ -250,6 +215,14 @@ export async function createBooking(input: {
 }
 
 export async function resumeAppointmentDeposit(token: string) {
+  if (!token || !/^[a-f0-9]{48}$/i.test(token)) return { error: "Booking not found." };
+
+  const requestHeaders = await headers();
+  const ipLimited = limitByIp(requestHeaders, "paystack-resume-apt", "paystackInit");
+  if (!ipLimited.ok) {
+    return { error: rateLimitMessage(ipLimited.retryAfterSec) };
+  }
+
   const prisma = await tryPrisma();
   if (!prisma) return { error: "Bookings need the database." };
   if (!hasPaystack()) return { error: "Online payments are not configured yet." };
@@ -260,7 +233,6 @@ export async function resumeAppointmentDeposit(token: string) {
   });
   if (!appointment) return { error: "Booking not found." };
 
-  const requestHeaders = await headers();
   const limited = limitByIpAndEmail(
     requestHeaders,
     "paystack",
@@ -289,6 +261,43 @@ export async function resumeAppointmentDeposit(token: string) {
     if (existing.settled) {
       return { error: "Deposit already paid." };
     }
+  }
+
+  if (appointment.startsAt.getTime() <= Date.now() + MIN_BOOKING_LEAD_MS) {
+    return { error: "This time has passed. Please book a new session." };
+  }
+
+  // Re-verify the slot is still open (in case the unpaid hold expired and another guest booked it).
+  const slotStillAvailable = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('appointments'))`;
+    const clash = await tx.appointment.findFirst({
+      where: {
+        id: { not: appointment.id },
+        startsAt: { lt: appointment.endsAt },
+        endsAt: { gt: appointment.startsAt },
+        OR: [
+          { status: "CONFIRMED" },
+          { status: "PENDING", payment: { status: "PAID" } },
+          {
+            status: "PENDING",
+            createdAt: { gte: new Date(Date.now() - PENDING_HOLD_MS) },
+            OR: [{ payment: null }, { payment: { status: "PENDING" } }],
+          },
+        ],
+      },
+      select: { id: true },
+    });
+    if (clash) return false;
+    // Refresh hold timestamp while the user completes payment.
+    await tx.appointment.update({
+      where: { id: appointment.id },
+      data: { createdAt: new Date() },
+    });
+    return true;
+  });
+
+  if (!slotStillAvailable) {
+    return { error: "That time has been taken. Please book a new slot." };
   }
 
   const reference = nextPaystackReference("apt", appointment.id);
@@ -477,12 +486,11 @@ export async function updateAppointment(token: string, start: string) {
           endsAt: { gt: startsAt },
           OR: [
             { status: "CONFIRMED" },
+            { status: "PENDING", payment: { status: "PAID" } },
             {
               status: "PENDING",
-              OR: [
-                { payment: null },
-                { payment: { status: { in: ["PENDING", "PAID"] } } },
-              ],
+              createdAt: { gte: new Date(Date.now() - PENDING_HOLD_MS) },
+              OR: [{ payment: null }, { payment: { status: "PENDING" } }],
             },
           ],
         },

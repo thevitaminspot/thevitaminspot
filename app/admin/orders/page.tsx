@@ -15,7 +15,25 @@ export default async function AdminOrdersPage() {
   const rows = await prisma.order.findMany({
     where: { payment: { status: "PAID" } },
     orderBy: { createdAt: "desc" },
-    include: { payment: true, items: true, deliveryZone: true },
+    take: 500,
+    select: {
+      id: true,
+      orderNumber: true,
+      name: true,
+      email: true,
+      phone: true,
+      fulfillment: true,
+      total: true,
+      deliveryFee: true,
+      status: true,
+      notes: true,
+      addressLine1: true,
+      city: true,
+      createdAt: true,
+      payment: { select: { status: true } },
+      deliveryZone: { select: { name: true } },
+      items: { select: { name: true, quantity: true, unitPrice: true } },
+    },
   });
 
   return (

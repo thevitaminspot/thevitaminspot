@@ -406,18 +406,28 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     (current.status === "PAID" || current.status === "PACKED") &&
     !current.notes?.includes("stock ran short");
 
-  const order = restoreStock
-    ? await prisma.$transaction(async (tx) => {
-        for (const item of current.items) {
-          if (!item.productId) continue;
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
-          });
-        }
-        return tx.order.update({ where: { id }, data: { status } });
-      })
-    : await prisma.order.update({ where: { id }, data: { status } });
+  const order = await prisma.$transaction(async (tx) => {
+    // Guard against concurrent double-cancellation / double stock restoration.
+    const transitioned = await tx.order.updateMany({
+      where: { id, status: current.status },
+      data: { status },
+    });
+    if (transitioned.count === 0) return null;
+
+    if (restoreStock) {
+      for (const item of current.items) {
+        if (!item.productId) continue;
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+    }
+    return tx.order.findUnique({ where: { id } });
+  });
+  if (!order) {
+    return { error: "Order status already changed. Refresh and try again." };
+  }
   await sendOrderUpdate({
     to: order.email,
     name: order.name,
@@ -428,8 +438,7 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
     fulfillment: order.fulfillment,
   }).catch(() => undefined);
   revalidatePath("/admin/orders");
-  revalidatePath("/admin/orders");
-  revalidatePath(`/admin/orders/detail?id=${id}`);
+  revalidatePath("/admin/orders/detail");
   return { ok: true as const };
 }
 
@@ -515,8 +524,18 @@ export async function listAdminAppointments() {
   const prisma = await tryPrisma();
   if (!prisma) return [];
   const rows = await prisma.appointment.findMany({
-    include: { service: true, payment: true },
+    select: {
+      id: true,
+      startsAt: true,
+      name: true,
+      email: true,
+      phone: true,
+      status: true,
+      service: { select: { name: true, deposit: true, price: true } },
+      payment: { select: { status: true, amount: true } },
+    },
     orderBy: { startsAt: "asc" },
+    take: 500,
   });
   return rows.map((row) => ({
     id: row.id,
