@@ -4,6 +4,8 @@ import { tryPrisma } from "@/lib/db";
 export const DEFAULT_SLOT_MIN = 45;
 export const DEFAULT_BUFFER_MIN = 15;
 export const MIN_BOOKING_LEAD_MS = 60 * 60 * 1000;
+/** Unpaid pending bookings only hold a chair for 20 minutes so abandoned checkouts release the slot. */
+export const PENDING_HOLD_MS = 20 * 60 * 1000;
 
 type Rule = {
   weekday: number;
@@ -37,6 +39,12 @@ export async function getRules(): Promise<Rule[]> {
   return rows.length === 0 ? defaultRules : rows;
 }
 
+const lagosTimeFormatter = new Intl.DateTimeFormat("en-NG", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Africa/Lagos",
+});
+
 export async function listSlots(
   dateIso: string,
   durationMin: number,
@@ -50,47 +58,50 @@ export async function listSlots(
   if (Number.isNaN(date.getTime())) return [];
 
   const weekday = date.getUTCDay();
-  const rules = (await getRules()).filter((rule) => rule.weekday === weekday);
-  if (rules.length === 0) return [];
-
   const prisma = await tryPrisma();
-  const blocked = prisma
-    ? await prisma.blockedDate.findFirst({
-        where: {
-          date: {
-            gte: new Date(`${dateIso}T00:00:00.000Z`),
-            lt: new Date(`${dateIso}T23:59:59.999Z`),
-          },
-        },
-      })
-    : null;
-  if (blocked) return [];
 
-  const taken = prisma
-    ? await prisma.appointment.findMany({
-        where: {
-          startsAt: {
-            gte: new Date(`${dateIso}T00:00:00+01:00`),
-            lt: new Date(`${dateIso}T23:59:59+01:00`),
-          },
-          ...(options?.excludeAppointmentId
-            ? { id: { not: options.excludeAppointmentId } }
-            : {}),
-          // Confirmed bookings always hold the chair. Pending holds only while
-          // the booking-fee payment is still in flight — failed fees do not.
-          OR: [
-            { status: "CONFIRMED" },
-            {
-              status: "PENDING",
-              OR: [
-                { payment: null },
-                { payment: { status: { in: ["PENDING", "PAID"] } } },
-              ],
+  const [allRules, blocked, taken] = await Promise.all([
+    getRules(),
+    prisma
+      ? prisma.blockedDate.findFirst({
+          where: {
+            date: {
+              gte: new Date(`${dateIso}T00:00:00.000Z`),
+              lt: new Date(`${dateIso}T23:59:59.999Z`),
             },
-          ],
-        },
-      })
-    : [];
+          },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
+    prisma
+      ? prisma.appointment.findMany({
+          where: {
+            startsAt: {
+              gte: new Date(`${dateIso}T00:00:00+01:00`),
+              lt: new Date(`${dateIso}T23:59:59+01:00`),
+            },
+            ...(options?.excludeAppointmentId
+              ? { id: { not: options.excludeAppointmentId } }
+              : {}),
+            // Confirmed bookings and paid deposits always hold the chair.
+            // Unpaid pending holds expire after PENDING_HOLD_MS so abandoned Paystack popups release the slot.
+            OR: [
+              { status: "CONFIRMED" },
+              { status: "PENDING", payment: { status: "PAID" } },
+              {
+                status: "PENDING",
+                createdAt: { gte: new Date(Date.now() - PENDING_HOLD_MS) },
+                OR: [{ payment: null }, { payment: { status: "PENDING" } }],
+              },
+            ],
+          },
+          select: { startsAt: true, endsAt: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const rules = allRules.filter((rule) => rule.weekday === weekday);
+  if (rules.length === 0 || blocked) return [];
 
   const slots: { start: string; end: string; label: string }[] = [];
   const earliest = Date.now() + MIN_BOOKING_LEAD_MS;
@@ -115,11 +126,7 @@ export async function listSlots(
       slots.push({
         start: start.toISOString(),
         end: end.toISOString(),
-        label: new Intl.DateTimeFormat("en-NG", {
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: "Africa/Lagos",
-        }).format(start),
+        label: lagosTimeFormatter.format(start),
       });
     }
   }

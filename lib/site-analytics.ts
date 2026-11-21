@@ -55,7 +55,9 @@ async function countVisits(since: Date, until: Date) {
 export async function getSiteTraffic(): Promise<SiteTraffic> {
   if (!analyticsConfig()) return { status: "unconfigured" };
 
-  const until = new Date();
+  // Round to a 5-minute boundary so identical URLs hit Next's 300s fetch cache.
+  const bucketMs = 5 * 60 * 1000;
+  const until = new Date(Math.floor(Date.now() / bucketMs) * bucketMs);
   const week = new Date(until.getTime() - 7 * 24 * 60 * 60 * 1000);
   const today = new Date(Date.UTC(until.getUTCFullYear(), until.getUTCMonth(), until.getUTCDate()));
 

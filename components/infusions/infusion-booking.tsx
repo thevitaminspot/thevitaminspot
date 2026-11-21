@@ -1,18 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { BookingFlow } from "@/components/booking/booking-flow";
 import type { CatalogInfusion } from "@/lib/catalog";
-
-const BookingFlow = dynamic(
-  () => import("@/components/booking/booking-flow").then((module) => module.BookingFlow),
-  {
-    ssr: false,
-    loading: () => (
-      <p className="py-12 text-center text-sm text-deep/50">Loading booking…</p>
-    ),
-  },
-);
 
 export function InfusionBooking({ drips }: { drips: CatalogInfusion[] }) {
   const searchParams = useSearchParams();

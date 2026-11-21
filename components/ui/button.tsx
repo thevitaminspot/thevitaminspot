@@ -3,9 +3,9 @@ import type { ComponentProps } from "react";
 
 const styles = {
   primary:
-    "bg-deep text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-sage focus-visible:outline-deep",
+    "bg-deep text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-deep-hover focus-visible:outline-deep",
   ghost:
-    "border border-deep/15 bg-white/50 text-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] hover:border-sage hover:bg-tint/40",
+    "border border-deep/15 bg-white/50 text-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] hover:border-sage hover:bg-tint/40 focus-visible:outline-deep",
   cream:
     "bg-cream text-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] hover:bg-tint focus-visible:outline-cream",
 };

@@ -5,11 +5,13 @@ import { AddToBag } from "@/components/shop/add-to-bag";
 import { ProductGallery } from "@/components/shop/product-gallery";
 import { formatNaira } from "@/lib/money";
 import { products } from "@/lib/catalog";
-import { findProduct, findRelated } from "@/lib/data";
+import { findProduct, listProducts } from "@/lib/data";
 import { pageShell, pageWide } from "@/components/ui/layout-styles";
 
-export function generateStaticParams() {
-  return products.map((product) => ({ slug: product.slug }));
+export async function generateStaticParams() {
+  const active = await listProducts();
+  const source = active.length > 0 ? active : products;
+  return source.map((product) => ({ slug: product.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/shop/[slug]">) {
@@ -38,9 +40,10 @@ function DetailSection({
 
 export default async function ProductPage({ params }: PageProps<"/shop/[slug]">) {
   const { slug } = await params;
-  const product = await findProduct(slug);
+  const allProducts = await listProducts();
+  const product = allProducts.find((item) => item.slug === slug);
   if (!product) notFound();
-  const related = await findRelated(slug);
+  const related = allProducts.filter((item) => item.slug !== slug).slice(0, 3);
   const hasDiscount = Boolean(
     product.compareAtPrice && product.compareAtPrice > product.price,
   );

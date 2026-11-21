@@ -14,7 +14,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <Suspense
         fallback={
           <header className="sticky top-0 z-40 border-b border-deep/10 bg-cream/95 backdrop-blur-md">
-            <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-2.5 sm:px-5 md:px-8 md:py-3">
+            <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-5 md:px-8 md:py-3">
               <div className="size-10 shrink-0 md:size-11" aria-hidden />
               <div className="size-10 shrink-0" aria-hidden />
             </div>
@@ -23,7 +23,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       >
         <Header />
       </Suspense>
-      <div className="page-enter">{children}</div>
+      <div>{children}</div>
       <Footer />
       <CartDrawerLoader />
     </CookieConsentProvider>

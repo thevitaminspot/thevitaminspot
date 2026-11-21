@@ -21,7 +21,7 @@ async function PaystackReturnRedirect({
 }) {
   const query = await searchParams;
   const orderToken = first(query.order);
-  if (!orderToken) return null;
+  if (!orderToken || !/^[a-f0-9]{48}$/i.test(orderToken)) return null;
 
   const params = new URLSearchParams();
   const reference = first(query.reference);
@@ -29,7 +29,7 @@ async function PaystackReturnRedirect({
   if (reference) params.set("reference", reference);
   if (trxref) params.set("trxref", trxref);
   const qs = params.toString();
-  redirect(`/orders/${orderToken}${qs ? `?${qs}` : ""}`);
+  redirect(`/orders/${encodeURIComponent(orderToken)}${qs ? `?${qs}` : ""}`);
 }
 
 async function CheckoutBody() {

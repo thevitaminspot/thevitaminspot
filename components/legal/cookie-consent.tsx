@@ -93,14 +93,14 @@ function CookieBanner({ onChoose }: { onChoose: (choice: ConsentChoice) => void 
           <button
             type="button"
             onClick={() => onChoose("essential")}
-            className="rounded-xl border border-deep/15 px-5 py-3 text-[11px] font-medium tracking-[0.14em] text-deep uppercase transition hover:bg-tint/50"
+            className="rounded-xl border border-deep/15 px-5 py-3 text-[11px] font-medium tracking-[0.14em] text-deep uppercase transition hover:bg-tint/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep"
           >
             Essential only
           </button>
           <button
             type="button"
             onClick={() => onChoose("all")}
-            className="rounded-xl bg-deep px-5 py-3 text-[11px] font-medium tracking-[0.14em] text-cream uppercase transition hover:bg-[#14382a]"
+            className="rounded-xl bg-deep px-5 py-3 text-[11px] font-medium tracking-[0.14em] text-cream uppercase transition hover:bg-deep-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep"
           >
             Accept all
           </button>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { AdminOrderListItem } from "@/components/admin/order-list";
 import {
   AdminEmptyState,
@@ -40,6 +41,23 @@ function todayLabel() {
   }).format(new Date());
 }
 
+async function TrafficStatCard() {
+  const traffic = await getSiteTraffic();
+  return (
+    <AdminStatCard
+      label="Visitors · 7 days"
+      value={traffic.status === "ready" ? traffic.visitors.toLocaleString("en-NG") : "—"}
+      hint={
+        traffic.status === "ready"
+          ? `${traffic.pageviews.toLocaleString("en-NG")} page views · ${traffic.todayVisitors.toLocaleString("en-NG")} visitors today`
+          : traffic.status === "unconfigured"
+            ? "Enable Web Analytics on Vercel, then set VERCEL_API_TOKEN"
+            : "Visits could not be loaded"
+      }
+    />
+  );
+}
+
 export default async function AdminPage() {
   await requireAdmin();
   const prisma = await tryPrisma();
@@ -55,12 +73,25 @@ export default async function AdminPage() {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
 
-  const [orders, paid, depositRevenue, pendingBookings, soon, low, productCount, traffic] =
+  const [orders, openOrderCount, paid, depositRevenue, pendingBookings, soon, low, productCount] =
     await Promise.all([
       prisma.order.findMany({
         where: { status: { in: ["PAID", "PACKED", "OUT_FOR_DELIVERY"] } },
         orderBy: { createdAt: "desc" },
         take: 8,
+        select: {
+          id: true,
+          orderNumber: true,
+          name: true,
+          email: true,
+          fulfillment: true,
+          total: true,
+          status: true,
+          createdAt: true,
+        },
+      }),
+      prisma.order.count({
+        where: { status: { in: ["PAID", "PACKED", "OUT_FOR_DELIVERY"] } },
       }),
       prisma.order.aggregate({
         where: { status: { in: ["PAID", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED"] } },
@@ -75,17 +106,23 @@ export default async function AdminPage() {
       prisma.appointment.count({ where: { status: "PENDING" } }),
       prisma.appointment.findMany({
         where: { status: "CONFIRMED", startsAt: { gte: start } },
-        include: { service: true, payment: true },
+        select: {
+          id: true,
+          name: true,
+          startsAt: true,
+          service: { select: { name: true } },
+          payment: { select: { status: true } },
+        },
         orderBy: { startsAt: "asc" },
         take: 6,
       }),
       prisma.product.findMany({
         where: { isActive: true, stock: { lte: 5 } },
+        select: { id: true, name: true, stock: true },
         orderBy: { stock: "asc" },
         take: 6,
       }),
-      prisma.product.count(),
-      getSiteTraffic(),
+      prisma.product.count({ where: { isActive: true } }),
     ]);
 
   const orderRevenue = paid._sum.total ?? 0;
@@ -129,7 +166,7 @@ export default async function AdminPage() {
       </AdminQuickActions>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <AdminStatCard href="/admin/orders" label="Open orders" value={String(orders.length)} />
+        <AdminStatCard href="/admin/orders" label="Open orders" value={String(openOrderCount)} />
         <AdminStatCard
           href="/admin/orders"
           label="Total revenue"
@@ -146,17 +183,11 @@ export default async function AdminPage() {
           label="Low stock alerts"
           value={String(low.length)}
         />
-        <AdminStatCard
-          label="Visitors · 7 days"
-          value={traffic.status === "ready" ? traffic.visitors.toLocaleString("en-NG") : "—"}
-          hint={
-            traffic.status === "ready"
-              ? `${traffic.pageviews.toLocaleString("en-NG")} page views · ${traffic.todayVisitors.toLocaleString("en-NG")} visitors today`
-              : traffic.status === "unconfigured"
-                ? "Enable Web Analytics on Vercel, then set VERCEL_API_TOKEN"
-                : "Visits could not be loaded"
-          }
-        />
+        <Suspense
+          fallback={<AdminStatCard label="Visitors · 7 days" value="—" hint="Loading visits…" />}
+        >
+          <TrafficStatCard />
+        </Suspense>
       </div>
 
       <div className="mt-10 grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">

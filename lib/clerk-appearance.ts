@@ -16,12 +16,12 @@ export const siteClerkAppearance = {
     socialButtonsBlockButton:
       "rounded-xl border border-deep/15 bg-white text-deep hover:bg-tint/40",
     dividerLine: "bg-deep/10",
-    dividerText: "text-deep/45",
-    formFieldLabel: "text-xs font-medium text-deep/70",
+    dividerText: "text-deep/65",
+    formFieldLabel: "text-xs font-medium text-deep/75",
     formFieldInput:
       "rounded-xl border-deep/15 bg-cream/50 text-deep focus:border-deep/30",
     formButtonPrimary:
-      "rounded-xl bg-deep text-cream hover:bg-[#14382a] text-[11px] font-medium tracking-[0.14em] uppercase shadow-none",
+      "rounded-xl bg-deep text-cream hover:bg-deep-hover text-[11px] font-medium tracking-[0.14em] uppercase shadow-none",
     formButtonReset: "text-deep hover:text-sage",
     footerActionLink: "text-deep hover:text-sage",
     footerActionText: "text-deep/60",

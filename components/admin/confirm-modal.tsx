@@ -48,7 +48,7 @@ export function ConfirmModal({
           className={`rounded-xl px-4 py-2.5 text-[11px] tracking-[0.12em] text-cream uppercase transition disabled:opacity-60 ${interactiveControl} ${
             danger
               ? "bg-red-800 hover:bg-red-900"
-              : "bg-deep hover:bg-[#14382a]"
+              : "bg-deep hover:bg-deep-hover"
           }`}
         >
           {pending ? "Working…" : confirmLabel}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { ChevronLeft } from "lucide-react";
 import { createBooking, fetchSlots, resumeAppointmentDeposit } from "@/actions/booking";
@@ -209,7 +209,6 @@ export function BookingFlow({
   drips: CatalogInfusion[];
   initialSlug?: string;
 }) {
-  const { isLoaded, isSignedIn, user } = useUser();
   const [step, setStep] = useState(0);
   const [slug, setSlug] = useState(initialSlug ?? "");
   const [date, setDate] = useState("");
@@ -229,6 +228,14 @@ export function BookingFlow({
   const formTopRef = useRef<HTMLDivElement>(null);
   const skipStepScrollRef = useRef(true);
 
+  const handleAutofill = useCallback((data: { name: string; email: string }) => {
+    setDetails((current) => ({
+      ...current,
+      name: current.name || data.name,
+      email: current.email || data.email,
+    }));
+  }, []);
+
   function scrollToFormTop() {
     formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -245,7 +252,6 @@ export function BookingFlow({
     setSlug(nextSlug);
     setSlot(null);
     if (date) setSlots(await fetchSlots(date, nextSlug));
-    scrollToFormTop();
   }
 
   async function loadSlots(nextDate: string) {
@@ -272,17 +278,6 @@ export function BookingFlow({
     if (step === 1 && !slot) {
       notifyError("Select a time to continue.");
       return;
-    }
-    if (step === 1) {
-      setDetails((current) => {
-        if (!isLoaded || !isSignedIn || !user) return current;
-        return {
-          name: current.name || user.fullName || user.firstName || "",
-          email: current.email || user.primaryEmailAddress?.emailAddress || "",
-          phone: current.phone,
-          notes: current.notes,
-        };
-      });
     }
     if (step === 2) {
       const parsed = parseBookingDetails(details);
@@ -378,7 +373,7 @@ export function BookingFlow({
           ) : null}
 
           {step === 1 && drip ? (
-            <>
+            <div className={surfaceCard}>
               <SelectionContext drip={drip} onChangeService={() => setStep(0)} />
               <label className={`${formLabel} block min-w-0`}>
                 Date
@@ -393,21 +388,18 @@ export function BookingFlow({
               <div className="mt-5">
                 <p className={formLabel}>Time</p>
                 {!date ? (
-                  <p className="mt-2 text-sm text-deep/50">Select a date to see available times.</p>
+                  <p className="mt-2 text-sm text-deep/65">Select a date to see available times.</p>
                 ) : loadingSlots ? (
-                  <p className="mt-2 text-sm text-deep/50">Loading times…</p>
+                  <p className="mt-2 text-sm text-deep/65">Loading times…</p>
                 ) : slots.length === 0 ? (
-                  <p className="mt-2 text-sm text-deep/60">No availability. Try another date.</p>
+                  <p className="mt-2 text-sm text-deep/65">No availability. Try another date.</p>
                 ) : (
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     {slots.map((item) => (
                       <button
                         key={item.start}
                         type="button"
-                        onClick={() => {
-                          setSlot(item);
-                          scrollToFormTop();
-                        }}
+                        onClick={() => setSlot(item)}
                         className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                           slot?.start === item.start
                             ? "bg-deep text-cream"
@@ -420,13 +412,13 @@ export function BookingFlow({
                   </div>
                 )}
               </div>
-            </>
+            </div>
           ) : null}
 
           {step === 2 && drip ? (
-            <>
+            <div className={surfaceCard}>
               <SelectionContext drip={drip} slot={slot} onChangeService={() => setStep(0)} />
-              <GuestBookingNote />
+              <GuestBookingNote onAutofill={handleAutofill} />
               <div className="mt-4 space-y-4">
                 <label className={formLabel}>
                   Full name
@@ -470,7 +462,7 @@ export function BookingFlow({
                   />
                 </label>
                 <label className={formLabel}>
-                  Additional notes <span className="font-normal text-deep/40">optional</span>
+                  Additional notes <span className="font-normal text-deep/60">optional</span>
                   <textarea
                     value={details.notes}
                     onChange={(event) =>
@@ -481,54 +473,56 @@ export function BookingFlow({
                   />
                 </label>
               </div>
-            </>
+            </div>
           ) : null}
 
           {step === 3 && drip && slot ? (
-            <dl className="divide-y divide-deep/10 text-sm">
-              <div className="flex justify-between gap-4 py-3 first:pt-0">
-                <dt className="text-deep/55">Service</dt>
-                <dd className="text-right font-medium text-deep">{drip.name}</dd>
-              </div>
-              <div className="flex justify-between gap-4 py-3">
-                <dt className="text-deep/55">Date & time</dt>
-                <dd className="text-right font-medium text-deep">{slot.label}</dd>
-              </div>
-              <div className="flex justify-between gap-4 py-3">
-                <dt className="text-deep/55">Duration</dt>
-                <dd className="font-medium text-deep">{drip.durationMin} minutes</dd>
-              </div>
-              <div className="flex justify-between gap-4 py-3">
-                <dt className="text-deep/55">Price</dt>
-                <dd className="font-medium text-deep">{nairaLabel(drip.price)}</dd>
-              </div>
-              <div className="flex justify-between gap-4 py-3">
-                <dt className="text-deep/55">Booking fee</dt>
-                <dd className="font-medium text-deep">{nairaLabel(drip.deposit)}</dd>
-              </div>
-              <div className="py-3 text-sm leading-relaxed text-deep/65">
-                <p>{BOOKING_FEE_REQUIRED_MESSAGE}</p>
-                <p className="mt-2">{BOOKING_CANCELLATION_NOT_FREE}</p>
-              </div>
-              <div className="flex justify-between gap-4 py-3">
-                <dt className="text-deep/55">Name</dt>
-                <dd className="text-right font-medium text-deep">{details.name}</dd>
-              </div>
-              <div className="flex justify-between gap-4 py-3">
-                <dt className="text-deep/55">Email</dt>
-                <dd className="text-right font-medium text-deep">{details.email}</dd>
-              </div>
-              <div className="flex justify-between gap-4 py-3">
-                <dt className="text-deep/55">Phone</dt>
-                <dd className="font-medium text-deep">{details.phone}</dd>
-              </div>
-              {details.notes ? (
-                <div className="py-3">
-                  <dt className="text-deep/55">Notes</dt>
-                  <dd className="mt-1 text-deep/80">{details.notes}</dd>
+            <div className={surfaceCard}>
+              <dl className="divide-y divide-deep/10 text-sm">
+                <div className="flex justify-between gap-4 py-3 first:pt-0">
+                  <dt className="text-deep/65">Service</dt>
+                  <dd className="text-right font-medium text-deep">{drip.name}</dd>
                 </div>
-              ) : null}
-            </dl>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-deep/65">Date & time</dt>
+                  <dd className="text-right font-medium text-deep">{slot.label}</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-deep/65">Duration</dt>
+                  <dd className="font-medium text-deep">{drip.durationMin} minutes</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-deep/65">Price</dt>
+                  <dd className="font-medium text-deep">{nairaLabel(drip.price)}</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-deep/65">Booking fee</dt>
+                  <dd className="font-medium text-deep">{nairaLabel(drip.deposit)}</dd>
+                </div>
+                <div className="py-3 text-sm leading-relaxed text-deep/70">
+                  <p>{BOOKING_FEE_REQUIRED_MESSAGE}</p>
+                  <p className="mt-2">{BOOKING_CANCELLATION_NOT_FREE}</p>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-deep/65">Name</dt>
+                  <dd className="text-right font-medium text-deep">{details.name}</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-deep/65">Email</dt>
+                  <dd className="text-right font-medium text-deep">{details.email}</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-deep/65">Phone</dt>
+                  <dd className="font-medium text-deep">{details.phone}</dd>
+                </div>
+                {details.notes ? (
+                  <div className="py-3">
+                    <dt className="text-deep/65">Notes</dt>
+                    <dd className="mt-1 text-deep/80">{details.notes}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
           ) : null}
 
         </div>
@@ -580,16 +574,35 @@ export function BookingFlow({
   );
 }
 
-function GuestBookingNote() {
+function GuestBookingNote({
+  onAutofill,
+}: {
+  onAutofill?: (data: { name: string; email: string }) => void;
+}) {
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     return <GuestBookingCopy />;
   }
-  return <ClerkBookingNote />;
+  return <ClerkBookingNote onAutofill={onAutofill} />;
 }
 
-function ClerkBookingNote() {
+function ClerkBookingNote({
+  onAutofill,
+}: {
+  onAutofill?: (data: { name: string; email: string }) => void;
+}) {
   const mounted = useClientMounted();
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const autofilledRef = useRef(false);
+
+  useEffect(() => {
+    if (!mounted || !isLoaded || !isSignedIn || !user || autofilledRef.current) return;
+    autofilledRef.current = true;
+    onAutofill?.({
+      name: user.fullName ?? user.firstName ?? "",
+      email: user.primaryEmailAddress?.emailAddress ?? "",
+    });
+  }, [mounted, isLoaded, isSignedIn, user, onAutofill]);
+
   if (!mounted) return <GuestBookingCopy />;
   if (!isLoaded || isSignedIn) return null;
   return <GuestBookingCopy />;

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { adminEmails } from "@/lib/admin-access";
 import { tryPrisma } from "@/lib/db";
@@ -12,37 +13,55 @@ export type SessionProfile = {
   name?: string;
 };
 
-export async function getSessionProfile(): Promise<SessionProfile | null> {
+type CachedClerkAuth = {
+  profile: SessionProfile;
+  isAdmin: boolean;
+} | null;
+
+const loadClerkAuth = cache(async (): Promise<CachedClerkAuth> => {
   if (!hasClerk()) return null;
   const { userId } = await auth();
   if (!userId) return null;
   const user = await currentUser();
   if (!user) return null;
-  const email =
-    user.primaryEmailAddress?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress;
+
+  const primary = user.primaryEmailAddress;
+  const verifiedPrimary =
+    primary?.verification?.status === "verified" ? primary.emailAddress : undefined;
+  const fallbackVerified = user.emailAddresses.find(
+    (entry) => entry.verification?.status === "verified",
+  )?.emailAddress;
+  const email = verifiedPrimary ?? fallbackVerified;
   if (!email) return null;
+
+  const normalizedPrimary = verifiedPrimary?.toLowerCase();
+  const isAdminUser =
+    user.publicMetadata?.role === "admin" ||
+    Boolean(normalizedPrimary && adminEmails().includes(normalizedPrimary));
+
   return {
-    clerkId: user.id,
-    email,
-    name: user.fullName ?? user.firstName ?? undefined,
+    profile: {
+      clerkId: user.id,
+      email,
+      name: user.fullName ?? user.firstName ?? undefined,
+    },
+    isAdmin: isAdminUser,
   };
+});
+
+export async function getSessionProfile(): Promise<SessionProfile | null> {
+  const session = await loadClerkAuth();
+  return session?.profile ?? null;
 }
 
 export async function isAdmin() {
-  if (!hasClerk()) return false;
-  const { userId } = await auth();
-  if (!userId) return false;
-  const user = await currentUser();
-  if (!user) return false;
-  if (user.publicMetadata?.role === "admin") return true;
-  const email = user.primaryEmailAddress?.emailAddress?.toLowerCase();
-  return Boolean(email && adminEmails().includes(email));
+  const session = await loadClerkAuth();
+  return session?.isAdmin ?? false;
 }
 
 export async function getAdminProfile() {
-  if (!(await isAdmin())) return null;
-  return getSessionProfile();
+  const session = await loadClerkAuth();
+  return session?.isAdmin ? session.profile : null;
 }
 
 export async function attachCustomer(profile: SessionProfile | null) {

@@ -6,47 +6,41 @@ import { tryPrisma } from "@/lib/db";
 export const metadata = { title: "Customers" };
 export const instant = false;
 
+type CustomerAggRow = {
+  email: string;
+  name: string;
+  phone: string;
+  orders: bigint;
+  spent: bigint | null;
+};
+
 export default async function AdminCustomersPage() {
   await requireAdmin();
   const prisma = await tryPrisma();
   if (!prisma) return <DatabaseSetup />;
 
-  const orders = await prisma.order.findMany({
-    where: { payment: { status: "PAID" } },
-    orderBy: { createdAt: "desc" },
-    select: {
-      email: true,
-      name: true,
-      phone: true,
-      total: true,
-      status: true,
-      createdAt: true,
-    },
-  });
+  const aggregated = await prisma.$queryRaw<CustomerAggRow[]>`
+    SELECT
+      LOWER(o."email") AS email,
+      (ARRAY_AGG(o."name" ORDER BY o."createdAt" DESC))[1] AS name,
+      (ARRAY_AGG(o."phone" ORDER BY o."createdAt" DESC))[1] AS phone,
+      COUNT(*)::bigint AS orders,
+      COALESCE(SUM(CASE WHEN o."status" <> 'CANCELLED' THEN o."total" ELSE 0 END), 0)::bigint AS spent
+    FROM "Order" o
+    INNER JOIN "Payment" p ON p."orderId" = o."id"
+    WHERE p."status" = 'PAID'
+    GROUP BY LOWER(o."email")
+    ORDER BY spent DESC
+    LIMIT 500
+  `;
 
-  const people = new Map<
-    string,
-    { email: string; name: string; phone: string; orders: number; spent: number; last: Date }
-  >();
-
-  for (const order of orders) {
-    const current = people.get(order.email) ?? {
-      email: order.email,
-      name: order.name,
-      phone: order.phone,
-      orders: 0,
-      spent: 0,
-      last: order.createdAt,
-    };
-    current.orders += 1;
-    if (order.status !== "CANCELLED") current.spent += order.total;
-    if (order.createdAt > current.last) current.last = order.createdAt;
-    people.set(order.email, current);
-  }
-
-  const rows = [...people.values()]
-    .sort((a, b) => b.spent - a.spent)
-    .map(({ email, name, phone, orders, spent }) => ({ email, name, phone, orders, spent }));
+  const rows = aggregated.map((row) => ({
+    email: row.email,
+    name: row.name,
+    phone: row.phone,
+    orders: Number(row.orders),
+    spent: Number(row.spent ?? 0),
+  }));
 
   return <AdminCustomerList rows={rows} />;
 }

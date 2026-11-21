@@ -1,19 +1,32 @@
 "use server";
 
 import { headers } from "next/headers";
+import { z } from "zod";
 import { deliveryZones } from "@/lib/catalog";
 import { attachCustomer, getSessionProfile } from "@/lib/auth";
 import { checkoutSchema, hasPaystack } from "@/lib/env";
 import { tryPrisma } from "@/lib/db";
 import {
-  confirmPaystackReturn,
   nextPaystackReference,
   verifyAndSettleExistingReference,
 } from "@/lib/payments";
 import { initializePaystack } from "@/lib/paystack";
 import { orderPaystackReturnUrl, orderReturnPath, withPaymentCancelled } from "@/lib/paystack-return";
-import { limitByIpAndEmail, rateLimitMessage } from "@/lib/rate-limit";
+import { limitByIp, limitByIpAndEmail, rateLimitMessage } from "@/lib/rate-limit";
 import { createOrderNumber, createToken } from "@/lib/tokens";
+
+const checkoutItemsSchema = z
+  .array(
+    z.object({
+      productId: z.string().min(1).max(64),
+      quantity: z.number().int().min(1).max(99),
+      unitPrice: z.number().int().nonnegative().optional(),
+    }),
+  )
+  .min(1)
+  .max(50);
+
+const MAX_SAFE_ORDER_KOBO = 2_000_000_000;
 
 export async function createCheckout(
   items: { productId: string; quantity: number; unitPrice?: number }[],
@@ -21,7 +34,24 @@ export async function createCheckout(
 ) {
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) return { error: "Please complete the delivery details." };
-  if (items.length === 0) return { error: "Your bag is empty." };
+  if (!Array.isArray(items) || items.length === 0) return { error: "Your bag is empty." };
+
+  const parsedItems = checkoutItemsSchema.safeParse(items);
+  if (!parsedItems.success) {
+    return { error: "Choose a valid quantity for each product." };
+  }
+
+  // Merge duplicate productIds so combined quantities cannot bypass stock checks.
+  const merged = new Map<string, { productId: string; quantity: number; unitPrice?: number }>();
+  for (const item of parsedItems.data) {
+    const existing = merged.get(item.productId);
+    if (existing) {
+      existing.quantity += item.quantity;
+    } else {
+      merged.set(item.productId, { ...item });
+    }
+  }
+  const normalizedItems = [...merged.values()];
 
   const requestHeaders = await headers();
   const limited = limitByIpAndEmail(requestHeaders, "checkout", parsed.data.email, "checkout");
@@ -34,20 +64,28 @@ export async function createCheckout(
     return { error: "Checkout needs the Neon database. Add DATABASE_URL and load the catalogue in admin." };
   }
 
-  const ids = [...new Set(items.map((item) => item.productId))];
-  const products = await prisma.product.findMany({
-    where: { id: { in: ids }, isActive: true },
-  });
+  if (parsed.data.fulfillment === "DELIVERY") {
+    if (!parsed.data.zoneSlug) return { error: "Choose a delivery zone." };
+    if (!parsed.data.addressLine1) return { error: "Add a delivery address." };
+  }
+
+  const ids = normalizedItems.map((item) => item.productId);
+  const [products, existingZone, profile] = await Promise.all([
+    prisma.product.findMany({ where: { id: { in: ids }, isActive: true } }),
+    parsed.data.fulfillment === "DELIVERY" && parsed.data.zoneSlug
+      ? prisma.deliveryZone.findUnique({ where: { slug: parsed.data.zoneSlug } })
+      : Promise.resolve(null),
+    getSessionProfile(),
+  ]);
+
+  const productById = new Map(products.map((entry) => [entry.id, entry]));
   const lines = [];
   const priceUpdates: Record<string, number> = {};
 
-  for (const item of items) {
-    const product = products.find((entry) => entry.id === item.productId);
+  for (const item of normalizedItems) {
+    const product = productById.get(item.productId);
     if (!product) {
       return { error: "A product in your bag is no longer for sale. Remove it and add it again." };
-    }
-    if (!Number.isInteger(item.quantity) || item.quantity < 1) {
-      return { error: "Choose a quantity for each product." };
     }
     if (product.stock < item.quantity) {
       return { error: `${product.name} only has ${product.stock} left.` };
@@ -74,12 +112,9 @@ export async function createCheckout(
   let zoneId: string | undefined;
 
   if (parsed.data.fulfillment === "DELIVERY") {
-    if (!parsed.data.zoneSlug) return { error: "Choose a delivery zone." };
-    if (!parsed.data.addressLine1) return { error: "Add a delivery address." };
-    const existing = await prisma.deliveryZone.findUnique({ where: { slug: parsed.data.zoneSlug } });
     const catalogZone = deliveryZones.find((entry) => entry.slug === parsed.data.zoneSlug);
     const zone =
-      existing ??
+      existingZone ??
       (catalogZone
         ? await prisma.deliveryZone.create({
             data: {
@@ -95,7 +130,11 @@ export async function createCheckout(
     zoneId = zone.id;
   }
 
-  const profile = await getSessionProfile();
+  const total = subtotal + deliveryFee;
+  if (!Number.isSafeInteger(total) || total <= 0 || total > MAX_SAFE_ORDER_KOBO) {
+    return { error: "Order total exceeds the maximum allowed online amount. Please contact us." };
+  }
+
   const user = await attachCustomer(profile);
   const accessToken = createToken();
   const orderNumber = createOrderNumber();
@@ -177,56 +216,30 @@ export async function createCheckout(
   }
 }
 
-export async function completeCheckoutReturn(token: string, reference: string) {
-  if (!token || !reference) return { error: "Missing payment details." as const };
+export async function resumeOrderPayment(token: string) {
+  if (!token || !/^[a-f0-9]{48}$/i.test(token)) return { error: "Order not found." as const };
 
   const requestHeaders = await headers();
-  const limited = limitByIpAndEmail(requestHeaders, "pay-confirm", undefined, "paymentConfirm");
-  if (!limited.ok) {
-    return { error: rateLimitMessage(limited.retryAfterSec) };
+  const ipLimited = limitByIp(requestHeaders, "paystack-resume", "paystackInit");
+  if (!ipLimited.ok) {
+    return { error: rateLimitMessage(ipLimited.retryAfterSec) };
   }
 
-  const verified = await confirmPaystackReturn(reference, { orderToken: token });
-  if (verified.outcome === "error") {
-    return { error: verified.message };
-  }
-
-  if (verified.outcome === "failed") {
-    return { ok: true as const, status: "FAILED" as const };
-  }
-
-  if (verified.outcome === "pending" || verified.outcome === "skipped") {
-    return { ok: true as const, status: "PENDING" as const, token };
-  }
-
-  const prisma = await tryPrisma();
-  if (!prisma) return { error: "Checkout needs the database." as const };
-
-  const order = await prisma.order.findUnique({
-    where: { accessToken: token },
-    include: { payment: true },
-  });
-  if (!order) return { error: "Order not found." as const };
-
-  if (order.payment?.status === "PAID" || order.status === "PAID") {
-    return { ok: true as const, status: "PAID" as const, token };
-  }
-
-  return { ok: true as const, status: "PENDING" as const, token };
-}
-
-export async function resumeOrderPayment(token: string) {
   const prisma = await tryPrisma();
   if (!prisma) return { error: "Checkout needs the database." as const };
   if (!hasPaystack()) return { error: "Online payments are not configured yet." as const };
 
   const order = await prisma.order.findUnique({
     where: { accessToken: token },
-    include: { payment: true },
+    include: {
+      payment: true,
+      items: {
+        include: { product: { select: { id: true, name: true, isActive: true, stock: true } } },
+      },
+    },
   });
   if (!order) return { error: "Order not found." as const };
 
-  const requestHeaders = await headers();
   const limited = limitByIpAndEmail(requestHeaders, "paystack", order.email, "paystackInit");
   if (!limited.ok) {
     return { error: rateLimitMessage(limited.retryAfterSec) };
@@ -236,6 +249,18 @@ export async function resumeOrderPayment(token: string) {
   }
   if (order.status === "PAID" || order.payment?.status === "PAID") {
     return { error: "This order is already paid." as const };
+  }
+
+  // Re-verify active status and stock before re-initiating payment.
+  for (const item of order.items) {
+    if (!item.product || !item.product.isActive) {
+      return { error: `${item.name} is no longer available. Please start a new order.` as const };
+    }
+    if (item.product.stock < item.quantity) {
+      return {
+        error: `${item.product.name} only has ${item.product.stock} left. Please update your bag.` as const,
+      };
+    }
   }
 
   if (order.payment?.paystackReference) {

@@ -78,79 +78,6 @@ export const categories: CatalogCategory[] = [
 
 export const products: CatalogProduct[] = [
   {
-    id: "prod-cranberry",
-    name: "Cranberry Probiotic",
-    slug: "cranberry-probiotic",
-    tagline: "Cranberry and probiotics, for five mornings.",
-    description:
-      "A box of five cranberry probiotic ampoules. Chill one, snap the top, and drink it in the morning.",
-    benefits: [
-      "Supports a balanced gut",
-      "Helps maintain daily freshness",
-      "Simple five-day routine",
-    ],
-    ingredients: [
-      "Cranberry extract",
-      "Plant-based probiotic cultures",
-      "Purified water",
-    ],
-    usage:
-      "Chill, snap, and drink one ampoule in the morning. Complete the box over five days, or as advised by your practitioner.",
-    price: nairaToKobo(65000),
-    sku: "TVS-HERB-CRAN-5",
-    stock: 24,
-    featured: true,
-    categorySlug: "daily-rituals",
-    images: [
-      {
-        url: "/images/products/cranberry/box.jpg",
-        alt: "Cranberry probiotic box with ampoule tray",
-      },
-      {
-        url: "/images/products/cranberry/ampoules.jpg",
-        alt: "Close view of cranberry probiotic ampoules in a black tray",
-      },
-      {
-        url: "/images/products/cranberry/held.jpg",
-        alt: "Open cranberry probiotic box",
-      },
-    ],
-  },
-  {
-    id: "prod-tomato",
-    name: "Tomato Yeast",
-    slug: "tomato-yeast",
-    tagline: "Tomato yeast for skin. Five days.",
-    description:
-      "Five ampoules of tomato extract and yeast. Take one with breakfast and keep the tray out of the sun.",
-    benefits: [
-      "Supports a more even-looking complexion",
-      "Antioxidant tomato botanicals",
-      "Five-day daily ritual",
-    ],
-    ingredients: ["Tomato extract", "Nutritional yeast", "Purified water"],
-    usage: "Take one ampoule daily, preferably with breakfast. Keep the tray cool and away from direct sun.",
-    price: nairaToKobo(40000),
-    sku: "TVS-HERB-TOMA-5",
-    stock: 18,
-    featured: true,
-    categorySlug: "daily-rituals",
-    images: [
-      {
-        url: "/images/products/tomato/box.jpg",
-        alt: "Tomato yeast drink box",
-      },
-      {
-        url: "/images/products/tomato/tray.jpg",
-        alt: "Five tomato extract ampoules on a white tray",
-      },
-      {
-        url: "/images/products/tomato/held.jpg",
-        alt: "Hand holding a tray of tomato yeast ampoules",
-      },
-    ],
-  },
-  {
     id: "prod-chiselan",
     name: "Collagen Atelier",
     slug: "collagen-atelier",
@@ -181,32 +108,6 @@ export const products: CatalogProduct[] = [
       {
         url: "/images/products/chiselan/case.jpg",
         alt: "Collagen attache case filled with vials",
-      },
-    ],
-  },
-  {
-    id: "prod-iron",
-    name: "Iron Tablets",
-    slug: "iron-tablets",
-    tagline: "Iron tablets. Sixty days.",
-    description:
-      "Iron with folic acid and vitamin C. One tablet a day with food, and keep the tin closed.",
-    benefits: [
-      "Supports healthy iron levels",
-      "Helps maintain everyday energy",
-      "Compact sixty-day support",
-    ],
-    ingredients: ["Elemental iron", "Folic acid", "Vitamin C"],
-    usage: "One tablet daily with food, or as your physician advises. Keep the tin closed and dry.",
-    price: nairaToKobo(40000),
-    sku: "TVS-HERB-IRON-60",
-    stock: 40,
-    featured: false,
-    categorySlug: "daily-essentials",
-    images: [
-      {
-        url: "/images/marketing/cranberry-02.jpg",
-        alt: "Herbstrong multidimensional iron tablets",
       },
     ],
   },

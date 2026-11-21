@@ -13,8 +13,10 @@ export default async function AdminAvailabilityPage() {
   await requireAdmin();
   const prisma = await tryPrisma();
   if (!prisma) return <DatabaseSetup />;
-  const rules = await getRules();
-  const blocked = await prisma.blockedDate.findMany({ orderBy: { date: "asc" } });
+  const [rules, blocked] = await Promise.all([
+    getRules(),
+    prisma.blockedDate.findMany({ orderBy: { date: "asc" } }),
+  ]);
 
   return (
     <div>
