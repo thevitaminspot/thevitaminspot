@@ -107,33 +107,54 @@ export function ProductStories({ products }: { products: CatalogProduct[] }) {
                     </p>
 
                     {details.length > 0 ? (
-                      <ul className="mt-7 space-y-3 border-l border-deep/12 pl-4">
-                        {details.slice(0, 3).map((detail) => (
-                          <li key={detail} className="text-sm leading-snug text-deep/70">
-                            {detail}
-                          </li>
-                        ))}
+                      <ul className="mt-8 max-w-sm space-y-4">
+                        {details.slice(0, 3).map((detail) => {
+                          const split = detail.indexOf(":");
+                          const label =
+                            split > 0 && split < 42 ? detail.slice(0, split).trim() : null;
+                          const body = label ? detail.slice(split + 1).trim() : detail;
+
+                          return (
+                            <li key={detail} className="flex gap-3">
+                              <span
+                                className="mt-[0.55rem] size-1.5 shrink-0 rounded-full bg-sage/80"
+                                aria-hidden
+                              />
+                              <span className="min-w-0 text-sm leading-relaxed text-deep/70">
+                                {label ? (
+                                  <>
+                                    <span className="font-medium text-deep">{label}</span>
+                                    {body ? (
+                                      <span className="text-deep/60"> — {body}</span>
+                                    ) : null}
+                                  </>
+                                ) : (
+                                  body
+                                )}
+                              </span>
+                            </li>
+                          );
+                        })}
                       </ul>
                     ) : null}
 
-                    <div className="mt-8 flex items-baseline gap-2.5 border-t border-deep/10 pt-6">
-                      <p className="font-display text-3xl tracking-tight text-deep">
-                        {formatNaira(product.price)}
-                      </p>
-                      {hasDiscount ? (
-                        <p className="text-sm text-deep/35 line-through">
-                          {formatNaira(product.compareAtPrice!)}
+                    <div className="mt-9 flex flex-wrap items-end justify-between gap-4">
+                      <div className="flex items-baseline gap-2.5">
+                        <p className="font-display text-3xl tracking-tight text-deep">
+                          {formatNaira(product.price)}
                         </p>
-                      ) : null}
-                      <span className="text-[11px] tracking-[0.12em] text-deep/45 uppercase">
-                        each
-                      </span>
-                    </div>
-
-                    <div className="mt-6">
+                        {hasDiscount ? (
+                          <p className="text-sm text-deep/35 line-through">
+                            {formatNaira(product.compareAtPrice!)}
+                          </p>
+                        ) : null}
+                        <span className="text-[11px] tracking-[0.12em] text-deep/45 uppercase">
+                          each
+                        </span>
+                      </div>
                       <Link
                         href={`/shop/${product.slug}`}
-                        className="inline-flex items-center justify-center rounded-xl bg-deep px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a]"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-deep px-5 py-3.5 text-[11px] font-medium tracking-[0.16em] text-cream uppercase transition hover:bg-[#14382a] focus-visible:outline focus-visible:outline-offset-4 focus-visible:outline-deep"
                       >
                         See this pack
                       </Link>

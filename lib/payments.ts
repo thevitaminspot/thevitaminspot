@@ -1,6 +1,6 @@
 import "server-only";
 import { adminRecipientsExcluding } from "@/lib/admin-access";
-import { notifyBookingDepositPaid } from "@/lib/booking-notify";
+import { notifyBookingCancelled, notifyBookingDepositPaid } from "@/lib/booking-notify";
 import { formatLagosLong } from "@/lib/datetime";
 import { tryPrisma } from "@/lib/db";
 import {
@@ -99,10 +99,48 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
   if (outcome === "failed") {
     if (payment.status === "PAID") return false;
 
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: { status: "FAILED" },
+    const released = await prisma.$transaction(async (tx) => {
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: { status: "FAILED" },
+      });
+
+      // Unpaid booking fees must not leave a held / successful booking.
+      if (
+        payment.purpose === "APPOINTMENT_DEPOSIT" &&
+        payment.appointmentId &&
+        payment.appointment?.status === "PENDING"
+      ) {
+        const stamp = new Date().toISOString();
+        const releaseNote = `[Booking fee unpaid ${stamp}] Payment was not completed. Slot released.`;
+        await tx.appointment.update({
+          where: { id: payment.appointmentId },
+          data: {
+            status: "CANCELLED",
+            notes: payment.appointment.notes?.trim()
+              ? `${releaseNote}\n\n${payment.appointment.notes.trim()}`
+              : releaseNote,
+          },
+        });
+        return true;
+      }
+
+      return false;
     });
+
+    if (released && payment.appointment) {
+      await notifyBookingCancelled({
+        to: payment.appointment.email,
+        name: payment.appointment.name,
+        serviceName: payment.appointment.service.name,
+        startsAt: payment.appointment.startsAt,
+        manageUrl: `${site.url}/appointments/${payment.appointment.accessToken}`,
+        reason: "Booking fee payment was not completed",
+      }).catch((error) => {
+        console.error("[paystack:email] unpaid booking cancel notice failed", error);
+      });
+    }
+
     return false;
   }
 
