@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { deliveryZones } from "@/lib/catalog";
 import { attachCustomer, getSessionProfile } from "@/lib/auth";
+import { assertHumanRequest } from "@/lib/bot-guard";
 import { checkoutSchema, hasPaystack } from "@/lib/env";
 import { tryPrisma } from "@/lib/db";
 import {
@@ -32,6 +33,9 @@ export async function createCheckout(
   items: { productId: string; quantity: number; unitPrice?: number }[],
   input: unknown,
 ) {
+  const human = await assertHumanRequest();
+  if (!human.ok) return { error: human.error };
+
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) return { error: "Please complete the delivery details." };
   if (!Array.isArray(items) || items.length === 0) return { error: "Your bag is empty." };
@@ -54,7 +58,7 @@ export async function createCheckout(
   const normalizedItems = [...merged.values()];
 
   const requestHeaders = await headers();
-  const limited = limitByIpAndEmail(requestHeaders, "checkout", parsed.data.email, "checkout");
+  const limited = await limitByIpAndEmail(requestHeaders, "checkout", parsed.data.email, "checkout");
   if (!limited.ok) {
     return { error: rateLimitMessage(limited.retryAfterSec) };
   }
@@ -173,7 +177,12 @@ export async function createCheckout(
     return { token: accessToken, returnPath: orderReturnPath(accessToken) };
   }
 
-  const payLimit = limitByIpAndEmail(requestHeaders, "paystack", parsed.data.email, "paystackInit");
+  const payLimit = await limitByIpAndEmail(
+    requestHeaders,
+    "paystack",
+    parsed.data.email,
+    "paystackInit",
+  );
   if (!payLimit.ok) {
     await prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
     return { error: rateLimitMessage(payLimit.retryAfterSec) };
@@ -217,10 +226,13 @@ export async function createCheckout(
 }
 
 export async function resumeOrderPayment(token: string) {
+  const human = await assertHumanRequest();
+  if (!human.ok) return { error: human.error };
+
   if (!token || !/^[a-f0-9]{48}$/i.test(token)) return { error: "Order not found." as const };
 
   const requestHeaders = await headers();
-  const ipLimited = limitByIp(requestHeaders, "paystack-resume", "paystackInit");
+  const ipLimited = await limitByIp(requestHeaders, "paystack-resume", "paystackInit");
   if (!ipLimited.ok) {
     return { error: rateLimitMessage(ipLimited.retryAfterSec) };
   }
@@ -240,7 +252,7 @@ export async function resumeOrderPayment(token: string) {
   });
   if (!order) return { error: "Order not found." as const };
 
-  const limited = limitByIpAndEmail(requestHeaders, "paystack", order.email, "paystackInit");
+  const limited = await limitByIpAndEmail(requestHeaders, "paystack", order.email, "paystackInit");
   if (!limited.ok) {
     return { error: rateLimitMessage(limited.retryAfterSec) };
   }

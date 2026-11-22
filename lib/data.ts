@@ -5,9 +5,22 @@ import {
   infusions,
   products,
   relatedProducts,
+  type CatalogProduct,
 } from "@/lib/catalog";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { tryPrisma } from "@/lib/db";
+import { REDIS_KEYS, redisGet, redisSet } from "@/lib/redis";
+
+const FALLBACK_CACHE_LIFE = { stale: 300, revalidate: 15, expire: 300 } as const;
+const CATALOG_FRESH_TTL_SEC = 30 * 60;
+const CATALOG_STALE_TTL_SEC = 24 * 60 * 60;
+
+async function mirrorCatalog(freshKey: string, staleKey: string, value: unknown) {
+  await Promise.all([
+    redisSet(freshKey, value, CATALOG_FRESH_TTL_SEC),
+    redisSet(staleKey, value, CATALOG_STALE_TTL_SEC),
+  ]);
+}
 
 function mapProduct(row: {
   id: string;
@@ -47,9 +60,12 @@ function mapProduct(row: {
   };
 }
 
-const FALLBACK_CACHE_LIFE = { stale: 300, revalidate: 15, expire: 300 } as const;
+async function fetchActiveProducts(): Promise<{ data: CatalogProduct[]; fallback: boolean }> {
+  const cached = await redisGet<CatalogProduct[]>(REDIS_KEYS.products);
+  if (cached && cached.length > 0) {
+    return { data: cached, fallback: false };
+  }
 
-async function fetchActiveProducts() {
   const prisma = await tryPrisma();
   if (!prisma) return { data: products, fallback: false };
 
@@ -60,11 +76,17 @@ async function fetchActiveProducts() {
       orderBy: { name: "asc" },
     });
 
-    return {
-      data: rows.length === 0 ? products : rows.map(mapProduct),
-      fallback: false,
-    };
+    const mapped: CatalogProduct[] = rows.length === 0 ? products : rows.map(mapProduct);
+    if (rows.length > 0) {
+      await mirrorCatalog(REDIS_KEYS.products, REDIS_KEYS.productsStale, mapped);
+    }
+    return { data: mapped, fallback: false };
   } catch {
+    const stale = await redisGet<CatalogProduct[]>(REDIS_KEYS.productsStale);
+    if (stale && stale.length > 0) {
+      console.warn("[data:products] Neon unreachable; serving Redis snapshot.");
+      return { data: stale, fallback: true };
+    }
     console.warn("[data:products] Neon unreachable; using static fallback catalog.");
     return { data: products, fallback: true };
   }
@@ -97,8 +119,31 @@ export async function listManagedProducts() {
   return rows.map(mapProduct);
 }
 
-async function fetchActiveInfusions() {
-  const fallbackInfusions = infusions.filter((item) => item.isActive !== false);
+type InfusionView = {
+  id: string;
+  name: string;
+  slug: string;
+  tagline: string;
+  description: string;
+  benefits: string[];
+  ingredients: string[];
+  durationMin: number;
+  price: number;
+  deposit: number;
+  featured: boolean;
+  isActive: boolean;
+  image: string;
+};
+
+async function fetchActiveInfusions(): Promise<{ data: InfusionView[]; fallback: boolean }> {
+  const cached = await redisGet<InfusionView[]>(REDIS_KEYS.infusions);
+  if (cached && cached.length > 0) {
+    return { data: cached, fallback: false };
+  }
+
+  const fallbackInfusions = infusions
+    .filter((item) => item.isActive !== false)
+    .map((item) => ({ ...item, isActive: item.isActive ?? true }));
   const prisma = await tryPrisma();
   if (!prisma) return { data: fallbackInfusions, fallback: false };
 
@@ -110,25 +155,29 @@ async function fetchActiveInfusions() {
 
     if (rows.length === 0) return { data: fallbackInfusions, fallback: false };
 
-    return {
-      data: rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        tagline: row.tagline,
-        description: row.description,
-        benefits: row.benefits,
-        ingredients: row.ingredients,
-        durationMin: row.durationMin,
-        price: row.price,
-        deposit: row.deposit,
-        featured: row.featured,
-        isActive: row.isActive,
-        image: row.image,
-      })),
-      fallback: false,
-    };
+    const mapped: InfusionView[] = rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      tagline: row.tagline,
+      description: row.description,
+      benefits: row.benefits,
+      ingredients: row.ingredients,
+      durationMin: row.durationMin,
+      price: row.price,
+      deposit: row.deposit,
+      featured: row.featured,
+      isActive: row.isActive,
+      image: row.image,
+    }));
+    await mirrorCatalog(REDIS_KEYS.infusions, REDIS_KEYS.infusionsStale, mapped);
+    return { data: mapped, fallback: false };
   } catch {
+    const stale = await redisGet<InfusionView[]>(REDIS_KEYS.infusionsStale);
+    if (stale && stale.length > 0) {
+      console.warn("[data:infusions] Neon unreachable; serving Redis snapshot.");
+      return { data: stale, fallback: true };
+    }
     console.warn("[data:infusions] Neon unreachable; using static fallback infusions.");
     return { data: fallbackInfusions, fallback: true };
   }
@@ -171,9 +220,24 @@ export async function listManagedInfusions() {
   }));
 }
 
+type ZoneView = {
+  id: string;
+  name: string;
+  slug: string;
+  fee: number;
+  eta: string;
+};
+
 export async function listZones() {
   "use cache";
   cacheTag(CACHE_TAGS.zones);
+
+  const cached = await redisGet<ZoneView[]>(REDIS_KEYS.zones);
+  if (cached && cached.length > 0) {
+    cacheLife("hours");
+    return cached;
+  }
+
   const prisma = await tryPrisma();
   if (!prisma) {
     cacheLife("hours");
@@ -184,19 +248,43 @@ export async function listZones() {
     const rows = await prisma.deliveryZone.findMany({
       where: { isActive: true },
       orderBy: { fee: "asc" },
+      select: { id: true, name: true, slug: true, fee: true, eta: true },
     });
     cacheLife("hours");
-    return rows.length === 0 ? deliveryZones : rows;
+    if (rows.length > 0) {
+      await mirrorCatalog(REDIS_KEYS.zones, REDIS_KEYS.zonesStale, rows);
+      return rows;
+    }
+    return deliveryZones;
   } catch {
     cacheLife(FALLBACK_CACHE_LIFE);
+    const stale = await redisGet<ZoneView[]>(REDIS_KEYS.zonesStale);
+    if (stale && stale.length > 0) {
+      console.warn("[data:zones] Neon unreachable; serving Redis snapshot.");
+      return stale;
+    }
     console.warn("[data:zones] Neon unreachable; using static fallback zones.");
     return deliveryZones;
   }
 }
 
+type CategoryView = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+};
+
 export async function listCategories() {
   "use cache";
   cacheTag(CACHE_TAGS.categories);
+
+  const cached = await redisGet<CategoryView[]>(REDIS_KEYS.categories);
+  if (cached && cached.length > 0) {
+    cacheLife("hours");
+    return cached;
+  }
+
   const prisma = await tryPrisma();
   if (!prisma) {
     cacheLife("hours");
@@ -208,16 +296,24 @@ export async function listCategories() {
       orderBy: { name: "asc" },
     });
     cacheLife("hours");
-    return rows.length === 0
-      ? categories
-      : rows.map((row) => ({
-          id: row.id,
-          name: row.name,
-          slug: row.slug,
-          description: row.description ?? "",
-        }));
+    if (rows.length > 0) {
+      const mapped = rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        description: row.description ?? "",
+      }));
+      await mirrorCatalog(REDIS_KEYS.categories, REDIS_KEYS.categoriesStale, mapped);
+      return mapped;
+    }
+    return categories;
   } catch {
     cacheLife(FALLBACK_CACHE_LIFE);
+    const stale = await redisGet<CategoryView[]>(REDIS_KEYS.categoriesStale);
+    if (stale && stale.length > 0) {
+      console.warn("[data:categories] Neon unreachable; serving Redis snapshot.");
+      return stale;
+    }
     console.warn("[data:categories] Neon unreachable; using static fallback categories.");
     return categories;
   }

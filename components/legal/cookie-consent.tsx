@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import {
   allowsAnalytics,
   readConsentFromDocument,
@@ -62,7 +63,12 @@ export function CookieConsentProvider({ children }: { children: ReactNode }) {
   return (
     <ConsentContext.Provider value={value}>
       {children}
-      {allowsAnalytics(consent) ? <Analytics /> : null}
+      {allowsAnalytics(consent) ? (
+        <>
+          <Analytics />
+          <SpeedInsights />
+        </>
+      ) : null}
       {consent === null ? <CookieBanner onChoose={setConsent} /> : null}
     </ConsentContext.Provider>
   );

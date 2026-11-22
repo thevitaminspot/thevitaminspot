@@ -1,6 +1,7 @@
 import { handlePaystackWebhookCharge } from "@/lib/payments";
 import { verifyPaystackSignature } from "@/lib/paystack";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { redisAcquireOnce, redisDel } from "@/lib/redis";
 
 type PaystackEvent = {
   event: string;
@@ -16,7 +17,7 @@ type PaystackEvent = {
 export async function POST(request: Request) {
   const ip = getClientIp(request.headers);
 
-  const volume = rateLimit(`webhook:ip:${ip}`, "webhook");
+  const volume = await rateLimit(`webhook:ip:${ip}`, "webhook");
   if (!volume.ok) {
     return Response.json(
       { error: "Too many requests" },
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
 
   try {
     if (!verifyPaystackSignature(raw, signature)) {
-      const rejects = rateLimit(`webhook:bad:${ip}`, "webhookReject");
+      const rejects = await rateLimit(`webhook:bad:${ip}`, "webhookReject");
       if (!rejects.ok) {
         return Response.json(
           { error: "Too many invalid attempts" },
@@ -61,19 +62,31 @@ export async function POST(request: Request) {
   }
 
   // One active settlement path per reference — blocks replay floods of the same charge.
-  const refHit = rateLimit(`webhook:ref:${data.reference}`, "paymentConfirm");
+  const refHit = await rateLimit(`webhook:ref:${data.reference}`, "paymentConfirm");
   if (!refHit.ok) {
     return Response.json({ received: true, throttled: true });
   }
 
   if (event.event === "charge.success" || event.event === "charge.failed") {
-    await handlePaystackWebhookCharge({
-      reference: data.reference,
-      status: data.status,
-      amount: data.amount,
-      currency: data.currency ?? "NGN",
-      metadata: data.metadata,
-    });
+    const dedupKey = `tvs:webhook:dedup:${event.event}:${data.reference}`;
+    const acquired = await redisAcquireOnce(dedupKey, 300);
+    if (!acquired) {
+      return Response.json({ received: true, duplicate: true });
+    }
+
+    try {
+      await handlePaystackWebhookCharge({
+        reference: data.reference,
+        status: data.status,
+        amount: data.amount,
+        currency: data.currency ?? "NGN",
+        metadata: data.metadata,
+      });
+    } catch (error) {
+      // Release the dedup lock on failure so Paystack's retry can settle the charge.
+      await redisDel(dedupKey);
+      throw error;
+    }
   }
 
   return Response.json({ received: true });

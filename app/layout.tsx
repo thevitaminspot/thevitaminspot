@@ -60,10 +60,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: site.name,
     description: site.description,
-    images: [{ url: brand.logo.src, alt: brand.logo.alt }],
     locale: "en_NG",
     type: "website",
     siteName: site.name,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: site.name,
+    description: site.description,
   },
   alternates: { canonical: "/" },
 };

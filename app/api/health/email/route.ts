@@ -12,7 +12,7 @@ function safeTokenMatch(actual: string | null, expected: string | undefined) {
 
 export async function GET(request: Request) {
   const ip = getClientIp(request.headers);
-  const limited = rateLimit(`health-email:${ip}`, 10, 60_000);
+  const limited = await rateLimit(`health-email:${ip}`, 10, 60_000);
   if (!limited.ok) {
     return Response.json(
       { error: "Too many requests" },

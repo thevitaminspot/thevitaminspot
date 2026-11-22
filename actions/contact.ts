@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { assertHumanRequest } from "@/lib/bot-guard";
 import { contactSchema, newsletterSchema } from "@/lib/env";
 import { tryPrisma } from "@/lib/db";
 import { escapeHtml, sendMail } from "@/lib/email";
@@ -8,6 +9,9 @@ import { limitByIpAndEmail, rateLimitMessage } from "@/lib/rate-limit";
 import { site } from "@/lib/site";
 
 export async function submitContact(input: unknown) {
+  const human = await assertHumanRequest();
+  if (!human.ok) return { error: human.error };
+
   const parsed = contactSchema.safeParse(input);
   if (!parsed.success) {
     const messageTooShort = parsed.error.issues.some((issue) => issue.path[0] === "message");
@@ -19,7 +23,7 @@ export async function submitContact(input: unknown) {
   }
 
   const requestHeaders = await headers();
-  const limited = limitByIpAndEmail(requestHeaders, "contact", parsed.data.email, "contact");
+  const limited = await limitByIpAndEmail(requestHeaders, "contact", parsed.data.email, "contact");
   if (!limited.ok) {
     return { error: rateLimitMessage(limited.retryAfterSec) };
   }
@@ -39,11 +43,14 @@ export async function submitContact(input: unknown) {
 }
 
 export async function subscribeNotes(email: string) {
+  const human = await assertHumanRequest();
+  if (!human.ok) return { error: human.error };
+
   const parsed = newsletterSchema.safeParse({ email });
   if (!parsed.success) return { error: "Enter a valid email address." };
 
   const requestHeaders = await headers();
-  const limited = limitByIpAndEmail(requestHeaders, "notes", parsed.data.email, "notes");
+  const limited = await limitByIpAndEmail(requestHeaders, "notes", parsed.data.email, "notes");
   if (!limited.ok) {
     return { error: rateLimitMessage(limited.retryAfterSec) };
   }
