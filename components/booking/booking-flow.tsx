@@ -360,10 +360,12 @@ export function BookingFlow({
             </button>
           ) : null}
           <ProgressBar step={step} total={stepTitles.length} />
-          <h2 className="mt-4 font-display text-2xl text-deep">{stepTitles[step]}</h2>
+          <h2 key={`title-${step}`} className="animate-step-in mt-4 font-display text-2xl text-deep">
+            {stepTitles[step]}
+          </h2>
         </header>
 
-        <div className="min-w-0">
+        <div key={`panel-${step}`} className="animate-step-in min-w-0">
           {step === 0 ? (
             drips.length === 0 ? (
               <p className="text-sm text-deep/65">No sessions available right now.</p>

@@ -251,8 +251,8 @@ export function Header() {
 
   return (
     <>
-      <header className="site-header sticky top-0 z-40">
-        <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-5 md:min-h-[4.5rem] md:px-8 md:py-3.5">
+      <header className="site-header sticky top-0 z-40 h-[var(--site-header-height)]">
+        <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-5 md:px-8">
           <Link
             href="/"
             className="flex min-w-0 flex-1 items-center gap-2.5 transition active:scale-[0.99] md:flex-none"
@@ -278,17 +278,17 @@ export function Header() {
                   key={link.href}
                   href={link.href}
                   aria-current={current ? "page" : undefined}
-                  className={`relative px-3.5 py-2 text-[11px] tracking-[0.16em] uppercase transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep ${
+                  className={`group relative px-3.5 py-2 text-[11px] tracking-[0.16em] uppercase transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep ${
                     current ? "font-medium text-deep" : "text-deep/70 hover:text-deep"
                   }`}
                 >
                   {link.label}
-                  {current ? (
-                    <span
-                      className="absolute inset-x-3.5 -bottom-0.5 h-px bg-deep/70"
-                      aria-hidden
-                    />
-                  ) : null}
+                  <span
+                    className={`absolute inset-x-3.5 -bottom-0.5 h-px origin-left bg-deep/70 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      current ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                    }`}
+                    aria-hidden
+                  />
                 </Link>
               );
             })}
