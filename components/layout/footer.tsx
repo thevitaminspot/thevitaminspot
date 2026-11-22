@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import { ArrowUpRight, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { BrandWordmark } from "@/components/brand/wordmark";
 import { ContactIconRow } from "@/components/contact/contact-icons";
 import { FooterTrackOrder } from "@/components/layout/footer-track-order";
@@ -21,18 +22,18 @@ const policies = [
 ] as const;
 
 const linkClass =
-  "text-cream/80 transition hover:text-tint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cream";
+  "text-cream/80 transition-colors duration-200 hover:text-tint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cream";
 const headingClass = "text-[11px] font-medium tracking-[0.18em] text-tint uppercase";
 
 export function Footer() {
   return (
     <footer className="bg-deep text-cream">
       <div className="mx-auto max-w-6xl px-5 py-14 md:px-8 md:py-16">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.45fr_0.85fr_1.15fr_0.95fr] lg:gap-12">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.35fr_0.8fr_1.3fr_0.9fr] lg:gap-12">
           <div className="sm:col-span-2 lg:col-span-1">
             <Link
               href="/"
-              className="inline-flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cream"
+              className="inline-flex items-center gap-3 transition-opacity duration-200 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cream"
             >
               <Image
                 src={brand.mark.src}
@@ -67,41 +68,68 @@ export function Footer() {
 
           <div>
             <p className={headingClass}>Visit &amp; Contact</p>
-            <ul className="mt-4 space-y-2.5 text-sm text-cream/75">
-              <li>
+            <address className="mt-4 space-y-3.5 text-sm not-italic text-cream/80">
+              <div className="flex items-start gap-3">
+                <MapPin className="mt-1 size-4 shrink-0 text-tint/80" strokeWidth={1.5} aria-hidden />
+                <div className="min-w-0 leading-relaxed">
+                  <p className="text-cream/90">{site.address.line1}</p>
+                  <p className="text-xs text-cream/65">
+                    {site.address.area}, {site.address.city}
+                  </p>
+                  <a
+                    href={site.address.mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium tracking-[0.14em] text-tint uppercase transition-colors duration-200 hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cream"
+                  >
+                    Get directions
+                    <ArrowUpRight
+                      className="size-3 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                  </a>
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t border-cream/10 pt-3.5">
                 <a
-                  href={site.address.mapUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={linkClass}
+                  href={`tel:${site.phoneHref}`}
+                  className={`flex items-center gap-3 ${linkClass}`}
                 >
-                  {site.address.line1}
+                  <Phone className="size-4 shrink-0 text-tint/80" strokeWidth={1.5} aria-hidden />
+                  <span className="tabular-nums">{site.phone}</span>
+                  <span className="rounded-full border border-cream/15 px-1.5 py-0.5 text-[9px] font-medium tracking-[0.14em] text-cream/65 uppercase">
+                    Abuja
+                  </span>
                 </a>
-              </li>
-              <li>
-                {site.address.area}, {site.address.city}
-              </li>
-              <li>
-                <a href={`tel:${site.phoneHref}`} className={linkClass}>
-                  {site.phone}
-                </a>
-              </li>
-              <li>
+
                 <a
                   href={whatsappHref("Hello The Vitamin Spot", site.whatsappUs)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={linkClass}
+                  className={`flex items-center gap-3 ${linkClass}`}
                 >
-                  WhatsApp US · +1 312 998-0147
+                  <MessageCircle
+                    className="size-4 shrink-0 text-tint/80"
+                    strokeWidth={1.5}
+                    aria-hidden
+                  />
+                  <span className="tabular-nums">+1 312 998-0147</span>
+                  <span className="rounded-full border border-cream/15 px-1.5 py-0.5 text-[9px] font-medium tracking-[0.14em] text-cream/65 uppercase">
+                    US
+                  </span>
                 </a>
-              </li>
-              <li>
-                <a href={`mailto:${site.email}`} className={`break-all ${linkClass}`}>
-                  {site.email}
+
+                <a
+                  href={`mailto:${site.email}`}
+                  className={`flex items-center gap-3 break-all ${linkClass}`}
+                >
+                  <Mail className="size-4 shrink-0 text-tint/80" strokeWidth={1.5} aria-hidden />
+                  <span>{site.email}</span>
                 </a>
-              </li>
-            </ul>
+              </div>
+            </address>
           </div>
 
           <div>

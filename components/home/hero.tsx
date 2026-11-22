@@ -10,8 +10,8 @@ export function Hero({
   const lead = packs[0];
 
   return (
-    <section className="hero-stage flex h-[calc(100dvh-var(--site-header-height))] min-h-[calc(100dvh-var(--site-header-height))] max-h-[calc(100dvh-var(--site-header-height))] flex-col overflow-hidden text-cream 2xl:h-auto 2xl:min-h-0 2xl:max-h-none 2xl:overflow-visible">
-      <div className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 grid-rows-[auto_minmax(0,1fr)] items-center gap-x-10 gap-y-[clamp(0.5rem,1.4vh,1.25rem)] px-5 py-[clamp(0.65rem,1.8vh,2rem)] md:px-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-rows-1 lg:items-stretch">
+    <section className="hero-stage flex h-[calc(100dvh-var(--site-header-height))] min-h-[calc(100dvh-var(--site-header-height))] max-h-[calc(100dvh-var(--site-header-height))] flex-col overflow-hidden text-cream">
+      <div className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 grid-rows-[auto_minmax(0,1fr)] items-center gap-x-10 gap-y-[clamp(0.75rem,2vh,1.5rem)] px-5 py-[clamp(1rem,2.4vh,2rem)] md:px-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-rows-1 lg:items-stretch">
         <div className="min-w-0 max-w-xl self-center">
           <p className="animate-hero-in text-[11px] font-medium tracking-[0.22em] text-tint uppercase">
             Abuja · Shop &amp; IV Lounge

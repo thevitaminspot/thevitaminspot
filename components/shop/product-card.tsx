@@ -45,7 +45,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
       onPointerEnter={(event) => {
         if (hover && event.pointerType === "mouse") setLoadHover(true);
       }}
-      className={`group ${surface} flex h-full flex-col overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition duration-300 hover:border-deep/20 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_24px_rgba(11,44,33,0.06)]`}
+      className={`group ${surface} flex h-full flex-col overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-deep/20 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_28px_rgba(11,44,33,0.08)]`}
     >
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-tint/30">
         <Link href={`/shop/${product.slug}`} className="block size-full">
@@ -56,7 +56,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
               width={800}
               height={1000}
               sizes="(min-width: 1280px) 360px, (min-width: 1024px) 31vw, (min-width: 640px) 48vw, 96vw"
-              className="size-full object-cover transition duration-700 group-hover:scale-105"
+              className="size-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]"
             />
           ) : (
             <div className="size-full bg-tint/60" />
@@ -122,7 +122,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
             type="button"
             disabled={isOutOfStock}
             onClick={handleAdd}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[11px] font-medium tracking-wider uppercase transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep ${
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-[11px] font-medium tracking-wider uppercase transition duration-200 active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-deep ${
               isOutOfStock
                 ? "cursor-not-allowed bg-deep/5 text-deep/45"
                 : justAdded
