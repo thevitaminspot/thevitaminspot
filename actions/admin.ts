@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { after } from "next/server";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { canTransitionOrder } from "@/lib/admin-orders";
 import { getAdminProfile } from "@/lib/auth";
@@ -14,6 +15,7 @@ import {
 import { sendOrderUpdate } from "@/lib/email";
 import { asUploadFile, uploadImage } from "@/lib/images";
 import { nairaToKobo } from "@/lib/money";
+import { invalidateAvailabilityCache, invalidateCatalogCache } from "@/lib/redis";
 import { seedCatalog } from "@/lib/seed-catalog";
 import { site } from "@/lib/site";
 import type { AppointmentStatus, OrderStatus } from "@/lib/generated/prisma/client";
@@ -28,6 +30,7 @@ function slugify(value: string) {
 }
 
 function refreshShop(slug?: string) {
+  after(() => invalidateCatalogCache("products", "categories"));
   revalidateTag(CACHE_TAGS.products, "max");
   revalidateTag(CACHE_TAGS.categories, "max");
   revalidatePath("/");
@@ -42,6 +45,7 @@ function refreshShop(slug?: string) {
 }
 
 function refreshInfusions() {
+  after(() => invalidateCatalogCache("infusions"));
   revalidateTag(CACHE_TAGS.infusions, "max");
   revalidatePath("/infusions");
   revalidatePath("/admin/infusions");
@@ -49,6 +53,7 @@ function refreshInfusions() {
 }
 
 function refreshZones() {
+  after(() => invalidateCatalogCache("zones"));
   revalidateTag(CACHE_TAGS.zones, "max");
   revalidatePath("/admin/zones");
   revalidatePath("/checkout");
@@ -476,6 +481,7 @@ export async function updateAppointmentStatus(id: string, status: AppointmentSta
       ? existing.service.deposit
       : undefined;
   await prisma.appointment.update({ where: { id }, data: { status } });
+  await invalidateAvailabilityCache();
 
   if (status === "CONFIRMED" && existing.status !== "CONFIRMED") {
     await notifyBookingConfirmed({
@@ -559,6 +565,7 @@ export async function blockDate(date: string, reason?: string) {
     update: { reason },
     create: { date: new Date(date), reason },
   });
+  await invalidateAvailabilityCache();
   revalidatePath("/admin/availability");
   return { ok: true as const };
 }
@@ -567,6 +574,7 @@ export async function unblockDate(id: string) {
   const prisma = await database();
   if ("error" in prisma) return prisma;
   await prisma.blockedDate.delete({ where: { id } });
+  await invalidateAvailabilityCache();
   revalidatePath("/admin/availability");
   return { ok: true as const };
 }
@@ -621,6 +629,7 @@ export async function saveWeeklyHours(rules: WeeklyHoursInput[]) {
       : []),
   ]);
 
+  await invalidateAvailabilityCache({ includeRules: true });
   revalidatePath("/admin/availability");
   revalidatePath("/infusions");
   revalidatePath("/book");

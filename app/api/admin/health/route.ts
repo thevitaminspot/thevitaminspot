@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/lib/admin-api";
 import { tryPrisma } from "@/lib/db";
 import { emailConfigStatus } from "@/lib/email";
 import { hasClerk, hasPaystack, publicEnv } from "@/lib/env";
+import { hasRedis, tryRedis } from "@/lib/redis";
 import { resolveSiteUrl } from "@/lib/site";
 
 export const instant = false;
@@ -89,6 +90,40 @@ export async function GET() {
       }
     }
 
+    const redis = tryRedis();
+    if (!redis) {
+      checks.push({
+        id: "redis",
+        label: "Redis connection",
+        group: "backend",
+        ok: false,
+        detail: "UPSTASH_REDIS_REST_URL / TOKEN not set (using in-memory fallback)",
+      });
+    } else {
+      try {
+        const started = Date.now();
+        const pong = await redis.ping();
+        checks.push({
+          id: "redis",
+          label: "Redis connection",
+          group: "backend",
+          ok: pong === "PONG",
+          detail:
+            pong === "PONG"
+              ? `Upstash Redis responded in ${Date.now() - started}ms`
+              : `Unexpected ping reply: ${String(pong)}`,
+        });
+      } catch (error) {
+        checks.push({
+          id: "redis",
+          label: "Redis connection",
+          group: "backend",
+          ok: false,
+          detail: error instanceof Error ? error.message : "Ping failed",
+        });
+      }
+    }
+
     const email = emailConfigStatus();
     const admins = adminEmails();
 
@@ -149,6 +184,14 @@ export async function GET() {
         "RESEND_FROM_EMAIL",
         configured(process.env.RESEND_FROM_EMAIL) || email.configured,
         email.from,
+      ],
+      [
+        "redis-env",
+        "UPSTASH_REDIS_REST_URL",
+        hasRedis(),
+        hasRedis()
+          ? "Distributed rate limiting, slot & catalog caching active"
+          : "Run `npx vercel install upstash` to enable distributed Redis",
       ],
       [
         "app-url",

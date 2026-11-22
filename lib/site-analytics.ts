@@ -1,4 +1,5 @@
 import "server-only";
+import { REDIS_KEYS, redisGet, redisSet } from "@/lib/redis";
 
 export type SiteTraffic =
   | {
@@ -55,6 +56,9 @@ async function countVisits(since: Date, until: Date) {
 export async function getSiteTraffic(): Promise<SiteTraffic> {
   if (!analyticsConfig()) return { status: "unconfigured" };
 
+  const cached = await redisGet<Extract<SiteTraffic, { status: "ready" }>>(REDIS_KEYS.siteTraffic);
+  if (cached) return cached;
+
   // Round to a 5-minute boundary so identical URLs hit Next's 300s fetch cache.
   const bucketMs = 5 * 60 * 1000;
   const until = new Date(Math.floor(Date.now() / bucketMs) * bucketMs);
@@ -67,12 +71,14 @@ export async function getSiteTraffic(): Promise<SiteTraffic> {
       countVisits(today, until),
     ]);
     if (!weekCount || !todayCount) return { status: "error" };
-    return {
+    const result: Extract<SiteTraffic, { status: "ready" }> = {
       status: "ready",
       visitors: weekCount.visitors,
       pageviews: weekCount.pageviews,
       todayVisitors: todayCount.visitors,
     };
+    await redisSet(REDIS_KEYS.siteTraffic, result, 300);
+    return result;
   } catch (error) {
     console.error("[analytics]", error);
     return { status: "error" };

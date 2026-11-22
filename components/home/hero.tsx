@@ -94,11 +94,11 @@ export function Hero({
                       alt={pack.name}
                       width={64}
                       height={64}
-                      sizes="40px"
-                      className="size-10 rounded-xl object-cover sm:size-11"
+                      sizes="44px"
+                      className="aspect-square size-10 shrink-0 rounded-xl object-cover sm:size-11"
                     />
                   ) : (
-                    <span className="size-10 rounded-xl bg-cream/10 sm:size-11" />
+                    <span className="aspect-square size-10 shrink-0 rounded-xl bg-cream/10 sm:size-11" />
                   )}
                   <span className="min-w-0">
                     <span className="block truncate text-sm text-cream">{pack.name}</span>

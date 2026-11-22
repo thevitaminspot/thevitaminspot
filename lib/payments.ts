@@ -13,6 +13,7 @@ import {
 import { hasPaystack } from "@/lib/env";
 import { formatNaira } from "@/lib/money";
 import { verifyPaystackTransaction } from "@/lib/paystack";
+import { invalidateAvailabilityCache, invalidateCatalogCache } from "@/lib/redis";
 import { site } from "@/lib/site";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
@@ -237,6 +238,14 @@ async function applySettlement(payment: PaymentWithRelations, outcome: "success"
 
     return true;
   });
+
+  if (paid) {
+    // Stock changes and newly confirmed appointments must be visible across all serverless instances.
+    await Promise.all([
+      payment.orderId ? invalidateCatalogCache("products") : Promise.resolve(),
+      payment.appointmentId ? invalidateAvailabilityCache() : Promise.resolve(),
+    ]);
+  }
 
   if (paid && orderCancelled && payment.order) {
     await notifyAdminPaymentAlert(`Payment on cancelled order ${payment.order.orderNumber}`, {

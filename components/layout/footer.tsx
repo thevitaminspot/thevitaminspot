@@ -120,16 +120,8 @@ export function Footer() {
       </div>
 
       <div className="border-t border-cream/10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-cream/65 sm:flex-row sm:items-center sm:justify-between md:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 text-xs text-cream/65 md:px-8">
           <p>© 2026 {site.name}. All rights reserved.</p>
-          <a
-            href={site.developer.url}
-            className="transition hover:text-cream"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Developed by {site.developer.name}
-          </a>
         </div>
       </div>
     </footer>

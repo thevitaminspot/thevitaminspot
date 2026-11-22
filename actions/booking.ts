@@ -33,13 +33,15 @@ import {
   withPaymentCancelled,
 } from "@/lib/paystack-return";
 import { limitByIp, limitByIpAndEmail, rateLimitMessage } from "@/lib/rate-limit";
+import { assertHumanRequest } from "@/lib/bot-guard";
+import { invalidateAvailabilityCache } from "@/lib/redis";
 import { site, whatsappHref } from "@/lib/site";
 import { BOOKING_FEE_REQUIRED_MESSAGE } from "@/lib/booking-policy";
 import { createToken } from "@/lib/tokens";
 
 export async function fetchSlots(date: string, slug: string) {
   const requestHeaders = await headers();
-  const limited = limitByIp(requestHeaders, "slots", "slots");
+  const limited = await limitByIp(requestHeaders, "slots", "slots");
   if (!limited.ok) return [];
 
   const drip = await findInfusion(slug);
@@ -56,11 +58,14 @@ export async function createBooking(input: {
   notes?: string;
   payDeposit?: boolean;
 }) {
+  const human = await assertHumanRequest();
+  if (!human.ok) return { error: human.error };
+
   const details = parseBookingDetails(input);
   if (!details.ok) return { error: details.error };
 
   const requestHeaders = await headers();
-  const limited = limitByIpAndEmail(requestHeaders, "book", details.data.email, "booking");
+  const limited = await limitByIpAndEmail(requestHeaders, "book", details.data.email, "booking");
   if (!limited.ok) {
     return { error: rateLimitMessage(limited.retryAfterSec) };
   }
@@ -160,7 +165,7 @@ export async function createBooking(input: {
     return { error: "That hour has just been taken. Please choose another." };
   }
 
-  const payLimit = limitByIpAndEmail(
+  const payLimit = await limitByIpAndEmail(
     requestHeaders,
     "paystack",
     details.data.email,
@@ -195,6 +200,7 @@ export async function createBooking(input: {
     });
 
     // Confirmation emails go out only after the booking fee settles as PAID.
+    await invalidateAvailabilityCache();
 
     return {
       token,
@@ -215,10 +221,13 @@ export async function createBooking(input: {
 }
 
 export async function resumeAppointmentDeposit(token: string) {
+  const human = await assertHumanRequest();
+  if (!human.ok) return { error: human.error };
+
   if (!token || !/^[a-f0-9]{48}$/i.test(token)) return { error: "Booking not found." };
 
   const requestHeaders = await headers();
-  const ipLimited = limitByIp(requestHeaders, "paystack-resume-apt", "paystackInit");
+  const ipLimited = await limitByIp(requestHeaders, "paystack-resume-apt", "paystackInit");
   if (!ipLimited.ok) {
     return { error: rateLimitMessage(ipLimited.retryAfterSec) };
   }
@@ -233,7 +242,7 @@ export async function resumeAppointmentDeposit(token: string) {
   });
   if (!appointment) return { error: "Booking not found." };
 
-  const limited = limitByIpAndEmail(
+  const limited = await limitByIpAndEmail(
     requestHeaders,
     "paystack",
     appointment.email,
@@ -366,7 +375,7 @@ export async function cancelAppointment(
   input: { reason: string; details?: string; acknowledged: boolean },
 ) {
   const requestHeaders = await headers();
-  const limited = limitByIp(requestHeaders, "book-cancel", "bookingMutate");
+  const limited = await limitByIp(requestHeaders, "book-cancel", "bookingMutate");
   if (!limited.ok) {
     return { error: rateLimitMessage(limited.retryAfterSec) };
   }
@@ -412,6 +421,7 @@ export async function cancelAppointment(
       notes: buildCancellationNote(input.reason, input.details, appointment.notes),
     },
   });
+  await invalidateAvailabilityCache();
 
   await notifyBookingCancelled({
     to: appointment.email,
@@ -443,7 +453,7 @@ export async function cancelAppointment(
 
 export async function updateAppointment(token: string, start: string) {
   const requestHeaders = await headers();
-  const limited = limitByIp(requestHeaders, "book-reschedule", "bookingMutate");
+  const limited = await limitByIp(requestHeaders, "book-reschedule", "bookingMutate");
   if (!limited.ok) {
     return { error: rateLimitMessage(limited.retryAfterSec) };
   }
@@ -508,6 +518,8 @@ export async function updateAppointment(token: string, start: string) {
     }
     throw error;
   }
+
+  await invalidateAvailabilityCache();
 
   const updated = await prisma.appointment.findUnique({
     where: { id: appointment.id },

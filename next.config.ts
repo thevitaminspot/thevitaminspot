@@ -8,7 +8,7 @@ const cspDirectives = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://res.cloudinary.com https://img.clerk.com https://*.clerk.com https://imagedelivery.net",
   "font-src 'self' data:",
-  `connect-src 'self'${isDev ? " ws: wss:" : ""} https://*.clerk.accounts.dev https://*.clerk.com https://clerk.thevitaminspotltd.com https://api.paystack.co https://standard.paystack.co https://checkout.paystack.com https://res.cloudinary.com https://vitals.vercel-insights.com https://va.vercel-scripts.com`,
+  `connect-src 'self'${isDev ? " ws: wss:" : ""} https://*.clerk.accounts.dev https://*.clerk.com https://clerk.thevitaminspotltd.com https://api.paystack.co https://standard.paystack.co https://checkout.paystack.com https://res.cloudinary.com https://vitals.vercel-insights.com https://va.vercel-scripts.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io`,
   "frame-src 'self' https://checkout.paystack.com https://standard.paystack.co https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://www.google.com https://maps.google.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
